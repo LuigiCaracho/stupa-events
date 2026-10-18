@@ -1,0 +1,14 @@
+<!-- Copied from STUPA-Workflow@93c33d6 frontend/src/app/layout/bottom-bar/bottom-bar.component.html -->
+<nav class="bb" [attr.aria-label]="'nav.main' | t">
+  @for (item of barItems(); track item.key) {
+    <a
+      class="bb__item"
+      [routerLink]="item.path"
+      routerLinkActive="is-active"
+      ariaCurrentWhenActive="page"
+    >
+      <span class="bb__ind"><app-icon [name]="item.icon" [size]="22" /></span>
+      <span class="bb__label">{{ item.labelKey | t }}</span>
+    </a>
+  }
+</nav>

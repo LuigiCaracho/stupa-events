@@ -1,0 +1,11 @@
+<!-- Copied from STUPA-Workflow@93c33d6 frontend/src/app/shared/ui/field-group/field-row.component.html -->
+<div class="fld__text">
+  <span class="fld__label">{{ label() }}</span>
+  <span class="fld__value" [class.mono]="mono()">
+    @if (value() !== null) {
+      {{ value() }}
+    }
+    <ng-content />
+  </span>
+</div>
+<span class="fld__trail"><ng-content select="[trail]" /></span>

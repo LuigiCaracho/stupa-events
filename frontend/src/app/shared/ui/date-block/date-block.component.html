@@ -1,0 +1,10 @@
+<!-- Copied from STUPA-Workflow@93c33d6 frontend/src/app/shared/ui/date-block/date-block.component.html -->
+@if (valid()) {
+  <time class="db" [attr.datetime]="iso()">
+    <span class="db__day" aria-hidden="true">{{ day() }}</span>
+    <span class="db__month" aria-hidden="true">{{ month() }}</span>
+    <span class="sr-only">{{ full() }}</span>
+  </time>
+} @else {
+  <span class="db db--none" aria-hidden="true"><span class="db__day">–</span></span>
+}

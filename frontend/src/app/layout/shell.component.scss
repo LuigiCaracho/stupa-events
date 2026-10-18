@@ -1,0 +1,141 @@
+// Copied from STUPA-Workflow@93c33d6 frontend/src/app/layout/shell.component.scss
+/* The frame has no top bar any more, except the public one, which scrolls away with the
+   page. Pages that offset sticky panels by the header height get 0 here. */
+:host {
+  --layout-header-height: 0px;
+  --rail-width: 96px;
+  --bottom-bar-height: 64px;
+  display: block;
+}
+
+.skip-link {
+  position: absolute;
+  left: var(--space-3);
+  top: -3rem;
+  z-index: var(--z-toast);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  border-radius: var(--radius-md);
+  transition: top var(--motion-fast) var(--ease-standard);
+}
+.skip-link:focus {
+  top: var(--space-3);
+}
+
+.frame {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+.frame__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Rail: a fixed column at the start edge; the body takes the rest. */
+.frame--rail {
+  display: grid;
+  grid-template-columns: var(--rail-width) minmax(0, 1fr);
+}
+.frame__rail {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  height: 100dvh;
+}
+
+.main {
+  /* The block padding is a pair of properties, so a page that runs edge to edge (the
+     meeting page) can pull exactly this much back. */
+  --main-pad-top: var(--space-8);
+  --main-pad-bottom: var(--space-8);
+  /* A column, so a page can fill the free height with `flex: 1` (the 403 and 404 pages
+     centre in it) without a guess at the height of the frame around it. */
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+  width: 100%;
+  padding-block: var(--main-pad-top) var(--main-pad-bottom);
+  /* The gap that a pane page (a page that does not scroll as a page, but fills the
+     window and scrolls inside its panes, for example the budget) keeps between its panes
+     and the bottom edge of the window. Only the start page and the public pages have a
+     footer (route data `footer`), so a pane page always ends above the window edge. The
+     page pulls the bottom padding back and keeps this gap:
+     `margin-bottom: calc(var(--pane-foot-gap) - var(--main-pad-bottom))`. */
+  --pane-foot-gap: var(--layout-gutter);
+}
+/* Full width for route data `wide`: content with two sidebars, for example budget. */
+.main--wide {
+  max-width: none;
+}
+
+/* Rail pages start closer to the top: the rail carries the brand, not the page. The top
+   gap is the page gutter, so a pane page has the same margin on every side: the gutter
+   at the top, at the end edge and (as `--pane-foot-gap`) at the bottom. */
+.frame--rail .main {
+  --main-pad-top: var(--layout-gutter);
+}
+
+/* Phone: the body clears the fixed bottom bar and the gesture bar below it.
+   `--app-bottom-inset` tells fixed and sticky elements of a page (the meeting dock, a
+   selection bar) how far up the bar reaches; the bar already keeps the gesture area free,
+   so `--app-bottom-safe-area` is 0 for them. */
+.frame--phone {
+  --app-bottom-inset: calc(var(--bottom-bar-height) + env(safe-area-inset-bottom));
+  --app-bottom-safe-area: 0px;
+}
+.frame--phone .frame__body {
+  padding-bottom: calc(var(--app-bottom-inset) + var(--app-fab-clearance, 0px));
+}
+/* Route data `fab`: a floating action button (56px high, 16px above the bottom bar) sits
+   over the foot of the page. The body ends 16px above the button, so at the end of the
+   page the footer with its legal links is never under it. */
+.frame--fab {
+  --app-fab-clearance: calc(56px + 2 * var(--space-4));
+}
+.frame--phone .main {
+  --main-pad-top: var(--space-4);
+  --main-pad-bottom: var(--space-6);
+}
+
+/* The public frame: the bar is above, so the content starts closer to it. */
+.frame--public .main {
+  --main-pad-top: var(--space-6);
+}
+
+/* A page that fills the viewport (`PageFrameService.fill`): no footer below it, and only
+   the pane gap at the bottom, so the page ends just above the viewport edge. */
+.frame--rail .main.main--fill {
+  --main-pad-bottom: var(--pane-foot-gap);
+}
+
+/* Beamer: nothing but the page. */
+.frame--bare .main {
+  --main-pad-top: 0px;
+  --main-pad-bottom: 0px;
+}
+
+/* Toasts sit above the phone bar instead of on it. */
+.frame--phone ~ app-toast ::ng-deep .toasts {
+  inset-block-end: calc(var(--bottom-bar-height) + env(safe-area-inset-bottom) + var(--space-3));
+}
+
+/* Installed app (standalone): the signed-in pages drop the footer, as before the rail.
+   The safe-area reserve of the gesture bar then moves to the main content. The public
+   frame keeps its footer: an applicant who opens a link there still finds the imprint. */
+@media all and (display-mode: standalone) {
+  .frame--rail .frame__footer,
+  .frame--phone .frame__footer {
+    display: none;
+  }
+  .frame--rail .main {
+    --main-pad-bottom: calc(var(--space-8) + env(safe-area-inset-bottom));
+    --pane-foot-gap: calc(var(--layout-gutter) + env(safe-area-inset-bottom));
+  }
+}
+.frame--public .frame__footer {
+  padding-bottom: env(safe-area-inset-bottom);
+}

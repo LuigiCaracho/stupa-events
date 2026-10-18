@@ -1,0 +1,5 @@
+<!-- Copied from STUPA-Workflow@93c33d6 frontend/src/app/layout/load-bar/load-bar.component.html -->
+@if (loading.visible()) {
+  <div class="lb" aria-hidden="true"></div>
+}
+<span class="sr-only" role="status">{{ loading.visible() ? ('common.loading' | t) : '' }}</span>

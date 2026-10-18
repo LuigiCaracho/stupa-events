@@ -1,0 +1,13 @@
+<main class="login">
+  <app-card>
+    <div class="login__body">
+      <img class="login__mark" [src]="mark" alt="" width="56" height="56" />
+      <h1>{{ 'app.title' | t }}</h1>
+      <p>{{ 'app.tagline' | t }}</p>
+      <app-button variant="fill" size="lg" [block]="true" (click)="auth.login('/aufgaben')">
+        {{ 'login.button' | t }}
+      </app-button>
+      <a routerLink="/">{{ 'login.public' | t }}</a>
+    </div>
+  </app-card>
+</main>

@@ -1,0 +1,25 @@
+<!-- Copied from STUPA-Workflow@93c33d6 frontend/src/app/layout/public-header/public-header.component.html -->
+<header class="pub">
+  <a class="pub__brand" routerLink="/" [attr.aria-label]="'app.title' | t">
+    <img class="pub__logo" [src]="logoSrc()" alt="" />
+    <img class="pub__mark" [src]="markSrc" alt="" />
+  </a>
+  <span class="pub__spacer"></span>
+
+
+
+  <button
+    type="button"
+    class="pub__icon"
+    [attr.aria-label]="'theme.toggle' | t"
+    [title]="'theme.toggle' | t"
+    [attr.aria-pressed]="theme.resolved() === 'dark'"
+    (click)="theme.toggle()"
+  >
+    <app-icon [name]="theme.resolved() === 'dark' ? 'sun' : 'moon'" [size]="19" />
+  </button>
+
+  @if (!auth.isAuthenticated()) {
+    <button type="button" class="pub__login" (click)="login()">{{ 'action.login' | t }}</button>
+  }
+</header>

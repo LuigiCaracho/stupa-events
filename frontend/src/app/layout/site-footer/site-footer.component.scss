@@ -1,0 +1,18 @@
+// Copied from STUPA-Workflow@93c33d6 frontend/src/app/layout/site-footer/site-footer.component.scss
+:host {
+  display: block;
+}
+
+.ft {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-5) var(--space-4) 22px;
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  color: var(--color-text-muted);
+}
+
+.ft__copy {
+  margin: 0;
+  text-align: center;
+}

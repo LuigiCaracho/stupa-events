@@ -1,0 +1,9 @@
+<!-- Copied from STUPA-Workflow@93c33d6 frontend/src/app/core/pwa/sw-update-prompt.component.html -->
+<div class="sw-prompt-region" aria-live="polite">
+  @if (sw.updateReady()) {
+    <div class="sw-prompt" role="status">
+      <span class="sw-prompt__msg">{{ 'pwa.updateReady' | t }}</span>
+      <app-button variant="fill" size="sm" (click)="sw.reload()">{{ 'pwa.reload' | t }}</app-button>
+    </div>
+  }
+</div>

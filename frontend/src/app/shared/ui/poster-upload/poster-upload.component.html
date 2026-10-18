@@ -1,0 +1,44 @@
+<form class="pu" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <app-file-drop-zone
+    [label]="'poster.drop' | t"
+    [hint]="'poster.hint' | t"
+    [buttonLabel]="'poster.pick' | t"
+    [accept]="accept"
+    [multiple]="false"
+    [disabled]="busy()"
+    (files)="pick($event)"
+    (rejected)="rejected.set(true)"
+  />
+  @if (file(); as chosen) {
+    <p class="pu__chosen" role="status">{{ 'poster.chosen' | t: { name: chosen.name } }}</p>
+  }
+  @if (rejected()) {
+    <app-note kind="error" role="alert">{{ 'poster.rejected' | t }}</app-note>
+  }
+  @if (attempted() && !file()) {
+    <p class="pu__error" role="alert">{{ 'poster.errFile' | t }}</p>
+  }
+  <app-input
+    formControlName="altText"
+    [label]="'poster.alt' | t"
+    [hint]="'poster.altHint' | t"
+    [error]="invalid('altText') ? ('poster.errAlt' | t) : ''"
+    [required]="true"
+  />
+  <app-input
+    formControlName="credit"
+    [label]="'poster.credit' | t"
+    [hint]="'poster.creditHint' | t"
+    [error]="invalid('credit') ? ('poster.errCredit' | t) : ''"
+    [required]="true"
+  />
+  <app-select
+    formControlName="rightsBasis"
+    [label]="'poster.rights' | t"
+    [options]="rights()"
+    [clearable]="false"
+    [required]="true"
+    [error]="invalid('rightsBasis') ? ('poster.errRights' | t) : ''"
+  />
+  <app-button type="submit" variant="fill" [loading]="busy()">{{ 'poster.submit' | t }}</app-button>
+</form>

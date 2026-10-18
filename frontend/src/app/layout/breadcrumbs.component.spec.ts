@@ -1,0 +1,181 @@
+/** Copied from STUPA-Workflow@93c33d6 frontend/src/app/layout/breadcrumbs.component.spec.ts */
+import { Component } from '@angular/core';
+import { Router, provideRouter } from '@angular/router';
+import { render, screen } from '@testing-library/angular';
+import { BreadcrumbsComponent } from './breadcrumbs.component';
+import { I18nService } from '@core/i18n/i18n.service';
+import { PageFrameService } from './page-frame.service';
+
+@Component({ standalone: true, template: 'page' })
+class StubPage {}
+
+/** Routes that carry the title and parent data the breadcrumbs read. */
+const routes = [
+  // Flat sibling. The component must resolve the parent from the config by path.
+  {
+    path: 'budget',
+    component: StubPage,
+    data: { title: 'nav.dossiers' as const },
+  },
+  {
+    path: 'budget/pots',
+    component: StubPage,
+    data: { title: 'nav.account' as const, parent: ['budget'] },
+  },
+  // Leaf with a parent path that has no title in the config. The crumb is skipped.
+  {
+    path: 'orphan',
+    component: StubPage,
+    data: { title: 'nav.tasks' as const, parent: ['does/not/exist'] },
+  },
+  // Leaf with a title but no declared parent. One crumb only, so the nav stays hidden.
+  {
+    path: 'solo',
+    component: StubPage,
+    data: { title: 'nav.dashboard' as const },
+  },
+  // Route without any title data. It produces no crumbs.
+  { path: 'untitled', component: StubPage },
+  // Nested children for the recursive config walk and the title-by-path map.
+  {
+    path: 'admin',
+    data: { title: 'nav.main' as const },
+    children: [
+      {
+        path: 'users',
+        component: StubPage,
+        data: { title: 'nav.footer' as const, parent: ['admin'] },
+      },
+      {
+        path: 'users/roles',
+        component: StubPage,
+        data: { title: 'nav.tasks' as const, parent: ['admin', 'admin/users'] },
+      },
+    ],
+  },
+];
+
+async function setup() {
+  const view = await render(BreadcrumbsComponent, {
+    providers: [provideRouter(routes)],
+  });
+  const router = view.fixture.debugElement.injector.get(Router);
+  const i18n = view.fixture.debugElement.injector.get(I18nService);
+  return { ...view, router, i18n };
+}
+
+/** The accessible name of the crumb bar, in either language. */
+const BREADCRUMB = /^(Seitenpfad|Breadcrumb)$/;
+
+describe('BreadcrumbsComponent', () => {
+  it('renders nothing when there is no titled route', async () => {
+    const { router, fixture } = await setup();
+    await router.navigateByUrl('/untitled');
+    fixture.detectChanges();
+    expect(screen.queryByRole('navigation', { name: BREADCRUMB })).not.toBeInTheDocument();
+  });
+
+  it('renders nothing when the current page has no parent (single crumb)', async () => {
+    const { router, fixture } = await setup();
+    await router.navigateByUrl('/solo');
+    fixture.detectChanges();
+    // With one crumb the H1 is enough, so the nav stays hidden.
+    expect(screen.queryByRole('navigation', { name: BREADCRUMB })).not.toBeInTheDocument();
+  });
+
+  it('prepends a config-resolved parent crumb before the current page', async () => {
+    const { router, fixture, i18n } = await setup();
+    await router.navigateByUrl('/budget/pots');
+    fixture.detectChanges();
+
+    expect(screen.getByRole('navigation', { name: BREADCRUMB })).toBeInTheDocument();
+    const parent = screen.getByRole('link', { name: i18n.translate('nav.dossiers') });
+    expect(parent).toHaveAttribute('href', '/budget');
+    const current = screen.getByText(i18n.translate('nav.account'));
+    expect(current).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('skips parent paths that are not declared in the route config', async () => {
+    const { router, fixture, i18n } = await setup();
+    await router.navigateByUrl('/orphan');
+    fixture.detectChanges();
+    // The parent path "does/not/exist" has no title. No parent crumb appears, so one
+    // crumb remains and the nav stays hidden.
+    expect(screen.queryByRole('navigation', { name: BREADCRUMB })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: i18n.translate('nav.tasks') })).not.toBeInTheDocument();
+  });
+
+  it('resolves a parent declared on a nested (child) route via the recursive walk', async () => {
+    const { router, fixture, i18n } = await setup();
+    await router.navigateByUrl('/admin/users');
+    fixture.detectChanges();
+    expect(screen.getByRole('link', { name: i18n.translate('nav.main') })).toHaveAttribute(
+      'href',
+      '/admin',
+    );
+    expect(screen.getByText(i18n.translate('nav.footer'))).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+  });
+
+  it('leaves out the parent that the frame around the page already shows', async () => {
+    const { router, fixture, i18n } = await setup();
+    const frame = fixture.debugElement.injector.get(PageFrameService);
+    frame.crumbRoot.set('admin');
+    await router.navigateByUrl('/admin/users');
+    fixture.detectChanges();
+    // Only the current page is left, so the bar hides.
+    expect(screen.queryByRole('navigation', { name: BREADCRUMB })).not.toBeInTheDocument();
+    // A sub-page of the frame loses its frame parents too: the navigation marks them.
+    await router.navigateByUrl('/admin/users/roles');
+    fixture.detectChanges();
+    expect(screen.queryByRole('navigation', { name: BREADCRUMB })).not.toBeInTheDocument();
+    // Another root keeps every crumb.
+    frame.crumbRoot.set('budget');
+    fixture.detectChanges();
+    expect(screen.getByRole('link', { name: i18n.translate('nav.main') })).toBeInTheDocument();
+    frame.crumbRoot.set(null);
+  });
+
+  it('shows the label that the page gives for its own crumb', async () => {
+    const { router, fixture, i18n } = await setup();
+    const frame = fixture.debugElement.injector.get(PageFrameService);
+    await router.navigateByUrl('/budget/pots');
+    frame.crumbLabel.set({ url: '/budget/pots', label: 'Topf A' });
+    fixture.detectChanges();
+    expect(screen.getByText('Topf A')).toHaveAttribute('aria-current', 'page');
+    expect(screen.queryByText(i18n.translate('nav.account'))).not.toBeInTheDocument();
+    // A label for another URL does not apply.
+    frame.crumbLabel.set({ url: '/elsewhere', label: 'Stale' });
+    fixture.detectChanges();
+    expect(screen.queryByText('Stale')).not.toBeInTheDocument();
+    expect(screen.getByText(i18n.translate('nav.account'))).toBeInTheDocument();
+    frame.crumbLabel.set(null);
+  });
+
+  it('refreshes the crumbs on every navigation', async () => {
+    const { router, fixture, i18n } = await setup();
+    await router.navigateByUrl('/budget/pots');
+    fixture.detectChanges();
+    expect(screen.getByText(i18n.translate('nav.account'))).toBeInTheDocument();
+
+    await router.navigateByUrl('/untitled');
+    fixture.detectChanges();
+    expect(screen.queryByRole('navigation', { name: BREADCRUMB })).not.toBeInTheDocument();
+
+    await router.navigateByUrl('/admin/users');
+    fixture.detectChanges();
+    expect(screen.getByText(i18n.translate('nav.footer'))).toBeInTheDocument();
+  });
+
+  it('puts a chevron between the crumbs and none after the current page', async () => {
+    const { router, fixture, container } = await setup();
+    await router.navigateByUrl('/budget/pots');
+    fixture.detectChanges();
+    const entries = container.querySelectorAll('li.bc__entry');
+    expect(entries).toHaveLength(2);
+    expect(entries[0].querySelector('app-icon.bc__sep')).not.toBeNull();
+    expect(entries[1].querySelector('app-icon.bc__sep')).toBeNull();
+  });
+});

@@ -1,0 +1,34 @@
+<!-- Copied from STUPA-Workflow@93c33d6 frontend/src/app/layout/nav-rail/nav-rail.component.html -->
+<nav class="rail" [attr.aria-label]="'nav.main' | t">
+  <a class="rail__brand" routerLink="/aufgaben" [attr.aria-label]="'shell.nav.brand' | t: { name: ('app.title' | t) }">
+    <img [src]="markSrc" alt="" width="40" height="40" />
+  </a>
+
+  <div class="rail__main">
+    @for (item of mainItems(); track item.key) {
+      <a
+        class="rail__item"
+        [routerLink]="item.path"
+        routerLinkActive="is-active"
+        ariaCurrentWhenActive="page"
+      >
+        <span class="rail__ind"><app-icon [name]="item.icon" [size]="22" /></span>
+        <span class="rail__label">{{ item.labelKey | t }}</span>
+      </a>
+    }
+  </div>
+
+  <div class="rail__spacer"></div>
+
+  @for (item of endItems(); track item.key) {
+    <a
+      class="rail__item"
+      [routerLink]="item.path"
+      routerLinkActive="is-active"
+      ariaCurrentWhenActive="page"
+    >
+      <span class="rail__ind"><app-icon [name]="item.icon" [size]="22" /></span>
+      <span class="rail__label">{{ item.labelKey | t }}</span>
+    </a>
+  }
+</nav>

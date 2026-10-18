@@ -1,0 +1,6 @@
+// Copied from STUPA-Workflow@93c33d6 frontend/src/app/shared/ui/field-group/field-group.component.scss
+/* The look of the group is the global `.rowgroup` class (styles.scss), because its rows are
+   projected and a component style does not reach projected content. */
+:host {
+  min-width: 0;
+}

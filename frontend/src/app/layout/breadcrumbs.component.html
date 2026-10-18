@@ -1,0 +1,17 @@
+<!-- Copied from STUPA-Workflow@93c33d6 frontend/src/app/layout/breadcrumbs.component.html -->
+@if (crumbs().length > 1) {
+  <nav class="bc" [attr.aria-label]="'shell.breadcrumb' | t">
+    <ol class="bc__list">
+      @for (c of crumbs(); track c.url; let last = $last) {
+        <li class="bc__entry">
+          @if (last) {
+            <span class="bc__crumb bc__crumb--current ell" aria-current="page" [appTruncated]="c.label" #cut="appTruncated" [attr.title]="cut.truncated() ? c.label : null">{{ c.label }}</span>
+          } @else {
+            <a class="bc__crumb bc__crumb--link ell" [routerLink]="c.url" [appTruncated]="c.label" #linkCut="appTruncated" [attr.title]="linkCut.truncated() ? c.label : null">{{ c.label }}</a>
+            <app-icon class="bc__sep" name="right" [size]="14" aria-hidden="true" />
+          }
+        </li>
+      }
+    </ol>
+  </nav>
+}

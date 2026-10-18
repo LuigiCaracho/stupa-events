@@ -1,0 +1,22 @@
+<app-page-header [title]="'account.title' | t" />
+<app-card>
+  <dl class="account">
+    <dt>{{ 'account.name' | t }}</dt>
+    <dd>{{ auth.displayName() }}</dd>
+    <dt>{{ 'account.email' | t }}</dt>
+    <dd>{{ auth.principal()?.email ?? '-' }}</dd>
+    <dt>{{ 'account.roles' | t }}</dt>
+    <dd>{{ auth.roles().length ? auth.roles().join(', ') : ('account.noRoles' | t) }}</dd>
+    <dt>{{ 'account.organizations' | t }}</dt>
+    <dd>
+      @for (org of auth.organizations(); track org.slug) {
+        <span class="account__org">{{ org.slug }} ({{ org.role }})</span>
+      } @empty {
+        {{ 'account.noOrganizations' | t }}
+      }
+    </dd>
+  </dl>
+  <div card-footer>
+    <app-button variant="danger" (click)="auth.logout()">{{ 'action.logout' | t }}</app-button>
+  </div>
+</app-card>
