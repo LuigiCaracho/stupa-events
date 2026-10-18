@@ -1,8 +1,18 @@
 /** Test fixtures of the dossier specs: a complete event DTO and a fake `EventsApi`. */
 import { of } from 'rxjs';
+import type { MeOrganization } from '../app/core/api/models';
 import type { EventDto, GuardResult, OrgRef } from '../app/features/dossiers/api/event.models';
 
 export const FSI: OrgRef = { id: 'org-fsi', slug: 'fsi', name: 'Fachschaft Informatik', short: 'FSI' };
+
+export const FSI_MEMBERSHIP: MeOrganization = {
+  slug: 'fsi',
+  role: 'organizer',
+  organizationId: 'org-fsi',
+  name: 'Fachschaft Informatik',
+  short: 'FSI',
+  trusted: false,
+};
 
 export function makeEvent(overrides: Partial<EventDto> = {}): EventDto {
   return {

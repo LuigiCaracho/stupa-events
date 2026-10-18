@@ -8,7 +8,7 @@ import { AuthService } from '@core/auth/auth.service';
 import type { TranslationKey } from '@core/i18n/translations';
 import type { IconName } from '@stupa-makers/ui-kit';
 
-export type NavKey = 'tasks' | 'dossiers' | 'account';
+export type NavKey = 'tasks' | 'dossiers' | 'admin' | 'account';
 
 /** One entry of the navigation rail and of the phone bar. */
 export interface NavItem {
@@ -25,11 +25,19 @@ export interface NavItem {
 export const NAV_ITEMS: readonly NavItem[] = [
   { key: 'tasks', path: '/aufgaben', labelKey: 'nav.tasks', icon: 'tasks', permissions: [], place: 'main' },
   { key: 'dossiers', path: '/dossiers', labelKey: 'nav.dossiers', icon: 'kanban', permissions: [], place: 'main' },
+  {
+    key: 'admin',
+    path: '/verwaltung',
+    labelKey: 'nav.admin',
+    icon: 'gear',
+    permissions: ['taxonomy.manage', 'venue.manage', 'admin.mappings'],
+    place: 'main',
+  },
   { key: 'account', path: '/konto', labelKey: 'nav.account', icon: 'user', permissions: [], place: 'end' },
 ];
 
-/** The entries of the phone bar, in bar order. M1 has so few that all fit. */
-export const BOTTOM_BAR_KEYS: readonly NavKey[] = ['tasks', 'dossiers', 'account'];
+/** The entries of the phone bar, in bar order. Four at most, so all fit. */
+export const BOTTOM_BAR_KEYS: readonly NavKey[] = ['tasks', 'dossiers', 'admin', 'account'];
 
 @Injectable({ providedIn: 'root' })
 export class NavService {

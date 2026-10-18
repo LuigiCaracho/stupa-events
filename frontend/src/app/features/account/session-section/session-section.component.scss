@@ -1,0 +1,22 @@
+.ss {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.ss__heading {
+  margin: 0;
+  font-size: var(--text-lg, 1.125rem);
+}
+
+.ss__hint {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.ss__footer {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}

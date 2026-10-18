@@ -1,9 +1,13 @@
 /** Wire models of the shell endpoints (`/api/auth/*`). Feature models live in `features/**`. */
 
-/** Membership of the principal in one organization, from the group `events-<org>-<role>`. */
-export interface OrganizationRole {
+/** Membership of the principal in one organization; `role` is the effective one (an approver of an untrusted organization shows as organizer). */
+export interface MeOrganization {
   slug: string;
   role: string;
+  organizationId: string;
+  name: string;
+  short: string;
+  trusted: boolean;
 }
 
 /** The signed-in principal (`GET /api/auth/me`). Permissions are UX hints, the server decides. */
@@ -14,7 +18,7 @@ export interface Principal {
   roles: string[];
   permissions: string[];
   groups: string[];
-  organizations: OrganizationRole[];
+  organizations: MeOrganization[];
 }
 
 /** Result of `POST /api/auth/logout`. `logoutUrl` ends the SSO session at the IdP. */
@@ -30,7 +34,14 @@ export interface Problem {
   detail?: string;
   code?: string;
   traceId?: string;
+  errors?: ProblemFieldError[];
   reasons?: ProblemReason[];
+}
+
+/** One field-level validation error of a 409/422 answer. */
+export interface ProblemFieldError {
+  field: string;
+  msg: string;
 }
 
 /** One blocker or warning of a refused transition. `messageKey` is an i18n key. */

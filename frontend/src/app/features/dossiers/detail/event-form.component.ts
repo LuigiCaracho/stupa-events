@@ -5,6 +5,7 @@ import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { SelectFieldComponent, type SelectFieldOption } from '@shared/ui/select/select.component';
 import { ButtonComponent, DatepickerComponent, InputComponent, TimeInputComponent } from '@stupa-makers/ui-kit';
 import { isoToZoned, zonedToIso } from '../api/event-time';
+import { categoryOptions as treeOptions } from '../api/category-options';
 import type { CategoryRef, EventDto, EventPatch } from '../api/event.models';
 
 @Component({
@@ -43,7 +44,7 @@ export class EventFormComponent implements OnInit {
   });
 
   protected readonly categoryOptions = computed<SelectFieldOption[]>(() =>
-    this.categories().map((c) => ({ value: c.id, label: c.name })),
+    treeOptions(this.categories()),
   );
 
   ngOnInit(): void {

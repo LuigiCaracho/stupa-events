@@ -23,6 +23,7 @@ import { catchError } from 'rxjs/operators';
 import { zonedToIso } from '../api/event-time';
 import type { CategoryRef, EventCreate, EventDto, OrgRef } from '../api/event.models';
 import { EventsApi } from '../api/events-api.service';
+import { categoryOptions as treeOptions } from '../api/category-options';
 import { problemMessage } from '../api/problem-message';
 
 const TZID = 'Europe/Berlin';
@@ -85,7 +86,7 @@ export class NewEventDialogComponent {
   });
 
   protected readonly categoryOptions = computed<SelectFieldOption[]>(() =>
-    (this.lookups.hasValue() ? this.lookups.value().categories : []).map((c) => ({ value: c.id, label: c.name })),
+    treeOptions(this.lookups.hasValue() ? this.lookups.value().categories : []),
   );
 
   constructor() {

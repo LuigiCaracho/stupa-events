@@ -6,6 +6,7 @@ import { render, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { AuthService } from '@core/auth/auth.service';
 import { runAxe } from '../../testing/a11y';
+import { FSI_MEMBERSHIP } from '../../testing/event-fixtures';
 import { createLocationMock, provideLocationMock } from '../../testing/location-mock';
 import { AccountComponent } from './account/account.component';
 import { ForbiddenComponent } from './forbidden.component';
@@ -59,7 +60,7 @@ describe('AccountComponent', () => {
       roles: ['organizer'],
       permissions: [],
       groups: ['events-fsi-organizer'],
-      organizations: [{ slug: 'fsi', role: 'organizer' }],
+      organizations: [FSI_MEMBERSHIP],
     });
     view.fixture.detectChanges();
     return { ...view, location, http: injector.get(HttpTestingController) };
@@ -70,7 +71,13 @@ describe('AccountComponent', () => {
     expect(screen.getByText('Mia')).toBeInTheDocument();
     expect(screen.getByText('mia@hs-reutlingen.de')).toBeInTheDocument();
     expect(screen.getByText('organizer')).toBeInTheDocument();
-    expect(screen.getByText('fsi (organizer)')).toBeInTheDocument();
+    expect(screen.getByText('Fachschaft Informatik (Organisierend)')).toBeInTheDocument();
+  });
+
+  it('shows the groups and offers to revoke the other sessions', async () => {
+    await setup();
+    expect(screen.getByText('events-fsi-organizer')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Andere Sitzungen widerrufen' })).toBeInTheDocument();
   });
 
   it('logs out and follows the IdP logout url', async () => {

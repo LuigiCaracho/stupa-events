@@ -16,3 +16,8 @@ dd {
 .account__org + .account__org::before {
   content: ', ';
 }
+
+app-session-section {
+  display: block;
+  margin-top: var(--space-5);
+}

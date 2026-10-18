@@ -81,6 +81,6 @@ export class EventsApi {
   }
 
   categories(): Observable<CategoryRef[]> {
-    return this.http.get<CategoryRef[] | Page<CategoryRef>>(`${this.base}/categories`).pipe(map(items));
+    return this.http.get<CategoryRef[] | Page<CategoryRef>>(`${this.base}/categories?tree=true`).pipe(map(items));
   }
 }

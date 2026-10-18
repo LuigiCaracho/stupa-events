@@ -1,0 +1,90 @@
+<app-note>{{ 'admin.mappings.note' | t }}</app-note>
+<div class="mp__bar">
+  <app-button variant="tonal" [loading]="working()" (click)="defaults()">{{ 'admin.defaults' | t }}</app-button>
+  <app-button variant="fill" [disabled]="editingId() !== null" (click)="startNew()">{{ 'admin.mappings.add' | t }}</app-button>
+</div>
+
+@if (list.error()) {
+  <app-note kind="error" role="alert">{{ 'admin.loadFailed' | t }}</app-note>
+} @else if (list.hasValue() && rows().length === 0) {
+  <app-empty-state plain [heading]="'admin.mappings.empty' | t" />
+} @else {
+  <app-data-table
+    [columns]="columns"
+    [rows]="rows()"
+    [loading]="list.isLoading() && !list.hasValue()"
+    [loadingText]="'common.loading' | t"
+    [emptyText]="'admin.empty' | t"
+    [rowKey]="rowKey"
+    [isExpanded]="isExpanded"
+  >
+    <ng-template appCell="oidcGroup" let-row>
+      @if (isNew() && editing(row)) {
+        <app-input [formControl]="form.controls.oidcGroup" [ariaLabel]="'admin.col.group' | t" [required]="true" [error]="err('oidcGroup')" />
+      } @else {
+        <code>{{ row.oidcGroup }}</code>
+      }
+    </ng-template>
+    <ng-template appCell="role" let-row>
+      @if (editing(row)) {
+        <app-select
+          [formControl]="form.controls.role"
+          [ariaLabel]="'admin.col.role' | t"
+          [placeholder]="'admin.rolePlaceholder' | t"
+          [options]="roleOptions"
+          [clearable]="false"
+          [required]="true"
+          [error]="err('role')"
+        />
+      } @else {
+        {{ labelKey(roleKeys, row.role) | t }}
+      }
+    </ng-template>
+    <ng-template appCell="organizationId" let-row>
+      @if (editing(row)) {
+        <app-select
+          [formControl]="form.controls.organizationId"
+          [ariaLabel]="'admin.col.organization' | t"
+          [placeholder]="'admin.noOrganization' | t"
+          [options]="orgOptions()"
+          [disabled]="globalRole()"
+          [error]="err('organizationId')"
+        />
+      } @else {
+        {{ row.organization?.name }}
+      }
+    </ng-template>
+    <ng-template appCell="principalCount" let-row>{{ row.principalCount }}</ng-template>
+    <ng-template appCell="actions" let-row>
+      @if (editing(row)) {
+        <div class="mp__actions">
+          <app-button variant="text" size="sm" (click)="cancel()">{{ 'action.cancel' | t }}</app-button>
+          <app-button variant="fill" size="sm" [loading]="saving()" (click)="submit()">{{ 'admin.save' | t }}</app-button>
+        </div>
+      } @else {
+        <div class="mp__actions">
+          <app-button variant="text" size="sm" [ariaPressed]="isExpanded(row)" (click)="toggle(row)">{{ 'admin.preview.toggle' | t }}</app-button>
+          <app-button variant="text" size="sm" [disabled]="editingId() !== null" (click)="startEdit(row)">{{ 'admin.edit' | t }}</app-button>
+          <app-button variant="danger" size="sm" [disabled]="editingId() !== null" (click)="deleting.set(row)">{{ 'admin.delete' | t }}</app-button>
+        </div>
+      }
+    </ng-template>
+    <ng-template appRowDetail let-row>
+      <app-principal-preview [group]="row.oidcGroup" />
+    </ng-template>
+  </app-data-table>
+}
+
+<app-dialog
+  [open]="deleting() !== null"
+  [title]="'admin.mappings.deleteTitle' | t"
+  [subtitle]="deleting()?.oidcGroup ?? ''"
+  [closeLabel]="'action.close' | t"
+  (closed)="deleting.set(null)"
+>
+  <p>{{ 'admin.mappings.deleteBody' | t }}</p>
+  <div dialog-footer class="mp__actions">
+    <app-button variant="text" (click)="deleting.set(null)">{{ 'action.cancel' | t }}</app-button>
+    <app-button variant="danger" [loading]="working()" (click)="confirmDelete()">{{ 'admin.delete' | t }}</app-button>
+  </div>
+</app-dialog>

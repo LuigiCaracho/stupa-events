@@ -1,0 +1,107 @@
+<app-note>{{ 'admin.categories.note' | t }}</app-note>
+<div class="tx__bar">
+  <app-button variant="fill" [disabled]="editingId() !== null" (click)="startNew()">{{ 'admin.add' | t }}</app-button>
+</div>
+
+@if (list.error()) {
+  <app-note kind="error" role="alert">{{ 'admin.loadFailed' | t }}</app-note>
+} @else {
+  <app-data-table
+    [columns]="columns"
+    [rows]="rows()"
+    [loading]="list.isLoading() && !list.hasValue()"
+    [loadingText]="'common.loading' | t"
+    [emptyText]="'admin.empty' | t"
+    [clickable]="editingId() === null"
+    [rowKey]="rowKey"
+    (rowClick)="startEdit($any($event))"
+  >
+    <ng-template appCell="name" let-row>
+      @if (editing(row)) {
+        <app-input
+          [formControl]="form.controls.name"
+          [ariaLabel]="'admin.col.name' | t"
+          [required]="true"
+          [error]="err('name')"
+        />
+      } @else {
+        <span class="tx__name" [style.padding-inline-start.rem]="row.depth * 1.5">{{ row.name }}</span>
+      }
+    </ng-template>
+    <ng-template appCell="slug" let-row>
+      @if (isNew() && editing(row)) {
+        <app-input [formControl]="form.controls.slug" [ariaLabel]="'admin.col.slug' | t" [required]="true" [error]="err('slug')" />
+      } @else {
+        <code>{{ row.slug }}</code>
+      }
+    </ng-template>
+    <ng-template appCell="kind" let-row>
+      @if (editing(row)) {
+        <app-select [formControl]="form.controls.kind" [ariaLabel]="'admin.col.kind' | t" [options]="kindOptions" [clearable]="false" />
+      } @else {
+        {{ labelKey(kindKeys, row.kind) | t }}
+      }
+    </ng-template>
+    <ng-template appCell="parentId" let-row>
+      @if (editing(row)) {
+        <app-select
+          [formControl]="form.controls.parentId"
+          [ariaLabel]="'admin.col.parent' | t"
+          [placeholder]="'admin.noParent' | t"
+          [options]="parentOptions()"
+          [error]="err('parentId')"
+        />
+      } @else {
+        {{ row.parentId ? parentName().get(row.parentId) : '' }}
+      }
+    </ng-template>
+    <ng-template appCell="short" let-row>
+      @if (editing(row)) {
+        <app-input [formControl]="form.controls.short" [ariaLabel]="'admin.col.short' | t" [error]="err('short')" />
+      } @else {
+        {{ row.short }}
+      }
+    </ng-template>
+    <ng-template appCell="colorToken" let-row>
+      @if (editing(row)) {
+        <app-select
+          [formControl]="form.controls.colorToken"
+          [ariaLabel]="'admin.col.color' | t"
+          [placeholder]="'admin.noColor' | t"
+          [options]="colorOptions"
+        />
+      } @else if (row.colorToken) {
+        {{ labelKey(colorKeys, row.colorToken) | t }}
+      }
+    </ng-template>
+    <ng-template appCell="requiredProfile" let-row>
+      @if (editing(row)) {
+        <app-select
+          [formControl]="form.controls.requiredProfile"
+          [ariaLabel]="'admin.col.profile' | t"
+          [options]="profileOptions"
+          [clearable]="false"
+        />
+      } @else {
+        {{ labelKey(profileKeys, row.requiredProfile) | t }}
+      }
+    </ng-template>
+    <ng-template appCell="active" let-row>
+      @if (editing(row)) {
+        <app-switch [formControl]="form.controls.active" [ariaLabel]="'admin.col.active' | t" />
+      } @else {
+        <app-status-text [kind]="row.active ? 'accent' : 'muted'">{{ (row.active ? 'admin.active' : 'admin.inactive') | t }}</app-status-text>
+      }
+    </ng-template>
+    <ng-template appCell="actions" let-row>
+      @if (editing(row)) {
+        <div class="tx__actions" (click)="$event.stopPropagation()" (keydown.enter)="$event.stopPropagation()">
+          <app-button variant="text" size="sm" (click)="cancel()">{{ 'action.cancel' | t }}</app-button>
+          <app-button variant="fill" size="sm" [loading]="saving()" (click)="submit()">{{ 'admin.save' | t }}</app-button>
+        </div>
+      } @else {
+        <app-button variant="text" size="sm" [disabled]="editingId() !== null" (click)="$event.stopPropagation(); startEdit(row)">{{ 'admin.edit' | t }}</app-button>
+      }
+    </ng-template>
+  </app-data-table>
+}

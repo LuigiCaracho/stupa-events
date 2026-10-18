@@ -1,0 +1,46 @@
+:host {
+  display: block;
+  padding: var(--space-3) var(--space-4);
+}
+
+.pp__table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: start;
+}
+
+.pp__table th,
+.pp__table td {
+  padding: var(--space-2);
+  text-align: start;
+}
+
+.pp__caption {
+  caption-side: top;
+  text-align: start;
+  font-weight: 600;
+  padding-bottom: var(--space-2);
+}
+
+.pp__end {
+  text-align: end;
+}
+
+.pp__muted {
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.pp__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.pp__footer {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}

@@ -66,7 +66,7 @@ describe('EventsApi', () => {
     expect(orgs).toEqual([{ id: 'o' }]);
     let cats: unknown;
     api.categories().subscribe((v) => (cats = v));
-    http.expectOne('/api/categories').flush({ items: [{ id: 'c' }], total: 1, limit: 1, offset: 0 });
+    http.expectOne('/api/categories?tree=true').flush({ items: [{ id: 'c' }], total: 1, limit: 1, offset: 0 });
     expect(cats).toEqual([{ id: 'c' }]);
   });
 });

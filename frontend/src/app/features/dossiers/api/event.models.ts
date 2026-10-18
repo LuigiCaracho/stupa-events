@@ -20,6 +20,9 @@ export interface CategoryRef {
   slug: string;
   name: string;
   kind: 'format' | 'fachschaft' | 'partner';
+  parentId?: string | null;
+  /** Present on the tree answer (`GET /api/categories?tree=true`). */
+  children?: CategoryRef[];
 }
 
 export interface Derivative {

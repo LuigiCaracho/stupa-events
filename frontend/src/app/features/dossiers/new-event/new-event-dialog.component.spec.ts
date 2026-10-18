@@ -68,6 +68,16 @@ describe('NewEventDialogComponent', () => {
     expect(screen.getAllByRole('option').map((o) => o.textContent?.trim())).toEqual(['MAKERS']);
   });
 
+  it('offers the category tree with children indented under their parent', async () => {
+    const tree = [
+      { id: 'fs', slug: 'fs', name: 'Fachschaften', kind: 'fachschaft', children: [{ id: 'fsi', slug: 'fsi', name: 'Informatik', kind: 'fachschaft' }] },
+      { id: 'kino', slug: 'kino', name: 'Kino', kind: 'format' },
+    ];
+    await setup(fakeApi({ categories: jest.fn(() => of(tree)) }));
+    await userEvent.click(screen.getByRole('combobox', { name: /Format oder Kategorie/ }));
+    expect(screen.getAllByRole('option').map((o) => o.textContent?.trim())).toEqual(['Optional', 'Fachschaften', 'Informatik', 'Kino']);
+  });
+
   it('refuses an end before the start', async () => {
     const { api } = await setup();
     await fillRequired();

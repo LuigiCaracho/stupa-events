@@ -1,0 +1,11 @@
+<app-page-header [title]="'nav.admin' | t" />
+<app-tabs
+  #bar
+  [ariaLabel]="'nav.admin' | t"
+  [tabs]="tabs()"
+  [active]="active()"
+  (activeChange)="go($event)"
+/>
+<section class="af__panel" role="tabpanel" [id]="bar.panelId(active())" [attr.aria-labelledby]="bar.tabId(active())">
+  <router-outlet />
+</section>
