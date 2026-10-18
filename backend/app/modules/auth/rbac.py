@@ -1,21 +1,28 @@
 """RBAC resolution: turn a `principal` row into a `Principal` with roles and permissions.
 
-The IdP groups are the only source of a membership. `parse_group` reads the group
-grammar, and a row of `group_mapping` (migration `0002_events_core`) adds a grant that a
-name does not express. The reserved namespace `events-system:` never enters the group
-set. A `submitter` or `approver` role gives rights in its organization only. The role
-`approver` counts only while the organization is `trusted`; otherwise it falls back to
-`organizer`. The bootstrap admin lists grant the global `admin` role.
+The IdP groups are the only source of a membership, and the rows of `group_mapping`
+(migration `0002_events_core`) are the only judge of what a group means (M2, D1). The
+group name carries no meaning in code. `effective_grants` is the one function that
+computes the roles of a group set; the resolver and `membership_sync` both call it. The
+reserved namespace `events-system:` never enters the group set. A `submitter` or
+`approver` role gives rights in its organization only. The role `approver` counts only
+while the organization is `trusted`; otherwise it falls back to `organizer`. The
+bootstrap admin lists grant the global `admin` role. A mapping to an inactive organization
+grants nothing; the sync drops its memberships when `active` flips.
 
 The tables are read through lightweight table constructs, so this module needs no
 model of the events schema.
 
-Copied from STUPA-Workflow@93c33d6 backend/app/modules/auth/rbac.py (group grammar)
+Copied from STUPA-Workflow@93c33d6 backend/app/modules/auth/rbac.py (group set cleaning)
 """
 
 from __future__ import annotations
 
-from sqlalchemy import Boolean, Uuid, select
+from collections.abc import Collection, Iterable, Sequence
+from dataclasses import dataclass, field
+from uuid import UUID
+
+from sqlalchemy import Boolean, Uuid, or_, select
 from sqlalchemy import Text as SaText
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import column, table
@@ -27,8 +34,6 @@ from app.shared.permissions import (
     GLOBAL_ROLES,
     ORG_ROLES,
     RESERVED_GROUP_PREFIX,
-    GroupGrant,
-    grants_from_groups,
     permissions_of,
 )
 
@@ -39,53 +44,91 @@ _GROUP_MAPPING = table(
     column("organization_id", Uuid),
 )
 _ORGANIZATION = table(
-    "organization", column("id", Uuid), column("slug", SaText), column("trusted", Boolean)
+    "organization",
+    column("id", Uuid),
+    column("slug", SaText),
+    column("trusted", Boolean),
+    column("active", Boolean),
 )
 
+MappingRow = tuple[str, UUID | None, str | None, bool | None, str]
+MappingRows = Sequence[MappingRow]
 
-def clean_groups(raw: list | None) -> set[str]:
+
+@dataclass(frozen=True, slots=True)
+class EffectiveGrants:
+    """The roles a group set grants after the downgrade of untrusted approvers."""
+
+    global_roles: frozenset[str] = frozenset()
+    org_roles: dict[str, frozenset[str]] = field(default_factory=dict)
+    org_ids: dict[str, UUID] = field(default_factory=dict)
+
+
+def clean_groups(raw: Iterable[object] | None) -> set[str]:
     """Return the group claim without the reserved `events-system:` namespace."""
     return {g for g in (str(item) for item in raw or []) if not g.startswith(RESERVED_GROUP_PREFIX)}
 
 
-async def _mapped_grants(db: AsyncSession, groups: set[str]) -> list[GroupGrant]:
-    """Read the grants of the `group_mapping` rows that match the groups."""
-    if not groups:
-        return []
-    rows = (
-        await db.execute(
-            select(_GROUP_MAPPING.c.role, _ORGANIZATION.c.slug)
-            .select_from(
-                _GROUP_MAPPING.outerjoin(
-                    _ORGANIZATION, _ORGANIZATION.c.id == _GROUP_MAPPING.c.organization_id
-                )
-            )
-            .where(_GROUP_MAPPING.c.oidc_group.in_(groups))
+async def load_mappings(db: AsyncSession, groups: Collection[str] | None = None) -> MappingRows:
+    """Read `group_mapping` rows (all, or those of `groups`) joined to their organization.
+
+    Rows of an inactive organization are dropped.
+    """
+    query = (
+        select(
+            _GROUP_MAPPING.c.role,
+            _ORGANIZATION.c.id,
+            _ORGANIZATION.c.slug,
+            _ORGANIZATION.c.trusted,
+            _GROUP_MAPPING.c.oidc_group,
         )
-    ).all()
+        .select_from(
+            _GROUP_MAPPING.outerjoin(
+                _ORGANIZATION, _ORGANIZATION.c.id == _GROUP_MAPPING.c.organization_id
+            )
+        )
+        .where(or_(_GROUP_MAPPING.c.organization_id.is_(None), _ORGANIZATION.c.active.is_(True)))
+    )
+    if groups is not None:
+        query = query.where(_GROUP_MAPPING.c.oidc_group.in_(groups))
+    result = await db.execute(query)
     return [
-        GroupGrant(role=role, org=slug)
-        for role, slug in rows
-        if (slug is None and role in GLOBAL_ROLES) or (slug is not None and role in ORG_ROLES)
+        (role, org_id, slug, trusted, group) for role, org_id, slug, trusted, group in result.all()
     ]
 
 
-async def _untrusted(db: AsyncSession, slugs: set[str]) -> set[str]:
-    """Return the slugs among `slugs` whose organization is not `trusted`."""
-    if not slugs:
-        return set()
-    trusted = set(
-        (
-            await db.execute(
-                select(_ORGANIZATION.c.slug).where(
-                    _ORGANIZATION.c.slug.in_(slugs), _ORGANIZATION.c.trusted.is_(True)
-                )
-            )
-        )
-        .scalars()
-        .all()
+async def effective_grants(db: AsyncSession, groups: Iterable[str]) -> EffectiveGrants:
+    """Compute the effective roles of an IdP group set from `group_mapping`.
+
+    A row counts when its role matches its scope: a global role without organization, an
+    organization role with one. An `approver` of an organization that is not `trusted`
+    counts as `organizer`. No group, no query.
+    """
+    cleaned = clean_groups(groups)
+    if not cleaned:
+        return EffectiveGrants()
+    return grants_from(await load_mappings(db, cleaned), cleaned)
+
+
+def grants_from(mappings: MappingRows, groups: Iterable[str]) -> EffectiveGrants:
+    """Compute the effective roles of a group set from already loaded mapping rows."""
+    cleaned = clean_groups(groups)
+    rows = [row for row in mappings if row[4] in cleaned]
+    global_roles: set[str] = set()
+    org_roles: dict[str, set[str]] = {}
+    org_ids: dict[str, UUID] = {}
+    for role, org_id, slug, trusted, _ in rows:
+        if slug is None and role in GLOBAL_ROLES:
+            global_roles.add(role)
+        elif slug is not None and org_id is not None and role in ORG_ROLES:
+            effective = "organizer" if role == "approver" and not trusted else role
+            org_roles.setdefault(slug, set()).add(effective)
+            org_ids[slug] = org_id
+    return EffectiveGrants(
+        frozenset(global_roles),
+        {slug: frozenset(roles) for slug, roles in org_roles.items()},
+        org_ids,
     )
-    return slugs - trusted
 
 
 def _is_bootstrap_admin(row: PrincipalRow, settings: Settings) -> bool:
@@ -101,29 +144,21 @@ async def resolve_principal(db: AsyncSession, row: PrincipalRow, settings: Setti
 
     Returns:
         The principal with its global roles and permissions and its organization roles
-        keyed by organization slug.
+        keyed by organization slug, already bound to the organization ids.
     """
     groups = clean_groups(row.oidc_groups)
-    grants = [*grants_from_groups(groups), *await _mapped_grants(db, groups)]
-    approver_slugs = {g.org for g in grants if g.role == "approver" and g.org}
-    untrusted = await _untrusted(db, approver_slugs)
-
-    global_roles = {"member"} | {g.role for g in grants if g.org is None}
+    grants = await effective_grants(db, groups)
+    global_roles = {"member"} | grants.global_roles
     if _is_bootstrap_admin(row, settings):
         global_roles.add("admin")
-    org_roles: dict[str, set[str]] = {}
-    for grant in grants:
-        if grant.org is None:
-            continue
-        role = "organizer" if grant.role == "approver" and grant.org in untrusted else grant.role
-        org_roles.setdefault(grant.org, set()).add(role)
-
-    return Principal(
+    principal = Principal(
         sub=row.sub,
         email=row.email,
         display_name=row.display_name,
         roles=sorted(global_roles),
         permissions=set(permissions_of(global_roles)),
         groups=groups,
-        org_roles={slug: frozenset(roles) for slug, roles in org_roles.items()},
+        org_roles=dict(grants.org_roles),
     )
+    principal.bind_org_ids({slug: org_id for slug, org_id in grants.org_ids.items()})
+    return principal

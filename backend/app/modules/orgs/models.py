@@ -1,20 +1,22 @@
-"""Organizations and group mappings: the `organization` and `group_mapping` tables.
+"""Organizations, group mappings and memberships: `organization`, `group_mapping`, `membership`.
 
 An organization is the organizer and the scope of a right (PLAN 3.3, 5). `trusted` lets
 an `approver` of the organization approve. `group_mapping` adds a grant that the group
-name does not express; `app.modules.auth.rbac` reads it.
+name does not express; `app.modules.auth.rbac` reads it. `membership` is the projection
+of the effective roles per person and organization; only the OIDC sync writes it, and no
+decision reads it (contract M2, 3.2).
 """
 
 from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Text, Uuid
+from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Index, Text, Uuid
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import Integer
 
-from app.db import Base, TimestampMixin, UUIDPkMixin
+from app.db import Base, CreatedAtMixin, TimestampMixin, UUIDPkMixin
 from app.shared.permissions import GLOBAL_ROLES, ORG_ROLES
 
 ORGANIZATION_KINDS = ("stupa", "referat", "fachschaft", "partner", "hochschule", "redaktion")
@@ -72,4 +74,23 @@ class GroupMapping(UUIDPkMixin, TimestampMixin, Base):
             name="scope",
         ),
         CheckConstraint("oidc_group NOT LIKE 'events-system:%'", name="reserved_namespace"),
+    )
+
+
+class Membership(CreatedAtMixin, Base):
+    """One effective role of a person in an organization, written by the sync only."""
+
+    __tablename__ = "membership"
+
+    principal_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("principal.id", ondelete="CASCADE"), primary_key=True
+    )
+    organization_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("organization.id", ondelete="CASCADE"), primary_key=True
+    )
+    role: Mapped[str] = mapped_column(Text, primary_key=True)
+
+    __table_args__ = (
+        CheckConstraint("role IN (" + ", ".join(repr(r) for r in ORG_ROLES) + ")", name="role"),
+        Index("ix_membership_organization_id_role", "organization_id", "role"),
     )

@@ -1,9 +1,12 @@
-"""Seed a development database: reference rows and a few dossiers (`python -m scripts.seed_dev`).
+"""Seed a development database: reference rows, mappings, dossiers (`python -m scripts.seed_dev`).
 
-The dossiers come from `seeds/dev_events.yaml` and go through the real services as a
-seed editor, so revisions, status events and audit entries exist like in production. A
-dossier is skipped when its title already exists in the organization, so the script can
-run twice. It never touches a live system: it uses `DATABASE_URL` of the environment.
+The reference rows (organizations, categories, 44 venues) come from the reference modules.
+The group mappings are the proposal of `MappingService.create_defaults` plus the extra rows
+of `seeds/dev_mappings.yaml`, so every group of the Keycloak realm means something. The
+dossiers come from `seeds/dev_events.yaml` and go through the real services as a seed
+editor, so revisions, status events and audit entries exist like in production. Every step
+skips what exists, so the script can run twice. It never touches a live system: it uses
+`DATABASE_URL` of the environment.
 """
 
 from __future__ import annotations
@@ -18,18 +21,22 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_sessionmaker
+from app.modules.admin.mappings_service import MappingService
 from app.modules.auth.principal import Principal
 from app.modules.events.models import Event
 from app.modules.events.schemas import EventCreate
 from app.modules.events.service import EventService
-from app.modules.orgs.models import Organization
+from app.modules.orgs.models import GroupMapping, Organization
 from app.modules.pipeline.service import PipelineService
 from app.modules.taxonomy.models import Category
 from app.modules.taxonomy.seeding import ensure_reference
+from app.settings import get_settings
 from app.shared.permissions import permissions_of
 from app.shared.timeutil import utcnow
 
-SEEDS = Path(__file__).resolve().parents[1] / "seeds" / "dev_events.yaml"
+SEED_DIR = Path(__file__).resolve().parents[1] / "seeds"
+SEEDS = SEED_DIR / "dev_events.yaml"
+MAPPING_SEEDS = SEED_DIR / "dev_mappings.yaml"
 
 
 def seed_editor() -> Principal:
@@ -41,6 +48,26 @@ def seed_editor() -> Principal:
 def load_definitions(path: Path = SEEDS) -> list[dict[str, Any]]:
     """Read the dossier definitions of the YAML file."""
     return yaml.safe_load(path.read_text(encoding="utf-8"))["events"]
+
+
+async def seed_mappings(session: AsyncSession, path: Path = MAPPING_SEEDS) -> int:
+    """Create the default mappings and the extra rows of the YAML file; return the new count."""
+    created = len(await MappingService(session, get_settings(), "seed-dev").create_defaults())
+    orgs = {
+        slug: id_ for slug, id_ in await session.execute(select(Organization.slug, Organization.id))
+    }
+    known = set((await session.scalars(select(GroupMapping.oidc_group))).all())
+    extra = [
+        m
+        for m in yaml.safe_load(path.read_text(encoding="utf-8"))["mappings"]
+        if m["group"] not in known
+    ]
+    session.add_all(
+        GroupMapping(oidc_group=m["group"], role=m["role"], organization_id=orgs[m["organization"]])
+        for m in extra
+    )
+    await session.flush()
+    return created + len(extra)
 
 
 async def _ids(session: AsyncSession, model: type[Organization] | type[Category]) -> dict[str, Any]:
@@ -85,6 +112,7 @@ async def main() -> int:
     """Seed the database of `DATABASE_URL` and return the number of new dossiers."""
     async with get_sessionmaker()() as session:
         await ensure_reference(session)
+        print(f"seeded {await seed_mappings(session)} new group mapping(s)")
         ids = {
             "organization": await _ids(session, Organization),
             "category": await _ids(session, Category),

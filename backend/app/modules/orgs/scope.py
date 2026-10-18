@@ -32,6 +32,23 @@ async def bind(session: AsyncSession, principal: Principal) -> None:
     principal.bind_org_ids({slug: org_id for slug, org_id in rows})
 
 
+async def org_refs(session: AsyncSession, principal: Principal) -> dict[str, Organization]:
+    """Return the organizations of the principal's roles by slug, in one query.
+
+    The query is the one `bind` runs, widened to whole rows, and it binds the ids too.
+    """
+    slugs = set(principal.org_roles)
+    if not slugs:
+        return {}
+    rows = (
+        (await session.execute(select(Organization).where(Organization.slug.in_(slugs))))
+        .scalars()
+        .all()
+    )
+    principal.bind_org_ids({org.slug: org.id for org in rows})
+    return {org.slug: org for org in rows}
+
+
 async def _ids_of(session: AsyncSession, principal: Principal, slugs: set[str]) -> set[UUID]:
     await bind(session, principal)
     return {UUID(principal.org_ids[slug]) for slug in slugs if slug in principal.org_ids}

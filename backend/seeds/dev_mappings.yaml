@@ -1,0 +1,7 @@
+# Mappings beyond the proposal of POST /api/admin/group-mappings/defaults, for scripts/seed_dev.py.
+# `events-fsi-approver` maps an approver of a non-trusted organization on purpose: the dev user
+# `approver-fsi` must show the downgrade to organizer (E05). The API refuses such a row, the seed writes it.
+mappings:
+  - group: events-fsi-approver
+    role: approver
+    organization: fsi

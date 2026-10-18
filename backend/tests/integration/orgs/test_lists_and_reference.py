@@ -3,30 +3,11 @@
 from __future__ import annotations
 
 import pytest
-from sqlalchemy import text
 
 from app.modules.taxonomy.reference import CATEGORIES, ORGANIZATIONS
 from tests.integration.events.harness import Api, future
 
 pytestmark = pytest.mark.integration
-
-
-async def test_migration_seeds_the_reference_rows(api: Api) -> None:
-    async with api.maker() as session:
-        orgs = (await session.execute(text("SELECT slug, trusted FROM organization"))).all()
-        cats = (await session.execute(text("SELECT slug FROM category"))).scalars().all()
-        children = (
-            await session.execute(
-                text(
-                    "SELECT count(*) FROM category c JOIN category p ON p.id = c.parent_id "
-                    "WHERE p.slug = 'fachschaft'"
-                )
-            )
-        ).scalar_one()
-    assert {slug for slug, _ in orgs} == {o["slug"] for o in ORGANIZATIONS}
-    assert {"fsi", "makers", "stupa"} <= {slug for slug, _ in orgs}
-    assert dict(orgs)["stupa"] is True and dict(orgs)["fsi"] is False
-    assert set(cats) == {c["slug"] for c in CATEGORIES} and children == 6
 
 
 async def test_organization_list(api: Api) -> None:
@@ -42,11 +23,20 @@ async def test_organization_list(api: Api) -> None:
 
 async def test_category_list(api: Api) -> None:
     cats = (await api.request("organizer-fsi", "GET", "/api/categories")).json()
-    assert {k: v for k, v in next(c for c in cats if c["slug"] == "kino").items() if k != "id"} == {
+    kino = next(c for c in cats if c["slug"] == "kino")
+    assert {k: v for k, v in kino.items() if k != "id"} == {
         "slug": "kino",
         "name": "Kino",
         "kind": "format",
+        "parentId": None,
+        "short": None,
+        "colorToken": None,
+        "requiredProfile": "generic",
+        "sort": 0,
     }
+    fsi = next(c for c in cats if c["slug"] == "fachschaft-informatik-fsi")
+    assert (fsi["short"], fsi["colorToken"], fsi["kind"]) == ("FSI", "petrol", "fachschaft")
+    assert fsi["parentId"] == next(c["id"] for c in cats if c["slug"] == "fachschaft")
     assert len(cats) == len(CATEGORIES)
 
 

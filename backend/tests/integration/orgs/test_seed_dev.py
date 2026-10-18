@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 from sqlalchemy import text
 
@@ -10,11 +13,18 @@ from scripts import seed_dev
 from tests.integration.events.harness import Api
 
 pytestmark = pytest.mark.integration
+REALM = Path(__file__).resolve().parents[4] / "deploy" / "keycloak" / "stupa-events-realm.json"
 
 
 async def test_seed_is_idempotent(api: Api, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(seed_dev, "get_sessionmaker", lambda: api.maker)
     assert await seed_dev.main() == 3
+    async with api.maker() as session:
+        mappings_after_first = (
+            await session.execute(
+                text("SELECT count(*) FROM audit_entry WHERE action = 'role_mapping_change'")
+            )
+        ).scalar_one()
     assert await seed_dev.main() == 0
     async with api.maker() as session:
         states = (
@@ -26,7 +36,8 @@ async def test_seed_is_idempotent(api: Api, monkeypatch: pytest.MonkeyPatch) -> 
         chain = (await session.execute(text("SELECT count(*) FROM audit_entry"))).scalar_one()
     assert {t: s for t, s, _ in states}["Movienight: Beispielfilm"] == "planning"
     assert {t: v for t, _, v in states}["Movienight: Beispielfilm"] == "Kinosaal 9-133"
-    assert revisions == 4 and chain == 4
+    assert revisions == 4
+    assert chain == 4 + mappings_after_first
 
 
 async def test_ensure_reference_adds_missing_rows_only(api: Api) -> None:
@@ -47,3 +58,26 @@ async def test_ensure_reference_adds_missing_rows_only(api: Api) -> None:
         )
         await session.commit()
     assert name == "Eigener Name" and total == 13
+
+
+async def test_seed_maps_every_realm_group(api: Api, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(seed_dev, "get_sessionmaker", lambda: api.maker)
+    async with api.maker() as session:
+        await session.execute(text("DELETE FROM group_mapping"))
+        await session.commit()
+    await seed_dev.main()
+    realm = json.loads((REALM).read_text(encoding="utf-8"))
+    async with api.maker() as session:
+        mapped = set(
+            (await session.execute(text("SELECT oidc_group FROM group_mapping"))).scalars()
+        )
+        approver = (
+            await session.execute(
+                text(
+                    "SELECT m.role, o.trusted FROM group_mapping m JOIN organization o "
+                    "ON o.id = m.organization_id WHERE m.oidc_group = 'events-fsi-approver'"
+                )
+            )
+        ).one()
+    assert {g["name"] for g in realm["groups"]} - {"events-users"} <= mapped
+    assert tuple(approver) == ("approver", False)

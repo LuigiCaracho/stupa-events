@@ -67,3 +67,26 @@ def test_m1_rights_per_role() -> None:
     assert "event.image_exception" in permissions_of(["editor"])
     assert "event.image_exception" not in permissions_of(["approver"])
     assert not permissions_of(["viewer"]) & {"event.create", "event.edit"}
+
+
+def test_default_mappings_follow_the_group_proposal() -> None:
+    from app.shared.permissions import default_mappings
+
+    rows = default_mappings([("fsi", False), ("stupa", True)])
+    groups = {(m.group, m.role, m.org) for m in rows}
+    assert ("events-admin", "admin", None) in groups
+    assert ("events-editor", "editor", None) in groups
+    assert ("events-stupa", "stupa", None) in groups
+    assert {"events-fsi-viewer", "events-fsi-submitter", "events-fsi-organizer"} <= {
+        g for g, _, _ in groups
+    }
+    assert "events-fsi-approver" not in {g for g, _, _ in groups}
+    assert ("events-stupa-approver", "approver", "stupa") in groups
+    assert len(rows) == 3 + 3 + 4
+
+
+def test_the_admin_role_maintains_venues() -> None:
+    from app.shared.permissions import ROLE_PERMISSIONS
+
+    assert "venue.manage" in ROLE_PERMISSIONS["admin"]
+    assert "admin.mappings" not in ROLE_PERMISSIONS["editor"]

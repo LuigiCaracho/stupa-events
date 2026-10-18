@@ -54,7 +54,7 @@ END $$;
 DO $$
 DECLARE t text;
 BEGIN
-  FOREACH t IN ARRAY ARRAY['auth_session', 'audit_verification', 'role_assignment'] LOOP
+  FOREACH t IN ARRAY ARRAY['auth_session', 'audit_verification', 'role_assignment', 'group_mapping', 'membership'] LOOP
     IF to_regclass('public.' || t) IS NOT NULL THEN
       EXECUTE format('GRANT DELETE ON TABLE %I TO events_app', t);
     END IF;

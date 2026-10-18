@@ -1,8 +1,9 @@
 """Permission catalogue, role catalogue and the OIDC group grammar.
 
 The roles and their rights are code, not data (PLAN 5.3). The IdP groups are the only
-source of a membership: `parse_group` turns a group name into a `GroupGrant`, and a
-`group_mapping` row can add a grant that the name does not express. Every decision runs
+source of a membership, and `group_mapping` rows are the only judge of what a group
+means (M2). `parse_group` and `default_mappings` stay as the generator of the proposal
+that the admin API applies; they do not take part in the resolution. Every decision runs
 through `Principal.has`, never through a role name.
 
 Copied from STUPA-Workflow@93c33d6 backend/app/shared/permissions.py (rewritten for events)
@@ -82,6 +83,7 @@ ROLE_PERMISSIONS: Mapping[str, frozenset[str]] = {
             "admin.sessions.revoke",
             "admin.status",
             "taxonomy.manage",
+            "venue.manage",
             "import.manage",
         }
     ),
@@ -137,3 +139,29 @@ def grants_from_groups(groups: Iterable[str]) -> tuple[GroupGrant, ...]:
 def permissions_of(roles: Iterable[str]) -> frozenset[str]:
     """Return the union of the permissions of the given roles."""
     return frozenset().union(*(ROLE_PERMISSIONS.get(role, frozenset()) for role in roles))
+
+
+@dataclass(frozen=True, slots=True)
+class DefaultMapping:
+    """A proposed `group_mapping` row: an IdP group, its role and its organization slug."""
+
+    group: str
+    role: str
+    org: str | None = None
+
+
+def default_mappings(organizations: Iterable[tuple[str, bool]]) -> tuple[DefaultMapping, ...]:
+    """Return the proposed mappings (PLAN 5.6): three global ones and the org roles.
+
+    Args:
+        organizations: `(slug, trusted)` of the active organizations. Only a trusted
+            organization gets an `approver` group.
+    """
+    global_rows = tuple(DefaultMapping(group, role) for group, role in GLOBAL_GROUPS.items())
+    org_rows = tuple(
+        DefaultMapping(f"events-{slug}-{role}", role, slug)
+        for slug, trusted in sorted(organizations)
+        for role in ORG_ROLES
+        if role != "approver" or trusted
+    )
+    return global_rows + org_rows
