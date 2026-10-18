@@ -7,29 +7,36 @@ import { createLocationMock, provideLocationMock } from '../../testing/location-
 import { routes } from '../app.routes';
 import { BOTTOM_BAR_KEYS, NAV_ITEMS, NavService } from './nav.service';
 
-function keysFor(signedIn: boolean, me: { roles?: string[]; permissions?: string[] } = {}): string[] {
+function keysFor(
+  signedIn: boolean,
+  me: { roles?: string[]; permissions?: string[] } = {},
+): string[] {
   TestBed.configureTestingModule({
-    providers: [provideHttpClient(), provideHttpClientTesting(), provideLocationMock(createLocationMock())],
+    providers: [
+      provideHttpClient(),
+      provideHttpClientTesting(),
+      provideLocationMock(createLocationMock()),
+    ],
   });
   TestBed.inject(AuthService).ensureLoaded().subscribe();
   const req = TestBed.inject(HttpTestingController).expectOne('/api/auth/me');
-  if (signedIn) req.flush({ sub: '1', roles: [], permissions: [], groups: [], organizations: [], ...me });
+  if (signedIn)
+    req.flush({ sub: '1', roles: [], permissions: [], groups: [], organizations: [], ...me });
   else req.flush(null, { status: 401, statusText: 'Unauthorized' });
-  return TestBed.inject(NavService).visible().map((i) => i.key);
+  return TestBed.inject(NavService)
+    .visible()
+    .map((i) => i.key);
 }
 
 describe('NavService', () => {
-  it('shows Aufgaben, Dossiers and Konto to a signed-in principal', () => {
-    expect(keysFor(true)).toEqual(['tasks', 'dossiers', 'account']);
+  it('shows Aufgaben, Pipeline, Dossiers and Konto to a signed-in principal', () => {
+    expect(keysFor(true)).toEqual(['tasks', 'pipeline', 'dossiers', 'account']);
   });
 
   it('adds Verwaltung for a principal with a taxonomy or mapping permission', () => {
-    expect(keysFor(true, { roles: ['editor'], permissions: ['taxonomy.manage', 'venue.manage'] })).toEqual([
-      'tasks',
-      'dossiers',
-      'admin',
-      'account',
-    ]);
+    expect(
+      keysFor(true, { roles: ['editor'], permissions: ['taxonomy.manage', 'venue.manage'] }),
+    ).toEqual(['tasks', 'pipeline', 'dossiers', 'admin', 'account']);
   });
 
   it('adds Verwaltung for admin without a listed permission', () => {

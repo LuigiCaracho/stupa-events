@@ -9,6 +9,11 @@ mapping and is refused a reserved `events-system:` group, organizer-fsi gets not
 "Andere Sitzungen widerrufen" ends only the other session.
 It needs the M2 dev users (`admin`, from `deploy/keycloak/stupa-events-realm.json`) in the running Keycloak.
 
+`m3.spec.ts` is the M3 acceptance run: keyboard drag on the board and the phone tabs, four-eyes (needs the dev user
+`approver2-stupa`), the field classes in `live`, a cancellation that stays in the feed as `cancelled`, autosave across a reload
+with the edit conflict, a proposal of a `member`, and axe in light and dark (`support/axe.ts`, `@axe-core/playwright`
+4.13.0). Run it against the compose `web` container (production build) for the axe gate.
+
 Needs the compose stack with the Keycloak overlay and `127.0.0.1 host.docker.internal` in `/etc/hosts`
 (see `docs/M1-KONTRAKT.md` sections 1 and 8). The tests open `http://localhost:8081` (the registered
 redirect URI); override with `E2E_BASE_URL`. Run `npx playwright test` in `frontend/`.

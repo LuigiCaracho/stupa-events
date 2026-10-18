@@ -8,7 +8,20 @@ import { VenuesComponent } from './venues.component';
 
 function fakeTaxonomy() {
   return {
-    venues: jest.fn(() => of([makeVenue(), makeVenue({ id: 'ven-3', slug: 'foyer', name: 'Foyer', buildingNo: null, roomKey: null }), makeVenue({ id: 'ven-2', slug: 'aula', name: 'Aula', address: 'Alteburgstraße 150', postcode: '72762', city: 'Reutlingen' })])),
+    venues: jest.fn(() =>
+      of([
+        makeVenue(),
+        makeVenue({ id: 'ven-3', slug: 'foyer', name: 'Foyer', buildingNo: null, roomKey: null }),
+        makeVenue({
+          id: 'ven-2',
+          slug: 'aula',
+          name: 'Aula',
+          address: 'Alteburgstraße 150',
+          postcode: '72762',
+          city: 'Reutlingen',
+        }),
+      ]),
+    ),
     createVenue: jest.fn(() => of(makeVenue())),
     updateVenue: jest.fn(() => of(makeVenue())),
   };
@@ -16,7 +29,9 @@ function fakeTaxonomy() {
 
 async function setup() {
   const api = fakeTaxonomy();
-  const view = await render(VenuesComponent, { providers: [{ provide: TaxonomyApi, useValue: api }] });
+  const view = await render(VenuesComponent, {
+    providers: [{ provide: TaxonomyApi, useValue: api }],
+  });
   await view.fixture.whenStable();
   view.fixture.detectChanges();
   return { ...view, api };
@@ -59,7 +74,10 @@ describe('VenuesComponent', () => {
     await userEvent.clear(city);
     await userEvent.type(city, 'Tübingen');
     await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
-    expect(api.updateVenue).toHaveBeenCalledWith('ven-2', expect.objectContaining({ city: 'Tübingen', address: 'Alteburgstraße 150' }));
+    expect(api.updateVenue).toHaveBeenCalledWith(
+      'ven-2',
+      expect.objectContaining({ city: 'Tübingen', address: 'Alteburgstraße 150' }),
+    );
     expect((api.updateVenue as jest.Mock).mock.calls[0][1]).not.toHaveProperty('slug');
   });
 
@@ -69,7 +87,13 @@ describe('VenuesComponent', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     expect(api.updateVenue).toHaveBeenCalledWith(
       'ven-1',
-      expect.objectContaining({ address: null, postcode: null, city: null, buildingNo: '9', roomKey: '133' }),
+      expect.objectContaining({
+        address: null,
+        postcode: null,
+        city: null,
+        buildingNo: '9',
+        roomKey: '133',
+      }),
     );
   });
 
@@ -77,7 +101,10 @@ describe('VenuesComponent', () => {
     const { api } = await setup();
     await userEvent.click(await screen.findByText('Foyer'));
     await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
-    expect(api.updateVenue).toHaveBeenCalledWith('ven-3', expect.objectContaining({ buildingNo: null, roomKey: null }));
+    expect(api.updateVenue).toHaveBeenCalledWith(
+      'ven-3',
+      expect.objectContaining({ buildingNo: null, roomKey: null }),
+    );
   });
 
   it('has no axe violations', async () => {

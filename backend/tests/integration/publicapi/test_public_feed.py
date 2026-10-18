@@ -195,3 +195,47 @@ async def test_a_replaced_poster_gets_a_new_media_id(api: Api) -> None:
         await api.process_poster(poster["id"])
         ids.append(poster["sha256"][:16])
     assert ids[0] != ids[1]
+
+
+async def test_cancel_and_postpone_stay_in_the_feed_with_their_status(api: Api) -> None:
+    live = await go_live(api)
+    eid = live["id"]
+    cancelled = await api.action(
+        "organizer-fsi", eid, "cancel", reason="Intern", publicReasonCode="weather"
+    )
+    assert cancelled.status_code == 200
+    body = (await api.request(None, "GET", FEED)).json()
+    SCHEMA.validate(body)
+    item = body["items"][0]
+    assert item["status"] == "cancelled" and item["statusReason"] == {
+        "code": "weather",
+        "text": None,
+    }
+    assert "Intern" not in json.dumps(body)
+    await api.action("editor", eid, "reinstate", reason="Doch")
+    await api.action("editor", eid, "postpone", reason="Verschoben", publicReasonCode="room")
+    item = (await api.request(None, "GET", FEED)).json()["items"][0]
+    assert item["status"] == "postponed" and item["statusReason"]["code"] == "room"
+    taken = await api.fire("editor", eid, "T07", note="Offline")
+    assert taken.status_code == 200
+    assert (await api.request(None, "GET", FEED)).json()["items"] == []
+
+
+async def test_the_venue_name_comes_from_the_venue_and_a_private_one_is_hidden(api: Api) -> None:
+    public = (await api.sql("SELECT id, name FROM venue WHERE NOT is_private AND active LIMIT 1"))[
+        0
+    ]
+    private = (await api.sql("SELECT id FROM venue WHERE slug = 'privat-test' LIMIT 1")) or (
+        await api.sql(
+            "INSERT INTO venue (slug, name, is_private) VALUES ('privat-test', 'Zuhause', true) "
+            "RETURNING id"
+        )
+    )
+    shown = await go_live(api, venueId=str(public[0]), venueText="Freitext", title="Mit Ort")
+    hidden = await go_live(api, venueId=str(private[0][0]), title="Privat")
+    items = {i["id"]: i for i in (await api.request(None, "GET", FEED)).json()["items"]}
+    assert items[shown["id"]]["venueText"] == public[1]
+    assert items[hidden["id"]]["venueText"] is None
+    SCHEMA.validate(
+        {"schema": 2, "generatedAt": "2030-01-01T00:00:00Z", "items": list(items.values())}
+    )

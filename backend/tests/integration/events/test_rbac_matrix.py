@@ -8,14 +8,18 @@ from tests.integration.events.harness import Api, future
 
 pytestmark = pytest.mark.integration
 
-OPS = ("read", "listed", "create", "patch", "T01", "T02", "T04", "poster", "exception")
-ALL_OK = dict(read=200, listed=True, create=201, patch=200, T01=200, T02=200, T04=200)
+OPS = ("read", "listed", "create", "propose", "patch", "T01", "T02", "T04", "poster", "exception")
+ALL_OK = dict(read=200, listed=True, create=201, propose=201, patch=200, T01=200, T02=200, T04=200)
 ALL_OK |= dict(poster=201, exception=200)
-NO_WRITE = dict(read=200, listed=True, create=403, patch=403, T01=403, T02=403, T04=403)
+NO_WRITE = dict(
+    read=200, listed=True, create=404, propose=201, patch=403, T01=403, T02=403, T04=403
+)
 NO_WRITE |= dict(poster=403, exception=403)
-FOREIGN_WITH_GATE = dict(read=404, listed=False, create=404, patch=404, T01=404, T02=404)
+FOREIGN_WITH_GATE = dict(
+    read=404, listed=False, create=404, propose=201, patch=404, T01=404, T02=404
+)
 FOREIGN_WITH_GATE |= dict(T04=404, poster=404, exception=403)
-NO_ORG = dict(read=404, listed=False, create=403, patch=403, T01=403, T02=403, T04=403)
+NO_ORG = dict(read=404, listed=False, create=404, propose=201, patch=403, T01=404, T02=404, T04=404)
 NO_ORG |= dict(poster=403, exception=403)
 ORGANIZER = ALL_OK | dict(T04=403, exception=403)
 
@@ -43,6 +47,10 @@ def body(api: Api, org: str = "fsi") -> dict[str, object]:
         "endsAt": future(hours=2).isoformat(),
         "organizationId": api.org_ids[org],
     }
+
+
+def proposal_body() -> dict[str, object]:
+    return {"title": "Vorschlag", "startsAt": future().isoformat()}
 
 
 async def event_in(api: Api, state: str, title: str) -> dict:
@@ -74,6 +82,9 @@ async def observed(api: Api, user: str) -> dict[str, int | bool]:
         "read": (await api.request(user, "GET", f"/api/events/{a['id']}")).status_code,
         "listed": a["id"] in [e["id"] for e in listing],
         "create": (await api.request(user, "POST", "/api/events", json=body(api))).status_code,
+        "propose": (
+            await api.request(user, "POST", "/api/events", json=proposal_body())
+        ).status_code,
         "patch": (
             await api.request(
                 user, "PATCH", f"/api/events/{a['id']}", json={"rev": a["rev"], "summary": "neu"}
@@ -102,15 +113,15 @@ async def test_role_by_organization_by_operation(api: Api, user: str) -> None:
 @pytest.mark.parametrize("user", [u for u, row in MATRIX.items() if row["read"] == 404])
 async def test_a_foreign_dossier_does_not_exist_for_the_caller(api: Api, user: str) -> None:
     eid = (await api.create_event(user="organizer-fsi"))["id"]
-    guards_gate = MATRIX[user]["T01"]
-    for url, want in [
-        (f"/api/events/{eid}", 404),
-        (f"/api/events/{eid}/guards/T01", guards_gate),
-        (f"/api/events/{eid}/poster/file", 404),
-    ]:
+    for url in (
+        f"/api/events/{eid}",
+        f"/api/events/{eid}/guards/T01",
+        f"/api/events/{eid}/poster/file",
+        f"/api/events/{eid}/revisions",
+    ):
         response = await api.request(user, "GET", url)
-        assert response.status_code == want, (user, url)
-        assert response.json()["code"] == ("not_found" if want == 404 else "forbidden")
+        assert response.status_code == 404, (user, url)
+        assert response.json()["code"] == "not_found"
 
 
 async def test_the_partner_account_gets_404_on_foreign_dossiers_and_guards(api: Api) -> None:
@@ -131,10 +142,12 @@ async def test_create_in_a_foreign_organization_is_404_for_an_org_member(api: Ap
     assert response.status_code == 404 and response.json()["code"] == "not_found"
 
 
-async def test_a_viewer_creates_nowhere(api: Api) -> None:
+async def test_a_viewer_creates_in_no_organization_but_may_propose(api: Api) -> None:
     for org in ("fsi", "makers"):
         response = await api.request("viewer-fsi", "POST", "/api/events", json=body(api, org))
-        assert response.status_code == 403 and response.json()["code"] == "forbidden"
+        assert response.status_code == 404 and response.json()["code"] == "not_found"
+    proposal = await api.request("viewer-fsi", "POST", "/api/events", json=proposal_body())
+    assert proposal.status_code == 201 and proposal.json()["organization"] is None
 
 
 async def test_unauthenticated_is_401_everywhere(api: Api) -> None:

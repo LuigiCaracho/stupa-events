@@ -80,7 +80,7 @@ async def test_states_from_in_review_on_are_field_locked(api: Api) -> None:
         "editor",
         "PATCH",
         f"/api/events/{ready['id']}",
-        json={"rev": ready["rev"], "summary": "nein"},
+        json={"rev": ready["rev"], "title": "nein"},
     )
     assert locked.status_code == 409 and locked.json()["code"] == "field_locked"
     await api.fire("editor", ready["id"], "T04")
@@ -88,7 +88,7 @@ async def test_states_from_in_review_on_are_field_locked(api: Api) -> None:
         "editor",
         "PATCH",
         f"/api/events/{ready['id']}",
-        json={"rev": ready["rev"] + 1, "title": "x"},
+        json={"rev": ready["rev"] + 1, "summary": "x"},
     )
     assert again.json()["code"] == "field_locked"
 
@@ -104,7 +104,7 @@ async def test_invalid_transition_is_409(api: Api) -> None:
 
 async def test_undefined_transitions_are_422(api: Api) -> None:
     event = await api.create_event()
-    for tid in ("T03", "T06", "T11", "T00", "x"):
+    for tid in ("T00", "T13", "x"):
         response = await api.fire("editor", event["id"], tid)
         assert response.status_code == 422 and response.json()["code"] == "validation_error", tid
 
@@ -120,7 +120,7 @@ async def test_t02_lists_every_missing_field(api: Api) -> None:
     response = await api.fire("organizer-fsi", event["id"], "T02")
     body = response.json()
     assert response.status_code == 422 and body["code"] == "field_missing"
-    assert {r["field"] for r in body["reasons"]} == {"summary", "primaryCategoryId", "venueText"}
+    assert {r["field"] for r in body["reasons"]} == {"summary", "primaryCategoryId", "venueId"}
     guards = (
         await api.request("organizer-fsi", "GET", f"/api/events/{event['id']}/guards/T02")
     ).json()
@@ -143,7 +143,9 @@ async def test_past_events_cannot_be_submitted_but_running_ones_can(api: Api) ->
 
 async def test_concurrent_approvals_exactly_one_wins(api: Api) -> None:
     ready = await api.approved_ready_event()
-    results = await asyncio.gather(*(api.fire("editor", ready["id"], "T04") for _ in range(4)))
+    results = await asyncio.gather(
+        *(api.fire("editor", ready["id"], "T04", if_match_rev=ready["rev"]) for _ in range(4))
+    )
     statuses = sorted(r.status_code for r in results)
     assert statuses.count(200) == 1 and set(statuses) <= {200, 409}
     live = (await api.request("editor", "GET", f"/api/events/{ready['id']}")).json()

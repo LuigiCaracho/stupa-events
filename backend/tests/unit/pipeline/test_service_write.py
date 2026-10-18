@@ -54,3 +54,39 @@ async def test_a_foreign_check_violation_is_not_reported_as_a_missing_image() ->
     service = PipelineService(Session(failure("23514", message="violates check ck_other")))  # type: ignore[arg-type]
     with pytest.raises(DBAPIError):
         await service._write(Event(), TRANSITIONS["T04"], {"state": "approved"})
+
+
+async def test_a_missing_event_is_not_found_for_the_worker() -> None:
+    from uuid import uuid4
+
+    from app.shared.errors import NotFoundError
+
+    class Empty:
+        async def get(self, *_args: object) -> None:
+            return None
+
+    with pytest.raises(NotFoundError):
+        await PipelineService(Empty()).stage_system_fire(uuid4(), "T05")  # type: ignore[arg-type]
+
+
+async def test_other_status_event_errors_are_not_turned_into_four_eyes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from types import SimpleNamespace
+
+    from app.modules.events import revisions
+    from tests.unit.pipeline.support import actor, snap
+
+    async def revision(*_args: object, **_kwargs: object) -> None:
+        return None
+
+    async def fails(*_args: object, **_kwargs: object) -> None:
+        raise failure("40001")
+
+    monkeypatch.setattr(revisions, "append_revision", revision)
+    monkeypatch.setattr(revisions, "append_status", fails)
+    service = PipelineService(Session(failure("40001")))  # type: ignore[arg-type]
+    with pytest.raises(DBAPIError):
+        await service._record(  # noqa: SLF001
+            SimpleNamespace(), TRANSITIONS["T04"], actor("editor"), snap(), None
+        )

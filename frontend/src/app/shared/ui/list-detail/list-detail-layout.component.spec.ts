@@ -16,7 +16,9 @@ import {
   imports: [ListDetailLayoutComponent],
   template: `
     <app-list-detail [detailOpen]="open()" (back)="open.set(false)">
-      <ul list aria-label="Anträge"><li>Druckkosten</li></ul>
+      <ul list aria-label="Anträge">
+        <li>Druckkosten</li>
+      </ul>
       <article detail aria-label="Detail">Antrag Druckkosten</article>
     </app-list-detail>
   `,
@@ -32,7 +34,9 @@ class HostComponent {
     <app-list-detail [detailOpen]="open() !== null" (back)="open.set(null)">
       <ul list aria-label="Anträge">
         @for (row of rows(); track row) {
-          <li><button type="button" (click)="open.set(row)">{{ row }}</button></li>
+          <li>
+            <button type="button" (click)="open.set(row)">{{ row }}</button>
+          </li>
         }
       </ul>
       <article detail aria-label="Detail">{{ open() }}</article>

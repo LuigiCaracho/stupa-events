@@ -1,3 +1,4 @@
+import type { Routes } from '@angular/router';
 import { FEATURE_ROUTES } from './feature-routes';
 
 describe('FEATURE_ROUTES', () => {
@@ -16,10 +17,16 @@ describe('FEATURE_ROUTES', () => {
     expect(byPath('verwaltung')?.data?.['wide']).toBe(true);
   });
 
-  it('puts the new-event route before the :id route and flags it', () => {
-    const paths = FEATURE_ROUTES.map((r) => r.path);
-    expect(paths.indexOf('dossiers/neu')).toBeLessThan(paths.indexOf('dossiers/:id'));
+  it('flags the new-event route and serves the dossier as a child of the list', async () => {
     expect(byPath('dossiers/neu')?.data?.['newEvent']).toBe(true);
-    expect(byPath('dossiers/:id')?.data?.['parent']).toEqual(['dossiers']);
+    expect(byPath('dossiers/:id')).toBeUndefined();
+    const loaded = await (byPath('dossiers')?.loadChildren as () => Promise<{ default: Routes }>)();
+    const child = loaded.default[0].children?.[0];
+    expect(child?.path).toBe(':id');
+    expect(child?.canDeactivate).toHaveLength(1);
+  });
+
+  it('gives the pipeline the wide frame and the fab', () => {
+    expect(byPath('pipeline')?.data).toEqual({ title: 'nav.pipeline', wide: true, fab: true });
   });
 });

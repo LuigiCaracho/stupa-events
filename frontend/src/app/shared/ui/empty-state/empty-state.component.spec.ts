@@ -57,7 +57,9 @@ describe('EmptyStateComponent', () => {
   });
 
   it('accepts the level as a bare attribute', async () => {
-    await render(`<app-empty-state heading="Leer" level="1" />`, { imports: [EmptyStateComponent] });
+    await render(`<app-empty-state heading="Leer" level="1" />`, {
+      imports: [EmptyStateComponent],
+    });
     expect(screen.getByRole('heading', { level: 1, name: 'Leer' })).toBeInTheDocument();
   });
 
@@ -106,7 +108,9 @@ describe('EmptyStateComponent', () => {
       `<app-empty-state heading="Leer"><button type="button">Zurücksetzen</button></app-empty-state>`,
       { imports: [EmptyStateComponent] },
     );
-    expect(screen.getByRole('button', { name: 'Zurücksetzen' }).closest('.es__action')).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Zurücksetzen' }).closest('.es__action'),
+    ).toBeTruthy();
   });
 
   it('stays at its own height by default, for cards and list rows', async () => {
@@ -124,10 +128,9 @@ describe('EmptyStateComponent', () => {
   });
 
   it('accepts fill as a bare attribute', async () => {
-    const { container } = await render(
-      `<app-empty-state heading="Leer" fill />`,
-      { imports: [EmptyStateComponent] },
-    );
+    const { container } = await render(`<app-empty-state heading="Leer" fill />`, {
+      imports: [EmptyStateComponent],
+    });
     expect(container.querySelector('app-empty-state')).toHaveClass('es-host--fill');
   });
 });

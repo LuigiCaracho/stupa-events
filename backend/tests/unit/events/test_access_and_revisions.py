@@ -44,6 +44,9 @@ def poster(**over: object) -> SimpleNamespace:
         "alt_text": "a",
         "credit": "c",
         "rights_basis": "own_work",
+        "persons_depicted": False,
+        "consent_note": None,
+        "created_at": None,
     }
     return SimpleNamespace(**{**base, **over})
 

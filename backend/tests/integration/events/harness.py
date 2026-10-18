@@ -21,7 +21,7 @@ from uuid import UUID
 
 import pytest
 import pytest_asyncio
-from fastapi import Request
+from fastapi import FastAPI, Request
 from httpx import ASGITransport, AsyncClient, Response
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -51,6 +51,7 @@ USERS: dict[str, tuple[str, tuple[str, ...]]] = {
     "viewer-fsi": ("sub-view-fsi", ("events-fsi-viewer",)),
     "approver-fsi": ("sub-app-fsi", ("events-fsi-approver",)),
     "approver-stupa": ("sub-app-stupa", ("events-stupa-approver",)),
+    "approver2-stupa": ("sub-app2-stupa", ("events-stupa-approver",)),
     "organizer-makers": ("sub-org-makers", ("events-makers-organizer",)),
     "submitter-ekhg": ("sub-sub-ekhg", ("events-ekhg-submitter",)),
     "member": ("sub-member", ()),
@@ -110,6 +111,9 @@ def future(days: int = 14, hours: int = 0) -> datetime:
     return base.replace(minute=0, second=0, microsecond=0)
 
 
+MANDATORY_IF_MATCH = frozenset({"T04", "T05", "cancel", "postpone", "reinstate", "revert-revision"})
+
+
 @dataclass
 class Api:
     """Typed handle around the client and the fakes of one test."""
@@ -120,6 +124,7 @@ class Api:
     queue: FakeScanQueue
     pool: FakePool
     maker: async_sessionmaker[AsyncSession]
+    app: FastAPI
     org_ids: dict[str, str] = field(default_factory=dict)
     category_ids: dict[str, str] = field(default_factory=dict)
     users: dict[str, tuple[str, tuple[str, ...]]] = field(default_factory=lambda: dict(USERS))
@@ -159,10 +164,86 @@ class Api:
         assert response.status_code == 201, response.text
         return response.json()
 
-    async def fire(self, user: str, event_id: str, transition: str) -> Response:
+    async def _if_match(
+        self, event_id: str, name: str, without: bool, rev: int | None
+    ) -> dict[str, str]:
+        if without or name not in MANDATORY_IF_MATCH:
+            return {}
+        return {"If-Match": f'"{rev or (await self.get("editor", event_id))["rev"]}"'}
+
+    async def fire(
+        self,
+        user: str,
+        event_id: str,
+        transition: str,
+        *,
+        without_if_match: bool = False,
+        if_match_rev: int | None = None,
+        **body: Any,
+    ) -> Response:
+        headers = await self._if_match(event_id, transition, without_if_match, if_match_rev)
         return await self.request(
-            user, "POST", f"/api/events/{event_id}/transitions/{transition}", json={}
+            user,
+            "POST",
+            f"/api/events/{event_id}/transitions/{transition}",
+            json=body,
+            headers=headers,
         )
+
+    async def action(
+        self,
+        user: str,
+        event_id: str,
+        name: str,
+        *,
+        without_if_match: bool = False,
+        if_match_rev: int | None = None,
+        **body: Any,
+    ) -> Response:
+        headers = await self._if_match(event_id, name, without_if_match, if_match_rev)
+        return await self.request(
+            user, "POST", f"/api/events/{event_id}/actions/{name}", json=body, headers=headers
+        )
+
+    async def get(self, user: str, event_id: str) -> dict:
+        response = await self.request(user, "GET", f"/api/events/{event_id}")
+        assert response.status_code == 200, response.text
+        return response.json()
+
+    async def patch(self, user: str, event_id: str, **fields: Any) -> Response:
+        rev = (await self.get("editor", event_id))["rev"]
+        return await self.request(
+            user, "PATCH", f"/api/events/{event_id}", json={"rev": rev, **fields}
+        )
+
+    async def to_state(self, state: str, *, user: str = "organizer-fsi", **over: Any) -> dict:
+        """Create a dossier in `fsi` and move it to `state` (exception instead of a poster).
+
+        `idea`, `planning`, `in_review`, `approved` and `live` go through the API; the
+        editor grants the image exception and approves. The result is read as the editor.
+        """
+        event = await self.create_event(user=user, **over)
+        eid = event["id"]
+        steps = ["idea", "planning", "in_review", "approved", "live"]
+        if state in steps[1:]:
+            assert (await self.fire(user, eid, "T01")).status_code == 200
+        if state in steps[2:]:
+            granted = await self.action("editor", eid, "image-exception", reason="Test ohne Motiv")
+            assert granted.status_code == 200, granted.text
+            assert (await self.fire(user, eid, "T02")).status_code == 200
+        if state in steps[3:]:
+            approved = await self.fire("editor", eid, "T04")
+            assert approved.status_code == 200, approved.text
+        if state == "live":
+            assert (await self.fire("editor", eid, "T05")).status_code == 200
+        return await self.get("editor", eid)
+
+    async def sql(self, statement: str, **params: Any) -> list[Any]:
+        """Run a statement as the superuser; return the rows of a SELECT."""
+        async with self.maker() as session:
+            result = await session.execute(text(statement), params)
+            await session.commit()
+            return list(result.all()) if result.returns_rows else []
 
     async def upload_poster(
         self,
@@ -249,7 +330,7 @@ def clean_events(engine: Engine) -> Iterator[None]:
             conn.execute(text("SET LOCAL session_replication_role = replica"))
             conn.execute(
                 text(
-                    "TRUNCATE event, attachment, event_revision, event_status_event, "
+                    "TRUNCATE event, attachment, event_revision, event_status_event, editor_draft, "
                     "group_mapping RESTART IDENTITY CASCADE"
                 )
             )
@@ -331,6 +412,7 @@ async def api(
         queue,
         pool,
         maker,
+        app,
     )
     overrides[get_current_principal] = _fake_login(handle.users)
     async with maker() as session:

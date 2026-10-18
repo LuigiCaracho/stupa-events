@@ -102,7 +102,9 @@ describe('BreadcrumbsComponent', () => {
     // The parent path "does/not/exist" has no title. No parent crumb appears, so one
     // crumb remains and the nav stays hidden.
     expect(screen.queryByRole('navigation', { name: BREADCRUMB })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: i18n.translate('nav.tasks') })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: i18n.translate('nav.tasks') }),
+    ).not.toBeInTheDocument();
   });
 
   it('resolves a parent declared on a nested (child) route via the recursive walk', async () => {
@@ -113,10 +115,7 @@ describe('BreadcrumbsComponent', () => {
       'href',
       '/admin',
     );
-    expect(screen.getByText(i18n.translate('nav.footer'))).toHaveAttribute(
-      'aria-current',
-      'page',
-    );
+    expect(screen.getByText(i18n.translate('nav.footer'))).toHaveAttribute('aria-current', 'page');
   });
 
   it('leaves out the parent that the frame around the page already shows', async () => {

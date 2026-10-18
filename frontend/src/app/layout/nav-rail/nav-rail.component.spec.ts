@@ -31,13 +31,18 @@ async function setup() {
 describe('NavRailComponent', () => {
   it('names the brand mark after the app and links it to the task page', async () => {
     await setup();
-    expect(screen.getByRole('link', { name: 'STUPA Events, Start' })).toHaveAttribute('href', '/aufgaben');
+    expect(screen.getByRole('link', { name: 'STUPA Events, Start' })).toHaveAttribute(
+      'href',
+      '/aufgaben',
+    );
   });
 
   it('lists the areas in rail order with Konto at the foot', async () => {
     const { container } = await setup();
-    const labels = Array.from(container.querySelectorAll('.rail__label')).map((l) => l.textContent?.trim());
-    expect(labels).toEqual(['Aufgaben', 'Dossiers', 'Konto']);
+    const labels = Array.from(container.querySelectorAll('.rail__label')).map((l) =>
+      l.textContent?.trim(),
+    );
+    expect(labels).toEqual(['Aufgaben', 'Pipeline', 'Dossiers', 'Konto']);
     expect(container.querySelector('.rail__spacer + a')).toHaveTextContent('Konto');
   });
 

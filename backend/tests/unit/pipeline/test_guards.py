@@ -85,17 +85,12 @@ def test_image_passes_with_poster_or_exception() -> None:
     assert guards.image_or_exception(no_poster, actor("editor"), NOW) == []
 
 
-def test_four_eyes_is_a_wired_stub_that_always_holds() -> None:
-    same_person = snap(submitted_by="x")
-    assert guards.four_eyes(same_person, actor("editor", sub="x"), NOW) == []
-
-
 def test_organization_scope_guard() -> None:
     assert guards.organization_scope_or_proposal(snap(), actor("submitter"), NOW) == []
-    no_org = guards.organization_scope_or_proposal(
-        snap(organization_id=None), actor("submitter"), NOW
+    assert (
+        guards.organization_scope_or_proposal(snap(organization_id=None), actor("member"), NOW)
+        == []
     )
-    assert no_org[0].field == "organizationId"
     outside = guards.organization_scope_or_proposal(snap(), actor("viewer"), NOW)
     assert outside[0].code == "organization_scope"
 

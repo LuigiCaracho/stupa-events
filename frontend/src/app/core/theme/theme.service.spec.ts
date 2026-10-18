@@ -147,9 +147,15 @@ describe('ThemeService', () => {
     it('colours the browser bars with the page background of the theme in effect', () => {
       const svc = service();
       svc.init();
-      expect(metas.map((m) => m.getAttribute('content'))).toEqual([THEME_COLOR.light, THEME_COLOR.light]);
+      expect(metas.map((m) => m.getAttribute('content'))).toEqual([
+        THEME_COLOR.light,
+        THEME_COLOR.light,
+      ]);
       svc.setPreference('dark');
-      expect(metas.map((m) => m.getAttribute('content'))).toEqual([THEME_COLOR.dark, THEME_COLOR.dark]);
+      expect(metas.map((m) => m.getAttribute('content'))).toEqual([
+        THEME_COLOR.dark,
+        THEME_COLOR.dark,
+      ]);
     });
 
     it('uses the background tokens of the design system, not the old brand green', () => {

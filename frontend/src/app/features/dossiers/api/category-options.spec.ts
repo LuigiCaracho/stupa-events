@@ -21,6 +21,8 @@ describe('categoryOptions', () => {
   });
 
   it('keeps a flat list flat', () => {
-    expect(categoryOptions([{ id: 'x', slug: 'x', name: 'X', kind: 'format' }])).toEqual([{ value: 'x', label: 'X' }]);
+    expect(categoryOptions([{ id: 'x', slug: 'x', name: 'X', kind: 'format' }])).toEqual([
+      { value: 'x', label: 'X' },
+    ]);
   });
 });

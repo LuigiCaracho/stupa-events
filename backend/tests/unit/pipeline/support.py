@@ -5,8 +5,8 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
-from app.modules.pipeline.snapshot import Actor, PosterSnapshot, Snapshot
-from app.shared.permissions import ROLE_PERMISSIONS
+from app.modules.pipeline.snapshot import SYSTEM_ACTOR, Actor, PosterSnapshot, Snapshot
+from app.shared.permissions import PERMISSION_CATALOGUE, ROLE_PERMISSIONS
 
 NOW = datetime(2026, 11, 1, 12, 0, tzinfo=UTC)
 ORG = uuid4()
@@ -33,6 +33,16 @@ def snap(**over: object) -> Snapshot:
     return Snapshot(**{**base, **over})  # type: ignore[arg-type]
 
 
-def actor(role: str, sub: str = "someone") -> Actor:
-    """An actor with the permissions of `role` in the organization of the snapshot."""
-    return Actor(sub=sub, permissions=frozenset(ROLE_PERMISSIONS[role]))
+def actor(role: str, sub: str = "someone", *, editor_four_eyes: bool = False) -> Actor:
+    """An actor with the permissions of `role` in the organization of the snapshot.
+
+    `admin` holds every permission (the bypass) and `system` is the worker.
+    """
+    if role == "system":
+        return SYSTEM_ACTOR
+    if role == "admin":
+        return Actor(sub, frozenset(PERMISSION_CATALOGUE), kind="admin", four_eyes=True)
+    perms = frozenset(ROLE_PERMISSIONS[role])
+    if role == "editor":
+        return Actor(sub, perms, kind="editor", four_eyes=editor_four_eyes)
+    return Actor(sub, perms)

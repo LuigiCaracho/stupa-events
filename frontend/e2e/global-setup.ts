@@ -13,12 +13,15 @@ async function healthy(url: string): Promise<boolean> {
 }
 
 export default async function globalSetup(config: FullConfig): Promise<void> {
-  const base = process.env['E2E_BASE_URL'] ?? config.projects[0]?.use.baseURL ?? 'http://localhost:8081';
+  const base =
+    process.env['E2E_BASE_URL'] ?? config.projects[0]?.use.baseURL ?? 'http://localhost:8081';
   const url = new URL('/api/health', base).toString();
   const deadline = Date.now() + WAIT_MS;
   while (Date.now() < deadline) {
     if (await healthy(url)) return;
     await new Promise((resolve) => setTimeout(resolve, STEP_MS));
   }
-  throw new Error(`Stack not healthy after ${WAIT_MS / 1000} s: ${url}. Start it with deploy/docker-compose.yml.`);
+  throw new Error(
+    `Stack not healthy after ${WAIT_MS / 1000} s: ${url}. Start it with deploy/docker-compose.yml.`,
+  );
 }

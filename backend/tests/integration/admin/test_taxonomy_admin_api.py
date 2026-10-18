@@ -279,7 +279,10 @@ async def test_venue_coordinate_rules(api: Api) -> None:
 
 async def test_there_is_no_delete_route_for_the_taxonomy() -> None:
     deletes = [path for method, path, _ in _routes() if method == "DELETE"]
-    assert deletes == ["/api/admin/group-mappings/{mapping_id}"]
+    assert sorted(deletes) == [
+        "/api/admin/group-mappings/{mapping_id}",
+        "/api/events/{event_id}/draft",
+    ]
 
 
 async def test_delete_on_the_taxonomy_is_405(api: Api) -> None:

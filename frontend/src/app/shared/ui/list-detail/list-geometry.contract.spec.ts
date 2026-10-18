@@ -26,7 +26,8 @@ const COLUMN_PAGES: string[] = [];
 const HEADER_ONLY_PAGES: string[] = [];
 
 /** `it.each` that skips instead of throwing while a page list is still empty. */
-const eachPage = (rows: string[]) => (rows.length ? it.each(rows) : it.skip.each(['(no page yet)']));
+const eachPage = (rows: string[]) =>
+  rows.length ? it.each(rows) : it.skip.each(['(no page yet)']);
 
 function files(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
@@ -87,11 +88,14 @@ describe('the one list/detail geometry', () => {
     expect(scss).not.toMatch(/grid-template-columns:\s*[\d.]+(px|rem)\b/);
   });
 
-  eachPage([...LIST_PAGES, ...COLUMN_PAGES])('%s uses the shared column and pane header', (base) => {
-    const html = read(base, 'html');
-    expect(html).toMatch(/class="ld-pane[\s"]/);
-    expect(html).toMatch(/<app-page-header\s[^>]*\[pane\]="true"/);
-  });
+  eachPage([...LIST_PAGES, ...COLUMN_PAGES])(
+    '%s uses the shared column and pane header',
+    (base) => {
+      const html = read(base, 'html');
+      expect(html).toMatch(/class="ld-pane[\s"]/);
+      expect(html).toMatch(/<app-page-header\s[^>]*\[pane\]="true"/);
+    },
+  );
 
   eachPage([...LIST_PAGES, ...HEADER_ONLY_PAGES])('%s has no list header of its own', (base) => {
     // The h1 is the one of app-page-header. Only the phone bar of the bulk actions of the
@@ -115,7 +119,8 @@ describe('the one list/detail geometry', () => {
     // A rule that reaches into the header (its `.ph__*` parts or its `.ph--*` modes)
     // would move the title on one page only. Styling a control that a page projects into
     // the header (`app-page-header app-button …`) is the page's own business.
-    const intoHeader = /app-page-header[^{};]*\.ph(__|--)|::ng-deep\s*\.ph(__|--)(bar|text|heading|title|meta|subtitle|actions|pane|flush|rail)/;
+    const intoHeader =
+      /app-page-header[^{};]*\.ph(__|--)|::ng-deep\s*\.ph(__|--)(bar|text|heading|title|meta|subtitle|actions|pane|flush|rail)/;
     const offenders = appStyles()
       .filter((f) => !f.startsWith(PAGE_HEADER_DIR))
       .filter((f) => intoHeader.test(code(f)));

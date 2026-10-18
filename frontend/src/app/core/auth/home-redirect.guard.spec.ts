@@ -1,10 +1,7 @@
 /** Copied from STUPA-Workflow@93c33d6 frontend/src/app/core/auth/home-redirect.guard.spec.ts */
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting,
-} from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import {
   type ActivatedRouteSnapshot,
   type RouterStateSnapshot,
@@ -30,11 +27,7 @@ describe('homeRedirectGuard', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [
-        provideRouter([]),
-        provideHttpClient(),
-        provideHttpClientTesting(),
-      ],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
     });
     http = TestBed.inject(HttpTestingController);
   });

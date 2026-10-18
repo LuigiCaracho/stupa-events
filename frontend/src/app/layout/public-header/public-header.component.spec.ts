@@ -52,7 +52,9 @@ describe('PublicHeaderComponent', () => {
   it('hides the sign-in for a principal who is signed in', async () => {
     const { auth, http, fixture } = await setup();
     auth.ensureLoaded().subscribe();
-    http.expectOne('/api/auth/me').flush({ sub: '1', roles: [], permissions: [], groups: [], organizations: [] });
+    http
+      .expectOne('/api/auth/me')
+      .flush({ sub: '1', roles: [], permissions: [], groups: [], organizations: [] });
     fixture.detectChanges();
     expect(screen.queryByRole('button', { name: 'Anmelden' })).not.toBeInTheDocument();
   });

@@ -25,7 +25,13 @@ const missing: ProblemReason = {
   messageKey: 'guards.field_missing',
   fixAction: 'fill_field',
 };
-const waiting: ProblemReason = { ...missing, code: 'four_eyes', field: null, messageKey: 'guards.four_eyes', fixAction: null };
+const waiting: ProblemReason = {
+  ...missing,
+  code: 'four_eyes',
+  field: null,
+  messageKey: 'guards.four_eyes',
+  fixAction: null,
+};
 
 describe('GuardListComponent', () => {
   it('shows the ready message for an empty list', async () => {
@@ -35,8 +41,12 @@ describe('GuardListComponent', () => {
   });
 
   it('lists blockers before warnings and names the field', async () => {
-    const { container } = await render(GuardListComponent, { inputs: { reasons: [warning, missing, poster] } });
-    const rows = Array.from(container.querySelectorAll('li')).map((li) => li.getAttribute('data-code'));
+    const { container } = await render(GuardListComponent, {
+      inputs: { reasons: [warning, missing, poster] },
+    });
+    const rows = Array.from(container.querySelectorAll('li')).map((li) =>
+      li.getAttribute('data-code'),
+    );
     expect(rows).toEqual(['field_missing', 'image_required', 'start_in_past']);
     expect(screen.getByText('Es fehlt: Ort.')).toBeInTheDocument();
   });
@@ -50,12 +60,16 @@ describe('GuardListComponent', () => {
   });
 
   it('falls back to the generic text for an unknown message key', async () => {
-    await render(GuardListComponent, { inputs: { reasons: [{ ...waiting, messageKey: 'guards.other' }] } });
+    await render(GuardListComponent, {
+      inputs: { reasons: [{ ...waiting, messageKey: 'guards.other' }] },
+    });
     expect(screen.getByText('Voraussetzung nicht erfüllt.')).toBeInTheDocument();
   });
 
   it('has no axe violations', async () => {
-    const { container } = await render(GuardListComponent, { inputs: { reasons: [poster, warning] } });
+    const { container } = await render(GuardListComponent, {
+      inputs: { reasons: [poster, warning] },
+    });
     expect(await runAxe(container)).toHaveNoViolations();
   });
 });

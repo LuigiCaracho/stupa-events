@@ -1,10 +1,7 @@
 /** Copied from STUPA-Workflow@93c33d6 frontend/src/app/core/loading/loading.interceptor.spec.ts */
 import { TestBed } from '@angular/core/testing';
 import { HttpClient, HttpContext, provideHttpClient, withInterceptors } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting,
-} from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { SKIP_LOADING, loadingInterceptor, skipLoading } from './loading.interceptor';
 import { LoadingService } from './loading.service';
 
@@ -44,9 +41,7 @@ describe('loadingInterceptor', () => {
     http.get('/api/boom').subscribe({ error: () => undefined });
     expect(inc).toHaveBeenCalledTimes(1);
 
-    httpMock
-      .expectOne('/api/boom')
-      .flush(null, { status: 500, statusText: 'Server Error' });
+    httpMock.expectOne('/api/boom').flush(null, { status: 500, statusText: 'Server Error' });
     expect(dec).toHaveBeenCalledTimes(1);
   });
 
@@ -57,9 +52,12 @@ describe('loadingInterceptor', () => {
       const req$ =
         method === 'DELETE'
           ? http.delete(url)
-          : (http as unknown as Record<string, (u: string, b: unknown) => ReturnType<HttpClient['post']>>)[
-              method.toLowerCase()
-            ](url, {});
+          : (
+              http as unknown as Record<
+                string,
+                (u: string, b: unknown) => ReturnType<HttpClient['post']>
+              >
+            )[method.toLowerCase()](url, {});
       req$.subscribe();
       expect(inc).not.toHaveBeenCalled();
 

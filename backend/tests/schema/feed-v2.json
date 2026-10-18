@@ -15,7 +15,7 @@
       "additionalProperties": false,
       "required": [
         "id", "slug", "title", "summary", "startsAt", "endsAt", "allDay", "tzid", "status",
-        "organization", "venueText", "categories", "image", "url"
+        "organization", "venueText", "statusReason", "categories", "image", "url"
       ],
       "properties": {
         "id": { "type": "string", "format": "uuid" },
@@ -39,6 +39,20 @@
           }
         },
         "venueText": { "type": ["string", "null"] },
+        "statusReason": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["code", "text"],
+              "properties": {
+                "code": { "enum": ["none", "room", "speaker", "illness", "registration", "weather", "other"] },
+                "text": { "type": ["string", "null"], "maxLength": 140 }
+              }
+            }
+          ]
+        },
         "categories": {
           "type": "array",
           "items": {

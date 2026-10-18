@@ -126,43 +126,46 @@ async def test_exception_service_refuses_a_principal_without_the_right(api: Api)
             )
 
 
-async def test_exception_race_is_409(api: Api, monkeypatch: pytest.MonkeyPatch) -> None:
-    eid = await planning(api)
-    real = exception_module.load_visible
+async def race_after_load(
+    api: Api, monkeypatch: pytest.MonkeyPatch, module: object, eid: str
+) -> None:
+    """Make another writer bump `rev` right after the dossier was loaded (a real race)."""
+    real = module.load_visible  # type: ignore[attr-defined]
 
-    async def stale(session, principal, event_id):  # noqa: ANN001, ANN202
+    async def racing(session, principal, event_id):  # noqa: ANN001, ANN202
         event = await real(session, principal, event_id)
-        session.expunge(event)
-        event.rev -= 1
+        async with api.maker() as other:
+            await other.execute(text("UPDATE event SET rev = rev + 1 WHERE id = :i"), {"i": eid})
+            await other.commit()
         return event
 
-    monkeypatch.setattr(exception_module, "load_visible", stale)
+    monkeypatch.setattr(module, "load_visible", racing)
+
+
+async def test_exception_race_is_409(api: Api, monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.modules.pipeline import action_base
+
+    eid = await planning(api)
+    await race_after_load(api, monkeypatch, action_base, eid)
     response = await api.request(
         "editor", "POST", f"/api/events/{eid}/image-exception", json={"reason": "Ein langer Grund"}
     )
-    assert response.status_code == 409
+    assert response.status_code == 409 and response.json()["code"] == "conflict"
+    assert response.json()["currentRev"] == 3 and response.json()["current"]["rev"] == 3
 
 
 async def test_patch_race_is_409(api: Api, monkeypatch: pytest.MonkeyPatch) -> None:
     from app.modules.events import service as events_service
 
     eid = await planning(api)
-    real = events_service.load_visible
-
-    async def stale(session, principal, event_id):  # noqa: ANN001, ANN202
-        event = await real(session, principal, event_id)
-        session.expunge(event)
-        event.rev -= 1
-        return event
-
-    monkeypatch.setattr(events_service, "load_visible", stale)
+    await race_after_load(api, monkeypatch, events_service, eid)
     response = await api.request(
-        "organizer-fsi", "PATCH", f"/api/events/{eid}", json={"rev": 1, "summary": "x"}
+        "organizer-fsi", "PATCH", f"/api/events/{eid}", json={"rev": 2, "summary": "x"}
     )
-    assert response.status_code == 409
+    assert response.status_code == 409 and response.json()["code"] == "conflict"
 
 
-async def test_an_event_without_organization_is_for_editors_and_not_editable(api: Api) -> None:
+async def test_an_event_without_organization_is_for_editors_and_not_for_posters(api: Api) -> None:
     async with api.maker() as session:
         await session.execute(
             text(
@@ -176,9 +179,11 @@ async def test_an_event_without_organization_is_for_editors_and_not_editable(api
     assert (await api.request("organizer-fsi", "GET", url)).status_code == 404
     seen = await api.request("editor", "GET", url)
     assert seen.status_code == 200 and seen.json()["organization"] is None
+    patched = await api.request("editor", "PATCH", url, json={"rev": 1, "summary": "x"})
+    assert patched.status_code == 200
     assert (
-        await api.request("editor", "PATCH", url, json={"rev": 1, "summary": "x"})
-    ).status_code == 403
+        await api.request("organizer-fsi", "PATCH", url, json={"rev": 2, "summary": "x"})
+    ).status_code == 404
     assert (
         await api.upload_poster("editor", "00000000-0000-0000-0000-0000000000aa")
     ).status_code == 403

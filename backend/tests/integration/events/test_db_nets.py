@@ -242,3 +242,75 @@ async def test_a_poster_of_a_foreign_event_does_not_count(api: Api, engine: Engi
             {"a": donor["poster"]["id"], "id": other},
         )
     assert sqlstate(caught.value) == "23514"
+
+
+def test_a_poster_of_depicted_persons_needs_a_consent_note_in_the_database(engine: Engine) -> None:
+    event_id = new_event(engine, "idea")
+    with engine.begin() as conn:
+        attachment = conn.execute(
+            text(
+                "INSERT INTO attachment (event_id, display_name, storage_name, mime, size_bytes, sha256, "
+                "scan_status, alt_text, credit, rights_basis, persons_depicted, consent_note, derivatives) "
+                "VALUES (:e, 'p', 'p', 'image/png', 1, 'aa', 'clean', 'a', 'c', 'own_work', true, :n, "
+                '\'{"thumb_400": {}, "card_1200": {}, "og_1200x630": {}}\') RETURNING id'
+            ),
+            {"e": event_id, "n": None},
+        ).scalar_one()
+        conn.execute(
+            text("UPDATE event SET hero_attachment_id = :a WHERE id = :e"),
+            {"a": attachment, "e": event_id},
+        )
+    with pytest.raises(DBAPIError) as caught, engine.begin() as conn:
+        conn.execute(text("UPDATE event SET state = 'approved' WHERE id = :e"), {"e": event_id})
+    assert sqlstate(caught.value) == "23514"
+    with engine.begin() as conn:
+        conn.execute(text("UPDATE attachment SET consent_note = 'liegt vor'"))
+        conn.execute(text("UPDATE event SET state = 'approved' WHERE id = :e"), {"e": event_id})
+
+
+def test_the_new_event_columns_are_checked(engine: Engine) -> None:
+    event_id = new_event(engine, "idea")
+    bad = [
+        "ticket_url = 'http://x.de'",
+        "website_url = 'https://user@x.de'",
+        "public_reason_code = 'nonsense'",
+        "public_status = 'scheduled', public_reason_code = 'room'",
+        "cost_text = repeat('x', 201)",
+        "public_reason_text = repeat('x', 141), public_status = 'cancelled'",
+    ]
+    for assignment in bad:
+        with pytest.raises(DBAPIError), engine.begin() as conn:
+            conn.execute(text(f"UPDATE event SET {assignment} WHERE id = :e"), {"e": event_id})
+    with engine.begin() as conn:
+        conn.execute(
+            text(
+                "UPDATE event SET ticket_url = 'https://t.example.org/x', public_status = 'cancelled', "
+                "public_reason_code = 'room' WHERE id = :e"
+            ),
+            {"e": event_id},
+        )
+
+
+def test_events_public_reads_the_view_only_and_the_runtime_role_deletes_drafts(
+    db_roles: tuple[str, str], engine: Engine
+) -> None:
+    from sqlalchemy import create_engine
+
+    app = create_engine(db_roles[0])
+    public = create_engine(db_roles[1])
+    try:
+        with app.begin() as conn:
+            conn.execute(
+                text(
+                    "INSERT INTO editor_draft (owner_kind, owner_id, principal_sub, base_rev, fields) "
+                    "VALUES ('event', gen_random_uuid(), 's', 1, '{}')"
+                )
+            )
+            conn.execute(text("DELETE FROM editor_draft"))
+            with pytest.raises(DBAPIError):
+                conn.execute(text("DELETE FROM event"))
+        with pytest.raises(DBAPIError), public.begin() as conn:
+            conn.execute(text("SELECT * FROM editor_draft"))
+    finally:
+        app.dispose()
+        public.dispose()

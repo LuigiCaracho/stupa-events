@@ -26,7 +26,9 @@ describe('SwUpdatePromptComponent', () => {
     const { view, updateReady } = await setup(false);
     updateReady.set(true);
     view.fixture.detectChanges();
-    expect(screen.getByRole('status')).toHaveTextContent('Eine neue Version der App ist verfügbar.');
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Eine neue Version der App ist verfügbar.',
+    );
     expect(screen.getByRole('button', { name: 'Neu laden' })).toBeInTheDocument();
     expect(await runAxe(view.container)).toHaveNoViolations();
   });

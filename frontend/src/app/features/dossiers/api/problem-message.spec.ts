@@ -10,9 +10,27 @@ describe('problemMessage', () => {
       status: 422,
       code: 'image_required',
       reasons: [
-        { code: 'image_required', field: null, severity: 'blocker', messageKey: 'guards.image_required', fixAction: 'upload_poster' },
-        { code: 'field_missing', field: 'venue_text', severity: 'blocker', messageKey: 'guards.field_missing', fixAction: 'fill_field' },
-        { code: 'x', field: null, severity: 'warning', messageKey: 'guards.four_eyes', fixAction: null },
+        {
+          code: 'image_required',
+          field: null,
+          severity: 'blocker',
+          messageKey: 'guards.image_required',
+          fixAction: 'upload_poster',
+        },
+        {
+          code: 'field_missing',
+          field: 'venue_text',
+          severity: 'blocker',
+          messageKey: 'guards.field_missing',
+          fixAction: 'fill_field',
+        },
+        {
+          code: 'x',
+          field: null,
+          severity: 'warning',
+          messageKey: 'guards.four_eyes',
+          fixAction: null,
+        },
       ],
     });
     expect(text).toBe('Nicht möglich: Poster fehlt oder ist nicht freigegeben. Es fehlt: Ort.');
@@ -24,9 +42,28 @@ describe('problemMessage', () => {
     expect(problemMessage(i18n(), { status: 413, code: 'payload_too_large' })).toContain('10 MiB');
   });
 
+  it('maps the M3 codes to fixed sentences', () => {
+    expect(problemMessage(i18n(), { status: 422, code: 'reason_required' })).toBe(
+      'Bitte gib einen Grund an.',
+    );
+    expect(problemMessage(i18n(), { status: 422, code: 'proposal_quota_exceeded' })).toContain(
+      '5 offene Vorschläge',
+    );
+    expect(problemMessage(i18n(), { status: 403, code: 'four_eyes' })).toBe(
+      'Eine andere Person muss freigeben.',
+    );
+    expect(problemMessage(i18n(), { status: 409, code: 'revert_poster_replaced' })).toContain(
+      'Poster',
+    );
+  });
+
   it('adds the trace id to unknown errors', () => {
-    expect(problemMessage(i18n(), { status: 500, traceId: 'abc123' })).toContain('Fehler-ID: abc123');
-    expect(problemMessage(i18n(), { status: 500 })).toBe('Das hat nicht geklappt. Bitte versuch es noch einmal.');
+    expect(problemMessage(i18n(), { status: 500, traceId: 'abc123' })).toContain(
+      'Fehler-ID: abc123',
+    );
+    expect(problemMessage(i18n(), { status: 500 })).toBe(
+      'Das hat nicht geklappt. Bitte versuch es noch einmal.',
+    );
   });
 
   it('reports a missing connection', () => {
@@ -36,7 +73,15 @@ describe('problemMessage', () => {
   it('falls back to the generic reason for an unknown message key', () => {
     const text = problemMessage(i18n(), {
       status: 422,
-      reasons: [{ code: 'z', field: null, severity: 'blocker', messageKey: 'guards.new_rule', fixAction: null }],
+      reasons: [
+        {
+          code: 'z',
+          field: null,
+          severity: 'blocker',
+          messageKey: 'guards.new_rule',
+          fixAction: null,
+        },
+      ],
     });
     expect(text).toBe('Nicht möglich: Voraussetzung nicht erfüllt.');
   });

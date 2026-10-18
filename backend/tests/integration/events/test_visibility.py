@@ -43,17 +43,36 @@ async def test_the_dossier_rows_by_state(api: Api, state: str) -> None:
     assert {user: await status_of(api, user, eid) for user in expected} == expected
 
 
-@pytest.mark.xfail(strict=True, reason="M3 proposals: a member reads their own proposal")
-async def test_a_member_reads_their_own_proposal(api: Api) -> None:
-    proposal = await api.request(
-        "member",
+async def propose(api: Api, user: str, title: str = "Mein Vorschlag") -> dict:
+    response = await api.request(
+        user,
         "POST",
         "/api/events",
-        json={
-            "title": "Mein Vorschlag",
-            "startsAt": "2030-01-01T10:00:00Z",
-            "endsAt": "2030-01-01T12:00:00Z",
-        },
+        json={"title": title, "startsAt": "2030-01-01T10:00:00Z", "endsAt": "2030-01-01T12:00:00Z"},
     )
-    assert proposal.status_code == 201
-    assert await status_of(api, "member", proposal.json()["id"]) == 200
+    assert response.status_code == 201, response.text
+    return response.json()
+
+
+async def test_a_member_reads_their_own_proposal_and_nobody_elses(api: Api) -> None:
+    mine = await propose(api, "member")
+    assert await status_of(api, "member", mine["id"]) == 200
+    assert await status_of(api, "nobody", mine["id"]) == 404
+    assert await status_of(api, "organizer-fsi", mine["id"]) == 404
+    assert await status_of(api, "editor", mine["id"]) == 200
+    listed = (await api.request("member", "GET", "/api/events")).json()["items"]
+    assert [e["id"] for e in listed] == [mine["id"]]
+    assert (await api.request("nobody", "GET", "/api/events")).json()["items"] == []
+
+
+async def test_the_proposer_loses_the_dossier_when_an_organization_is_assigned(api: Api) -> None:
+    mine = await propose(api, "member")
+    done = await api.request(
+        "editor",
+        "POST",
+        f"/api/events/{mine['id']}/actions/assign-organization",
+        json={"organizationId": api.org_ids["fsi"]},
+    )
+    assert done.status_code == 200 and done.json()["organization"]["slug"] == "fsi"
+    assert await status_of(api, "member", mine["id"]) == 404
+    assert await status_of(api, "organizer-fsi", mine["id"]) == 200

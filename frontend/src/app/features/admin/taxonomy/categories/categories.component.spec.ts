@@ -10,7 +10,14 @@ import { CategoriesComponent } from './categories.component';
 
 const TREE = [
   makeCategory({ id: 'fs', slug: 'fachschaft', name: 'Fachschaften', kind: 'fachschaft' }),
-  makeCategory({ id: 'fsi', slug: 'fsi', name: 'Informatik', kind: 'fachschaft', parentId: 'fs', colorToken: 'petrol' }),
+  makeCategory({
+    id: 'fsi',
+    slug: 'fsi',
+    name: 'Informatik',
+    kind: 'fachschaft',
+    parentId: 'fs',
+    colorToken: 'petrol',
+  }),
   makeCategory({ id: 'kino', slug: 'kino', name: 'Kino', kind: 'format', active: false }),
 ];
 
@@ -24,7 +31,9 @@ function fakeTaxonomy(overrides: Record<string, unknown> = {}) {
 }
 
 async function setup(api = fakeTaxonomy()) {
-  const view = await render(CategoriesComponent, { providers: [{ provide: TaxonomyApi, useValue: api }] });
+  const view = await render(CategoriesComponent, {
+    providers: [{ provide: TaxonomyApi, useValue: api }],
+  });
   await view.fixture.whenStable();
   view.fixture.detectChanges();
   const toast = view.fixture.debugElement.injector.get(ToastService);
@@ -38,7 +47,9 @@ describe('CategoriesComponent', () => {
     expect(names.indexOf('Fachschaften')).toBeLessThan(names.indexOf('Informatik'));
     expect(screen.getByText('Petrol')).toBeInTheDocument();
     expect(screen.getByText('inaktiv')).toBeInTheDocument();
-    expect(screen.getByText('Kategorien werden nicht gelöscht, nur deaktiviert.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Kategorien werden nicht gelöscht, nur deaktiviert.'),
+    ).toBeInTheDocument();
   });
 
   it('creates a category with an editable slug and a null parent', async () => {
@@ -72,8 +83,13 @@ describe('CategoriesComponent', () => {
   });
 
   it('shows "Slug schon vergeben." at the slug field on a 409', async () => {
-    const conflict = new HttpErrorResponse({ status: 409, error: { status: 409, code: 'slug_taken' } });
-    const { api, error } = await setup(fakeTaxonomy({ createCategory: jest.fn(() => throwError(() => conflict)) }));
+    const conflict = new HttpErrorResponse({
+      status: 409,
+      error: { status: 409, code: 'slug_taken' },
+    });
+    const { api, error } = await setup(
+      fakeTaxonomy({ createCategory: jest.fn(() => throwError(() => conflict)) }),
+    );
     await userEvent.click(await screen.findByRole('button', { name: 'Hinzufügen' }));
     await userEvent.type(screen.getByRole('textbox', { name: /Name/ }), 'Kino 2');
     await userEvent.type(screen.getByRole('textbox', { name: /Slug/ }), 'kino');
@@ -111,8 +127,14 @@ describe('CategoriesComponent', () => {
   });
 
   it('shows an error note when the load fails', async () => {
-    await setup(fakeTaxonomy({ categories: jest.fn(() => throwError(() => new HttpErrorResponse({ status: 500 }))) }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Die Daten konnten nicht geladen werden.');
+    await setup(
+      fakeTaxonomy({
+        categories: jest.fn(() => throwError(() => new HttpErrorResponse({ status: 500 }))),
+      }),
+    );
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Die Daten konnten nicht geladen werden.',
+    );
   });
 
   it('ignores a second edit while a row is open', async () => {
@@ -126,7 +148,11 @@ describe('CategoriesComponent', () => {
 
   it('ignores a repeated start of the same kind', async () => {
     const { fixture } = await setup();
-    const table = fixture.componentInstance as unknown as { startNew(): void; startEdit(row: unknown): void; editingId(): string | null };
+    const table = fixture.componentInstance as unknown as {
+      startNew(): void;
+      startEdit(row: unknown): void;
+      editingId(): string | null;
+    };
     table.startNew();
     table.startNew();
     table.startEdit(TREE[0]);
@@ -135,7 +161,9 @@ describe('CategoriesComponent', () => {
 
   it('refuses a blank name and toasts a failure without a field', async () => {
     const down = new HttpErrorResponse({ status: 500, error: { status: 500, code: 'internal' } });
-    const { api, error } = await setup(fakeTaxonomy({ updateCategory: jest.fn(() => throwError(() => down)) }));
+    const { api, error } = await setup(
+      fakeTaxonomy({ updateCategory: jest.fn(() => throwError(() => down)) }),
+    );
     await userEvent.click(await screen.findByText('Informatik'));
     const name = screen.getByRole('textbox', { name: /Name/ });
     await userEvent.clear(name);

@@ -1,10 +1,7 @@
 /** Copied from STUPA-Workflow@93c33d6 frontend/src/app/core/auth/auth.interceptor.spec.ts */
 import { TestBed } from '@angular/core/testing';
 import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting,
-} from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { authInterceptor } from './auth.interceptor';
 import { AuthService } from './auth.service';
 
@@ -105,9 +102,7 @@ describe('authInterceptor', () => {
     it('triggers re-login on a 401 from a protected endpoint', () => {
       const spy = jest.spyOn(auth, 'handleUnauthorized').mockImplementation(() => undefined);
       httpClient.get('/api/applications').subscribe({ error: () => undefined });
-      http
-        .expectOne('/api/applications')
-        .flush(null, { status: 401, statusText: 'Unauthorized' });
+      http.expectOne('/api/applications').flush(null, { status: 401, statusText: 'Unauthorized' });
       expect(spy).toHaveBeenCalled();
     });
 

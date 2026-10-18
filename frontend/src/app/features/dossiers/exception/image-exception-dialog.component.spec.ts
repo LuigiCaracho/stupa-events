@@ -27,7 +27,7 @@ describe('ImageExceptionDialogComponent', () => {
     const { api } = await setup();
     await userEvent.type(screen.getByLabelText(/Begründung/), 'kurz');
     await userEvent.click(screen.getByRole('button', { name: 'Ausnahme erteilen' }));
-    expect(api.imageException).not.toHaveBeenCalled();
+    expect(api.action).not.toHaveBeenCalled();
     expect(screen.getByText('Begründung zu kurz (mindestens 10 Zeichen).')).toBeInTheDocument();
   });
 
@@ -35,13 +35,23 @@ describe('ImageExceptionDialogComponent', () => {
     const { api, granted } = await setup();
     await userEvent.type(screen.getByLabelText(/Begründung/), '  Offenes Präsidium ohne Plakat ');
     await userEvent.click(screen.getByRole('button', { name: 'Ausnahme erteilen' }));
-    expect(api.imageException).toHaveBeenCalledWith('ev-1', 'Offenes Präsidium ohne Plakat');
+    expect(api.action).toHaveBeenCalledWith(
+      'ev-1',
+      'image-exception',
+      { reason: 'Offenes Präsidium ohne Plakat' },
+      3,
+    );
     expect(granted).toHaveBeenCalled();
   });
 
   it('keeps the dialog open when the server refuses', async () => {
-    const forbidden = new HttpErrorResponse({ status: 403, error: { status: 403, code: 'forbidden' } });
-    const { granted } = await setup(fakeApi({ imageException: jest.fn(() => throwError(() => forbidden)) }));
+    const forbidden = new HttpErrorResponse({
+      status: 403,
+      error: { status: 403, code: 'forbidden' },
+    });
+    const { granted } = await setup(
+      fakeApi({ action: jest.fn(() => throwError(() => forbidden)) }),
+    );
     await userEvent.type(screen.getByLabelText(/Begründung/), 'Offenes Präsidium ohne Plakat');
     await userEvent.click(screen.getByRole('button', { name: 'Ausnahme erteilen' }));
     expect(granted).not.toHaveBeenCalled();
@@ -49,12 +59,35 @@ describe('ImageExceptionDialogComponent', () => {
   });
 
   it('names a locked dossier on 409', async () => {
-    const locked = new HttpErrorResponse({ status: 409, error: { status: 409, code: 'field_locked' } });
-    const { granted, toast } = await setup(fakeApi({ imageException: jest.fn(() => throwError(() => locked)) }));
+    const locked = new HttpErrorResponse({
+      status: 409,
+      error: { status: 409, code: 'field_locked' },
+    });
+    const { granted, toast } = await setup(
+      fakeApi({ action: jest.fn(() => throwError(() => locked)) }),
+    );
     await userEvent.type(screen.getByLabelText(/Begründung/), 'Offenes Präsidium ohne Plakat');
     await userEvent.click(screen.getByRole('button', { name: 'Ausnahme erteilen' }));
     expect(granted).not.toHaveBeenCalled();
-    expect(toast.error).toHaveBeenCalledWith('In diesem Zustand lässt sich keine Ausnahme mehr erteilen.');
+    expect(toast.error).toHaveBeenCalledWith(
+      'In diesem Zustand lässt sich keine Ausnahme mehr erteilen.',
+    );
+  });
+
+  it('shows the generic text for another failure', async () => {
+    const { toast } = await setup(
+      fakeApi({ action: jest.fn(() => throwError(() => new HttpErrorResponse({ status: 500 }))) }),
+    );
+    await userEvent.type(screen.getByLabelText(/Begründung/), 'Offenes Präsidium ohne Plakat');
+    await userEvent.click(screen.getByRole('button', { name: 'Ausnahme erteilen' }));
+    expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Das hat nicht geklappt'));
+  });
+
+  it('tells that the exception only counts for this event', async () => {
+    await setup();
+    expect(
+      screen.getByText(/nur für dieses Event, nicht für Kopien und Serientermine/),
+    ).toBeInTheDocument();
   });
 
   it('has no axe violations', async () => {

@@ -5,10 +5,9 @@ import { NoteComponent } from './note.component';
 
 describe('NoteComponent', () => {
   it('shows its text next to a decorative icon', async () => {
-    const { container } = await render(
-      `<app-note>Ein Angebot ist Pflicht.</app-note>`,
-      { imports: [NoteComponent] },
-    );
+    const { container } = await render(`<app-note>Ein Angebot ist Pflicht.</app-note>`, {
+      imports: [NoteComponent],
+    });
     expect(screen.getByText('Ein Angebot ist Pflicht.')).toBeInTheDocument();
     expect(container.querySelector('app-icon')).toBeTruthy();
     expect(container.querySelector('app-note')).toHaveClass('note--neutral');

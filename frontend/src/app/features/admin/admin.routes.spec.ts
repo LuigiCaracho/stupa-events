@@ -6,12 +6,19 @@ describe('admin routes', () => {
 
   it('lazy-loads every tab page', async () => {
     const loaders = children.filter((r) => r.loadComponent);
-    expect(loaders.map((r) => r.path)).toEqual(['kategorien', 'orte', 'organisationen', 'zuordnungen']);
-    for (const route of loaders) expect(await (route.loadComponent as () => Promise<unknown>)()).toBeDefined();
+    expect(loaders.map((r) => r.path)).toEqual([
+      'kategorien',
+      'orte',
+      'organisationen',
+      'zuordnungen',
+    ]);
+    for (const route of loaders)
+      expect(await (route.loadComponent as () => Promise<unknown>)()).toBeDefined();
   });
 
   it('guards every tab page by a permission', () => {
-    for (const route of children.filter((r) => r.loadComponent)) expect(route.canActivate).toHaveLength(1);
+    for (const route of children.filter((r) => r.loadComponent))
+      expect(route.canActivate).toHaveLength(1);
   });
 
   it('keeps the old paths as redirects', () => {

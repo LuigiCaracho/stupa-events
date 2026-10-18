@@ -3,7 +3,14 @@
  * a dossier, uploads a poster and asks for approval; editor approves and publishes; the event is in
  * the public feed. Without a poster the approval is refused with 422 image_required.
  */
-import { type APIRequestContext, type Browser, type Page, expect, request, test } from '@playwright/test';
+import {
+  type APIRequestContext,
+  type Browser,
+  type Page,
+  expect,
+  request,
+  test,
+} from '@playwright/test';
 import { confirmTransition, createDossier, setSummary, uploadPoster } from './support/dossier';
 import { login, logout, postJson } from './support/session';
 
@@ -35,7 +42,9 @@ test('organizer-fsi: login shows the role from the group', async ({ browser }) =
   const page = await fresh(browser);
   await login(page, 'organizer-fsi');
   const me = await (await page.request.get('/api/auth/me')).json();
-  expect(me.organizations).toEqual(expect.arrayContaining([expect.objectContaining({ slug: 'fsi', role: 'organizer' })]));
+  expect(me.organizations).toEqual(
+    expect.arrayContaining([expect.objectContaining({ slug: 'fsi', role: 'organizer' })]),
+  );
   await expect(page.getByRole('heading', { level: 1, name: 'Meine Aufgaben' })).toBeVisible();
 
   dossierId = await createDossier(page, TITLE);

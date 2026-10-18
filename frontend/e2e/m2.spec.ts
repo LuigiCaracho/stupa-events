@@ -82,7 +82,9 @@ test('admin: adds a group mapping and removes it again', async ({ browser }) => 
   await page.getByRole('combobox', { name: /Rolle/ }).click();
   await page.getByRole('option', { name: 'Redaktion' }).click();
   await page.getByRole('button', { name: 'Speichern' }).click();
-  await expect(page.getByText('Gruppe beginnt mit reserviertem Präfix events-system:.')).toBeVisible();
+  await expect(
+    page.getByText('Gruppe beginnt mit reserviertem Präfix events-system:.'),
+  ).toBeVisible();
   await page.context().close();
 });
 
@@ -96,11 +98,15 @@ test('organizer-fsi: a dossier of another organization answers not found', async
   await login(page, 'organizer-fsi');
   expect((await page.request.get(`/api/events/${foreignId}`)).status()).toBe(404);
   await page.goto(`/dossiers/${foreignId}`);
-  await expect(page.getByRole('alert')).toContainText('Diese Seite gibt es nicht oder du hast keinen Zugriff.');
+  await expect(page.getByRole('alert')).toContainText(
+    'Diese Seite gibt es nicht oder du hast keinen Zugriff.',
+  );
   await page.context().close();
 });
 
-test('Sitzungen widerrufen: the other session needs a new login, this one stays', async ({ browser }) => {
+test('Sitzungen widerrufen: the other session needs a new login, this one stays', async ({
+  browser,
+}) => {
   const here = await fresh(browser);
   const other = await fresh(browser);
   await login(here, 'organizer-fsi');
@@ -109,7 +115,10 @@ test('Sitzungen widerrufen: the other session needs a new login, this one stays'
 
   await here.goto('/konto');
   await here.getByRole('button', { name: 'Andere Sitzungen widerrufen' }).click();
-  await here.getByRole('dialog').getByRole('button', { name: 'Andere Sitzungen widerrufen' }).click();
+  await here
+    .getByRole('dialog')
+    .getByRole('button', { name: 'Andere Sitzungen widerrufen' })
+    .click();
   await expect(here.getByText(/Sitzungen? beendet\./)).toBeVisible();
 
   expect((await other.request.get('/api/auth/me')).status()).toBe(401);

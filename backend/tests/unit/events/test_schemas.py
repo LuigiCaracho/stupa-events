@@ -53,9 +53,8 @@ def test_equal_start_and_end_is_allowed() -> None:
     assert build(endsAt=BASE["startsAt"]).ends_at == build().starts_at
 
 
-def test_patch_needs_a_revision_and_tracks_given_fields() -> None:
-    with pytest.raises(ValidationError):
-        EventPatch.model_validate({"title": "x"})
+def test_patch_tracks_given_fields_and_takes_an_optional_revision() -> None:
+    assert EventPatch.model_validate({"title": "x"}).rev is None
     patch = EventPatch.model_validate({"rev": 2, "venueText": None})
     assert patch.model_fields_set == {"rev", "venue_text"}
     with pytest.raises(ValidationError):

@@ -19,7 +19,14 @@ const ROUTES: Routes = [
   { path: 'start', component: StubPage, data: { fab: true } },
 ];
 
-const PRINCIPAL = { sub: '1', displayName: 'Mia', roles: [], permissions: [], groups: [], organizations: [] };
+const PRINCIPAL = {
+  sub: '1',
+  displayName: 'Mia',
+  roles: [],
+  permissions: [],
+  groups: [],
+  organizations: [],
+};
 
 async function setup(signedIn: boolean | null, url = '/aufgaben') {
   const view = await render(ShellComponent, {
@@ -82,6 +89,9 @@ describe('ShellComponent', () => {
 
   it('offers the skip link', async () => {
     await setup(true);
-    expect(screen.getByRole('link', { name: 'Zum Inhalt springen' })).toHaveAttribute('href', '#main');
+    expect(screen.getByRole('link', { name: 'Zum Inhalt springen' })).toHaveAttribute(
+      'href',
+      '#main',
+    );
   });
 });

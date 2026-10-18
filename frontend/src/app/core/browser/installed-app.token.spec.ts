@@ -5,7 +5,9 @@ import { IS_INSTALLED_APP, isInstalledApp, type DisplayModeHost } from './instal
 /** A host whose `matchMedia` matches exactly the given display mode. */
 function host(mode: string | null, standalone?: boolean): DisplayModeHost {
   return {
-    matchMedia: (query: string) => ({ matches: mode !== null && query === `(display-mode: ${mode})` }),
+    matchMedia: (query: string) => ({
+      matches: mode !== null && query === `(display-mode: ${mode})`,
+    }),
     navigator: standalone === undefined ? {} : { standalone },
   };
 }

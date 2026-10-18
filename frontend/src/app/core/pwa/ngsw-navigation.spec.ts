@@ -19,7 +19,15 @@ interface NgswConfig {
 }
 
 /** Paths the SERVER answers with its own HTML. None may reach the Angular router. */
-const SERVER_RENDERED = ['/api/**', '/.well-known/**', '/ics/**', '/e/**', '/k/**', '/tiles/**', '/sitemap.xml'];
+const SERVER_RENDERED = [
+  '/api/**',
+  '/.well-known/**',
+  '/ics/**',
+  '/e/**',
+  '/k/**',
+  '/tiles/**',
+  '/sitemap.xml',
+];
 
 function config(): NgswConfig {
   // Four levels up from src/app/core/pwa to the project root.

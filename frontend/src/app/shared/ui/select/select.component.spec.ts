@@ -591,9 +591,9 @@ describe('SelectFieldComponent', () => {
       await tick();
       const nord = screen.getByRole('group', { name: 'Nord' });
       expect(within(nord).getAllByRole('option')).toHaveLength(2);
-      expect(within(screen.getByRole('group', { name: 'Süd' })).getByRole('option')).toHaveTextContent(
-        'Delta',
-      );
+      expect(
+        within(screen.getByRole('group', { name: 'Süd' })).getByRole('option'),
+      ).toHaveTextContent('Delta');
     });
   });
 
@@ -676,7 +676,10 @@ describe('SelectFieldComponent', () => {
       const sheet = screen.getByRole('dialog', { name: 'Stadt' });
       const list = within(sheet).getByRole('listbox');
       expect(list).toHaveFocus();
-      expect(list).toHaveAttribute('aria-activedescendant', screen.getByRole('option', { name: 'Beta' }).id);
+      expect(list).toHaveAttribute(
+        'aria-activedescendant',
+        screen.getByRole('option', { name: 'Beta' }).id,
+      );
       expect(document.querySelector('.sel__menu')).toBeNull();
       expect(field()).not.toHaveAttribute('aria-activedescendant');
     });

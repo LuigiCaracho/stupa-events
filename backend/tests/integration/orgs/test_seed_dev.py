@@ -18,7 +18,7 @@ REALM = Path(__file__).resolve().parents[4] / "deploy" / "keycloak" / "stupa-eve
 
 async def test_seed_is_idempotent(api: Api, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(seed_dev, "get_sessionmaker", lambda: api.maker)
-    assert await seed_dev.main() == 3
+    assert await seed_dev.main() == 9
     async with api.maker() as session:
         mappings_after_first = (
             await session.execute(
@@ -34,10 +34,32 @@ async def test_seed_is_idempotent(api: Api, monkeypatch: pytest.MonkeyPatch) -> 
             await session.execute(text("SELECT count(*) FROM event_revision"))
         ).scalar_one()
         chain = (await session.execute(text("SELECT count(*) FROM audit_entry"))).scalar_one()
-    assert {t: s for t, s, _ in states}["Movienight: Beispielfilm"] == "planning"
+    by_title = {t: s for t, s, _ in states}
+    assert by_title["Movienight: Beispielfilm"] == "planning"
+    assert [
+        by_title[t] for t in sorted(by_title) if t.startswith(("Filmquiz", "Sommer", "Archiv"))
+    ] == [
+        "archived",
+        "in_review",
+        "approved",
+    ]
+    assert by_title["Vorschlag: Karaoke-Abend"] == "idea"
+    assert by_title["Löten für Einsteiger:innen: Rückblick"] == "followup"
+    assert by_title["Spieleabend: Brettspielklassiker"] == "live"
     assert {t: v for t, _, v in states}["Movienight: Beispielfilm"] == "Kinosaal 9-133"
-    assert revisions == 4
-    assert chain == 4 + mappings_after_first
+    assert revisions == 35
+    assert chain == 35 + mappings_after_first
+
+
+async def test_the_proposal_has_no_organization_and_belongs_to_the_member(
+    api: Api, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(seed_dev, "get_sessionmaker", lambda: api.maker)
+    await seed_dev.main()
+    rows = await api.sql(
+        "SELECT created_by, organization_id FROM event WHERE title LIKE 'Vorschlag%'"
+    )
+    assert rows == [("seed-member", None)]
 
 
 async def test_ensure_reference_adds_missing_rows_only(api: Api) -> None:

@@ -11,6 +11,8 @@ describe('TranslatePipe', () => {
   });
 
   it('interpolates parameters', () => {
-    expect(pipe().transform('shell.nav.brand', { name: 'STUPA Events' })).toBe('STUPA Events, Start');
+    expect(pipe().transform('shell.nav.brand', { name: 'STUPA Events' })).toBe(
+      'STUPA Events, Start',
+    );
   });
 });

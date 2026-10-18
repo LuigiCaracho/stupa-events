@@ -10,7 +10,9 @@ describe('ApiClient', () => {
   let http: HttpTestingController;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
     api = TestBed.inject(ApiClient);
     http = TestBed.inject(HttpTestingController);
   });
@@ -70,7 +72,13 @@ describe('problemOf', () => {
       status: 422,
       code: 'image_required',
       reasons: [
-        { code: 'image_required', field: null, severity: 'blocker', messageKey: 'guards.image_required', fixAction: 'upload_poster' },
+        {
+          code: 'image_required',
+          field: null,
+          severity: 'blocker',
+          messageKey: 'guards.image_required',
+          fixAction: 'upload_poster',
+        },
       ],
     };
     const err = new HttpErrorResponse({ status: 422, error: body });
@@ -78,7 +86,9 @@ describe('problemOf', () => {
   });
 
   it('falls back to the bare status when the body is not a problem object', () => {
-    expect(problemOf(new HttpErrorResponse({ status: 502, error: 'Bad Gateway' }))).toEqual({ status: 502 });
+    expect(problemOf(new HttpErrorResponse({ status: 502, error: 'Bad Gateway' }))).toEqual({
+      status: 502,
+    });
   });
 
   it('returns status 0 for anything that is not an HTTP error', () => {

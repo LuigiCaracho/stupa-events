@@ -37,14 +37,39 @@ describe('PosterUploadComponent', () => {
       altText: 'Plakat der Movienight',
       credit: 'Max Muster',
       rightsBasis: 'own_work',
+      personsDepicted: false,
+      consentNote: '',
     });
+  });
+
+  it('asks for the consent note when people are recognisable and sends it', async () => {
+    const { submitted, picker } = await setup();
+    await userEvent.upload(picker, png);
+    await userEvent.type(screen.getByLabelText(/Alt-Text/), 'Plakat');
+    await userEvent.type(screen.getByLabelText(/Credit/), 'Max');
+    await userEvent.click(screen.getByRole('combobox', { name: /Rechtegrundlage/ }));
+    await userEvent.click(screen.getByRole('option', { name: 'Eigenes Werk' }));
+    expect(screen.queryByLabelText(/Einwilligung/)).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Personen sind erkennbar' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Poster hochladen' }));
+    expect(screen.getByText('Die Einwilligung fehlt.')).toBeInTheDocument();
+    expect(submitted).not.toHaveBeenCalled();
+    await userEvent.type(screen.getByLabelText(/Einwilligung/), ' schriftlich ');
+    await userEvent.click(screen.getByRole('button', { name: 'Poster hochladen' }));
+    expect(submitted).toHaveBeenCalledWith(
+      expect.objectContaining({ personsDepicted: true, consentNote: 'schriftlich' }),
+    );
   });
 
   it('rejects a file of the wrong type with an alert', async () => {
     const { view } = await setup();
     const zone = view.container.querySelector('.fdz') as HTMLElement;
-    fireEvent.drop(zone, { dataTransfer: { files: [new File(['x'], 'a.pdf', { type: 'application/pdf' })] } });
-    expect(await screen.findByRole('alert')).toHaveTextContent('Dieses Format wird nicht angenommen');
+    fireEvent.drop(zone, {
+      dataTransfer: { files: [new File(['x'], 'a.pdf', { type: 'application/pdf' })] },
+    });
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Dieses Format wird nicht angenommen',
+    );
   });
 
   it('has no axe violations', async () => {

@@ -87,9 +87,7 @@ describe('SideSheetComponent', () => {
     expect(dialog).toHaveAttribute('aria-modal', 'true');
     expect(dialog).toHaveClass('ss', 'ss--end');
     expect(document.body.style.overflow).toBe('hidden');
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Zurücksetzen' })).toHaveFocus(),
-    );
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Zurücksetzen' })).toHaveFocus());
     expect(await runAxe(view.container)).toHaveNoViolations();
   });
 
@@ -97,7 +95,9 @@ describe('SideSheetComponent', () => {
     const { user, opener, host } = await setup();
     document.body.style.overflow = 'auto';
     await user.click(opener);
-    await waitFor(() => expect(screen.getByRole('dialog')).toContainElement(document.activeElement as HTMLElement));
+    await waitFor(() =>
+      expect(screen.getByRole('dialog')).toContainElement(document.activeElement as HTMLElement),
+    );
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(host.open()).toBe(false);

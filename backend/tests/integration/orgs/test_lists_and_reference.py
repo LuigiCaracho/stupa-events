@@ -83,9 +83,9 @@ async def test_event_list_filters(api: Api) -> None:
     assert titles(await api.request("editor", "GET", "/api/events?q=100%25")) == ["Kinoabend 100%"]
     assert titles(await api.request("editor", "GET", "/api/events?q=%25")) == ["Kinoabend 100%"]
     assert titles(await api.request("editor", "GET", "/api/events?q=_")) == []
-    org = api.org_ids["makers"]
-    assert titles(await api.request("editor", "GET", f"/api/events?organizationId={org}")) == []
-    for bad in ("limit=0", "limit=201", "offset=-1", "organizationId=x"):
+    assert titles(await api.request("editor", "GET", "/api/events?organization=makers")) == []
+    assert titles(await api.request("editor", "GET", "/api/events?organization=nope")) == []
+    for bad in ("limit=0", "limit=201", "offset=-1", "from=x", "view=cards"):
         assert (await api.request("editor", "GET", f"/api/events?{bad}")).status_code == 422
 
 
@@ -148,10 +148,15 @@ async def test_patch_validation(api: Api) -> None:
         {"rev": 1, "endsAt": "2000-01-01T00:00:00Z"},
         {"rev": 1, "primaryCategoryId": "00000000-0000-0000-0000-000000000000"},
         {"rev": 1, "allDay": True},
-        {"title": "ohne rev"},
+        {"rev": 1, "ticketUrl": "http://nicht-sicher.example"},
+        {"rev": 1, "websiteUrl": "https://user@example.org"},
+        {"rev": 1, "venueId": "00000000-0000-0000-0000-000000000000"},
     ):
         response = await api.request("organizer-fsi", "PATCH", url, json=body)
         assert response.status_code == 422, body
+    assert (
+        await api.request("organizer-fsi", "PATCH", url, json={"title": "ohne rev"})
+    ).status_code == 428
     unchanged = (await api.request("organizer-fsi", "GET", url)).json()
     assert unchanged["rev"] == 1
     set_null = await api.request(
@@ -164,10 +169,10 @@ async def test_patch_validation(api: Api) -> None:
 async def test_allowed_transitions_follow_state_and_role(api: Api) -> None:
     event = await api.create_event()
     eid = event["id"]
-    assert event["allowedTransitions"] == ["T01"]
+    assert event["allowedTransitions"] == ["T01", "T11"]
     as_editor = (await api.request("editor", "GET", f"/api/events/{eid}")).json()
-    assert as_editor["allowedTransitions"] == ["T01"]
+    assert as_editor["allowedTransitions"] == ["T01", "T11"]
     as_viewer = (await api.request("viewer-fsi", "GET", f"/api/events/{eid}")).json()
     assert as_viewer["allowedTransitions"] == []
     planning = (await api.fire("organizer-fsi", eid, "T01")).json()
-    assert planning["allowedTransitions"] == ["T02"]
+    assert planning["allowedTransitions"] == ["T02", "T11"]

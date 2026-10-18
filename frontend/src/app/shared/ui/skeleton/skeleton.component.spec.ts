@@ -38,7 +38,8 @@ describe('SkeletonComponent', () => {
     expect(rows[0].querySelectorAll('.sk__itemSub .skel-text')).toHaveLength(2);
     expect(rows[0].querySelectorAll('.sk__itemTrail .skel-text')).toHaveLength(1);
     // The widths repeat after six rows, the same on every load.
-    const width = (i: number) => (rows[i].querySelector('.sk__itemTitle .skel-text') as HTMLElement).style.width;
+    const width = (i: number) =>
+      (rows[i].querySelector('.sk__itemTitle .skel-text') as HTMLElement).style.width;
     expect(width(6)).toBe(width(0));
     expect(width(1)).not.toBe(width(0));
     expect(container.querySelector('.sk__items')).not.toHaveClass('rowgroup');
@@ -46,9 +47,12 @@ describe('SkeletonComponent', () => {
   });
 
   it('starts a list-item row with a lead tile and ends it with a person when asked', async () => {
-    const { container } = await render(`<app-skeleton variant="items" [count]="3" [lead]="true" trail="avatar" />`, {
-      imports: [SkeletonComponent],
-    });
+    const { container } = await render(
+      `<app-skeleton variant="items" [count]="3" [lead]="true" trail="avatar" />`,
+      {
+        imports: [SkeletonComponent],
+      },
+    );
     expect(container.querySelectorAll('.sk__item .sk__itemLead')).toHaveLength(3);
     expect(container.querySelectorAll('.sk__item .sk__itemAvatar')).toHaveLength(3);
     expect(container.querySelector('.sk__itemTrail')).toBeNull();
@@ -71,17 +75,22 @@ describe('SkeletonComponent', () => {
     expect(own.length).toBeGreaterThan(0);
     expect(own.length).toBeLessThan(5);
     for (const m of msgs) {
-      expect(m.querySelectorAll('.sk__avatar')).toHaveLength(m.classList.contains('sk__msg--own') ? 0 : 1);
+      expect(m.querySelectorAll('.sk__avatar')).toHaveLength(
+        m.classList.contains('sk__msg--own') ? 0 : 1,
+      );
     }
     expect(container.querySelector('.sk__bubbles')?.closest('[aria-hidden="true"]')).toBeTruthy();
     expect(container.querySelector('.sk__log')).toBeNull();
   });
 
   it('draws a whole chat: the framed log with bubbles, and the composer when asked', async () => {
-    const { container, rerender } = await render(`<app-skeleton variant="chat" [framed]="framed" [composer]="composer" />`, {
-      imports: [SkeletonComponent],
-      componentProperties: { framed: true, composer: true },
-    });
+    const { container, rerender } = await render(
+      `<app-skeleton variant="chat" [framed]="framed" [composer]="composer" />`,
+      {
+        imports: [SkeletonComponent],
+        componentProperties: { framed: true, composer: true },
+      },
+    );
     expect(container.querySelector('.sk__log')).toHaveClass('sk__log--framed');
     expect(container.querySelectorAll('.sk__log .sk__msg').length).toBeGreaterThan(0);
     expect(container.querySelector('.sk__composer')).toBeTruthy();

@@ -148,12 +148,19 @@ describe('ListItemComponent', () => {
 
   it('keeps the current query params on the link when asked to', async () => {
     const { fixture } = await render(ListItemComponent, {
-      inputs: { title: 'Druckkosten', link: ['/applications', 'a1'], linkQueryParamsHandling: 'preserve' },
+      inputs: {
+        title: 'Druckkosten',
+        link: ['/applications', 'a1'],
+        linkQueryParamsHandling: 'preserve',
+      },
       providers: [provideRouter([{ path: '**', component: BlankComponent }])],
     });
     await TestBed.inject(Router).navigateByUrl('/applications?type=t1');
     fixture.detectChanges();
-    expect(screen.getByRole('link', { name: 'Druckkosten' })).toHaveAttribute('href', '/applications/a1?type=t1');
+    expect(screen.getByRole('link', { name: 'Druckkosten' })).toHaveAttribute(
+      'href',
+      '/applications/a1?type=t1',
+    );
   });
 
   it('merges its own query params into the link', async () => {

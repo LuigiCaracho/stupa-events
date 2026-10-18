@@ -33,7 +33,6 @@ FORBIDDEN_PUBLIC_DEPENDENCIES = frozenset({"get_session", "get_current_principal
 SESSION_ONLY_ALLOWLIST: frozenset[tuple[str, str]] = frozenset(
     {("GET", "/api/auth/me"), ("POST", "/api/auth/sessions/revoke")}
 )
-_TRANSITION = frozenset({"event.edit", "event.submit", "event.approve"})
 _READ = frozenset({"library.read"})
 _MAPPINGS = frozenset({"admin.mappings"})
 _TAXONOMY = frozenset({"taxonomy.manage"})
@@ -64,12 +63,32 @@ ROUTE_PERMS: dict[tuple[str, str], frozenset[str]] = {
     ("GET", "/api/categories"): _READ,
     ("GET", "/api/venues"): _READ,
     ("GET", "/api/events"): _READ,
-    ("POST", "/api/events"): frozenset({"event.create"}),
+    ("POST", "/api/events"): _READ,
     ("GET", "/api/events/{event_id}"): _READ,
     ("PATCH", "/api/events/{event_id}"): frozenset({"event.edit"}),
-    ("POST", "/api/events/{event_id}/transitions/{transition}"): _TRANSITION,
-    ("GET", "/api/events/{event_id}/guards/{transition}"): _TRANSITION,
+    ("POST", "/api/events/{event_id}/transitions/{transition}"): _READ,
+    ("GET", "/api/events/{event_id}/guards/{transition}"): _READ,
     ("POST", "/api/events/{event_id}/image-exception"): frozenset({"event.image_exception"}),
+    ("POST", "/api/events/{event_id}/actions/cancel"): frozenset({"event.cancel"}),
+    ("POST", "/api/events/{event_id}/actions/postpone"): frozenset({"event.cancel"}),
+    ("POST", "/api/events/{event_id}/actions/reinstate"): frozenset({"event.approve"}),
+    ("POST", "/api/events/{event_id}/actions/image-exception"): frozenset(
+        {"event.image_exception"}
+    ),
+    ("POST", "/api/events/{event_id}/actions/assign-organization"): frozenset({"event.assign_org"}),
+    ("POST", "/api/events/{event_id}/actions/revert-revision"): frozenset(
+        {"event.edit_critical_live"}
+    ),
+    ("POST", "/api/events/{event_id}/actions/acknowledge-changes"): frozenset(
+        {"event.edit_critical_live"}
+    ),
+    ("POST", "/api/events/{event_id}/actions/confirm-flyer"): frozenset({"event.edit"}),
+    ("PUT", "/api/events/{event_id}/draft"): frozenset({"event.edit"}),
+    ("GET", "/api/events/{event_id}/draft"): frozenset({"event.edit"}),
+    ("DELETE", "/api/events/{event_id}/draft"): frozenset({"event.edit"}),
+    ("GET", "/api/events/{event_id}/revisions"): _READ,
+    ("GET", "/api/events/{event_id}/revisions/{rev}"): _READ,
+    ("GET", "/api/tasks"): _READ,
     ("POST", "/api/events/{event_id}/poster"): frozenset({"dossier.attach"}),
     ("GET", "/api/events/{event_id}/poster/file"): _READ,
     ("GET", "/api/auth/me"): frozenset(),

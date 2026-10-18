@@ -12,18 +12,34 @@ import { MappingsComponent } from './mappings.component';
 
 function fakeMappings(overrides: Record<string, unknown> = {}) {
   return {
-    list: jest.fn(() => of([makeMapping(), makeMapping({ id: 'map-2', oidcGroup: 'events-admin', role: 'admin', organization: null, principalCount: 1 })])),
+    list: jest.fn(() =>
+      of([
+        makeMapping(),
+        makeMapping({
+          id: 'map-2',
+          oidcGroup: 'events-admin',
+          role: 'admin',
+          organization: null,
+          principalCount: 1,
+        }),
+      ]),
+    ),
     organizations: jest.fn(() => of([FSI])),
     create: jest.fn(() => of(makeMapping())),
     update: jest.fn(() => of(makeMapping())),
     remove: jest.fn(() => of(undefined)),
-    createDefaults: jest.fn(() => of([makeMapping(), makeMapping({ id: 'map-3' }), makeMapping({ id: 'map-4' })])),
+    createDefaults: jest.fn(() =>
+      of([makeMapping(), makeMapping({ id: 'map-3' }), makeMapping({ id: 'map-4' })]),
+    ),
     principals: jest.fn(() => of({ items: [makePrincipal()], total: 1, limit: 200, offset: 0 })),
     ...overrides,
   };
 }
 
-async function setup(api = fakeMappings(), sessions = { revokePrincipal: jest.fn(() => of({ revoked: 2 })) }) {
+async function setup(
+  api = fakeMappings(),
+  sessions = { revokePrincipal: jest.fn(() => of({ revoked: 2 })) },
+) {
   const view = await render(MappingsComponent, {
     providers: [
       { provide: MappingsApi, useValue: api },
@@ -33,7 +49,13 @@ async function setup(api = fakeMappings(), sessions = { revokePrincipal: jest.fn
   await view.fixture.whenStable();
   view.fixture.detectChanges();
   const toast = view.fixture.debugElement.injector.get(ToastService);
-  return { ...view, api, sessions, success: jest.spyOn(toast, 'success'), error: jest.spyOn(toast, 'error') };
+  return {
+    ...view,
+    api,
+    sessions,
+    success: jest.spyOn(toast, 'success'),
+    error: jest.spyOn(toast, 'error'),
+  };
 }
 
 describe('MappingsComponent', () => {
@@ -42,7 +64,9 @@ describe('MappingsComponent', () => {
     expect(await screen.findByText('events-fsi-organizer')).toBeInTheDocument();
     expect(screen.getByText('Organisierend')).toBeInTheDocument();
     expect(screen.getByText('Fachschaft Informatik')).toBeInTheDocument();
-    expect(screen.getByText('Gruppen kommen aus Authentik. Mitglieder werden nur dort gepflegt.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Gruppen kommen aus Authentik. Mitglieder werden nur dort gepflegt.'),
+    ).toBeInTheDocument();
   });
 
   it('shows the empty text when nothing is mapped', async () => {
@@ -69,18 +93,27 @@ describe('MappingsComponent', () => {
     await userEvent.click(screen.getByRole('option', { name: 'Redaktion' }));
     expect(screen.getByRole('combobox', { name: 'Organisation' })).toBeDisabled();
     await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
-    expect(api.create).toHaveBeenCalledWith({ oidcGroup: 'events-editor', role: 'editor', organizationId: null });
+    expect(api.create).toHaveBeenCalledWith({
+      oidcGroup: 'events-editor',
+      role: 'editor',
+      organizationId: null,
+    });
   });
 
   it('shows the server code at the field, here the reserved prefix', async () => {
-    const reserved = new HttpErrorResponse({ status: 422, error: { status: 422, code: 'reserved_group_prefix' } });
+    const reserved = new HttpErrorResponse({
+      status: 422,
+      error: { status: 422, code: 'reserved_group_prefix' },
+    });
     await setup(fakeMappings({ create: jest.fn(() => throwError(() => reserved)) }));
     await userEvent.click(await screen.findByRole('button', { name: 'Zuordnung hinzufügen' }));
     await userEvent.type(screen.getByRole('textbox', { name: /Gruppe/ }), 'events-system:x');
     await userEvent.click(screen.getByRole('combobox', { name: /Rolle/ }));
     await userEvent.click(screen.getByRole('option', { name: 'Admin' }));
     await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
-    expect(await screen.findByText('Gruppe beginnt mit reserviertem Präfix events-system:.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Gruppe beginnt mit reserviertem Präfix events-system:.'),
+    ).toBeInTheDocument();
   });
 
   it('keeps the group read-only on edit and patches role and organization', async () => {
@@ -89,7 +122,10 @@ describe('MappingsComponent', () => {
     await userEvent.click(within(row).getByRole('button', { name: 'Bearbeiten' }));
     expect(screen.queryByRole('textbox', { name: /Gruppe/ })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
-    expect(api.update).toHaveBeenCalledWith('map-1', { role: 'organizer', organizationId: 'org-fsi' });
+    expect(api.update).toHaveBeenCalledWith('map-1', {
+      role: 'organizer',
+      organizationId: 'org-fsi',
+    });
   });
 
   it('edits a global mapping without an organization', async () => {
@@ -110,7 +146,9 @@ describe('MappingsComponent', () => {
 
   it('toasts a failed default proposal', async () => {
     const down = new HttpErrorResponse({ status: 500, error: { status: 500, code: 'internal' } });
-    const { error } = await setup(fakeMappings({ createDefaults: jest.fn(() => throwError(() => down)) }));
+    const { error } = await setup(
+      fakeMappings({ createDefaults: jest.fn(() => throwError(() => down)) }),
+    );
     await userEvent.click(await screen.findByRole('button', { name: /Standard/ }));
     expect(error).toHaveBeenCalled();
   });
@@ -128,7 +166,10 @@ describe('MappingsComponent', () => {
   it('guards a second default run and a delete without a target', async () => {
     const pending = new Subject<never>();
     const { api, fixture } = await setup(fakeMappings({ createDefaults: jest.fn(() => pending) }));
-    const page = fixture.componentInstance as unknown as { defaults(): void; confirmDelete(): void };
+    const page = fixture.componentInstance as unknown as {
+      defaults(): void;
+      confirmDelete(): void;
+    };
     page.defaults();
     page.defaults();
     page.confirmDelete();
@@ -147,17 +188,28 @@ describe('MappingsComponent', () => {
   });
 
   it('tells the last-admin rule as a toast when the delete is refused', async () => {
-    const refused = new HttpErrorResponse({ status: 409, error: { status: 409, code: 'last_admin_mapping' } });
-    const { error } = await setup(fakeMappings({ remove: jest.fn(() => throwError(() => refused)) }));
+    const refused = new HttpErrorResponse({
+      status: 409,
+      error: { status: 409, code: 'last_admin_mapping' },
+    });
+    const { error } = await setup(
+      fakeMappings({ remove: jest.fn(() => throwError(() => refused)) }),
+    );
     const row = (await screen.findByText('events-admin')).closest('tr') as HTMLElement;
     await userEvent.click(within(row).getByRole('button', { name: 'Löschen' }));
-    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Löschen' }));
-    expect(error).toHaveBeenCalledWith('Die letzte Admin-Zuordnung bleibt, solange keine Bootstrap-Admins gesetzt sind.');
+    await userEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Löschen' }),
+    );
+    expect(error).toHaveBeenCalledWith(
+      'Die letzte Admin-Zuordnung bleibt, solange keine Bootstrap-Admins gesetzt sind.',
+    );
   });
 
   it('creates the default mappings and reports how many are new', async () => {
     const { api, success } = await setup();
-    await userEvent.click(await screen.findByRole('button', { name: 'Standardzuordnungen anlegen' }));
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Standardzuordnungen anlegen' }),
+    );
     expect(api.createDefaults).toHaveBeenCalled();
     expect(success).toHaveBeenCalledWith('3 neue Zuordnungen angelegt');
   });
@@ -171,7 +223,9 @@ describe('MappingsComponent', () => {
     expect(screen.getByText('mia@example.test')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Sitzungen widerrufen' }));
     const dialog = await screen.findByRole('dialog');
-    expect(dialog).toHaveTextContent('Diese Person muss sich neu anmelden. Rechte ändern sich nur über Authentik.');
+    expect(dialog).toHaveTextContent(
+      'Diese Person muss sich neu anmelden. Rechte ändern sich nur über Authentik.',
+    );
     expect(sessions.revokePrincipal).not.toHaveBeenCalled();
     await userEvent.click(within(dialog).getByRole('button', { name: 'Sitzungen widerrufen' }));
     expect(sessions.revokePrincipal).toHaveBeenCalledWith('p-1');

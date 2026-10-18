@@ -9,7 +9,9 @@ describe('admin API services', () => {
   let http: HttpTestingController;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
     http = TestBed.inject(HttpTestingController);
   });
 
@@ -20,9 +22,14 @@ describe('admin API services', () => {
     api.categories().subscribe();
     http.expectOne('/api/admin/categories').flush([]);
     api.createVenue({ slug: 'a', name: 'A' }).subscribe();
-    expect(http.expectOne({ method: 'POST', url: '/api/admin/venues' }).request.body).toEqual({ slug: 'a', name: 'A' });
+    expect(http.expectOne({ method: 'POST', url: '/api/admin/venues' }).request.body).toEqual({
+      slug: 'a',
+      name: 'A',
+    });
     api.updateOrganization('o1', { trusted: true }).subscribe();
-    expect(http.expectOne({ method: 'PATCH', url: '/api/admin/organizations/o1' }).request.body).toEqual({ trusted: true });
+    expect(
+      http.expectOne({ method: 'PATCH', url: '/api/admin/organizations/o1' }).request.body,
+    ).toEqual({ trusted: true });
     api.organizations().subscribe();
     http.expectOne('/api/admin/organizations').flush([]);
     api.venues().subscribe();
@@ -60,6 +67,8 @@ describe('admin API services', () => {
     api.revokeOwn().subscribe();
     http.expectOne({ method: 'POST', url: '/api/auth/sessions/revoke' }).flush({ revoked: 1 });
     api.revokePrincipal('p1').subscribe();
-    http.expectOne({ method: 'POST', url: '/api/admin/principals/p1/sessions/revoke' }).flush({ revoked: 3 });
+    http
+      .expectOne({ method: 'POST', url: '/api/admin/principals/p1/sessions/revoke' })
+      .flush({ revoked: 3 });
   });
 });

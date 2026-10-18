@@ -1,95 +1,170 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, provideRouter } from '@angular/router';
 import { render, screen, waitFor } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { of, throwError } from 'rxjs';
-import { AuthService } from '@core/auth/auth.service';
+import { BehaviorSubject, of, throwError } from 'rxjs';
 import { runAxe } from '../../../../testing/a11y';
+import { AuthService } from '@core/auth/auth.service';
+import { fakeApi, fakeAuth, makeCard } from '../../../../testing/event-fixtures';
+import { convertToParamMap } from '@angular/router';
 import { EventsApi } from '../api/events-api.service';
-import { fakeApi, fakeAuth, makeEvent } from '../../../../testing/event-fixtures';
 import { DossierListComponent } from './dossier-list.component';
 
 describe('DossierListComponent', () => {
-  async function setup(api = fakeApi(), data: Record<string, unknown> = {}) {
+  async function setup(
+    api = fakeApi(),
+    data: Record<string, unknown> = {},
+    child: string | null = null,
+  ) {
+    const params = new BehaviorSubject(convertToParamMap({}));
+    const route = {
+      snapshot: { data, queryParamMap: params.value },
+      queryParamMap: params,
+      firstChild: child ? { snapshot: { paramMap: convertToParamMap({ id: child }) } } : null,
+    };
     const view = await render(DossierListComponent, {
       providers: [
         provideRouter([]),
         { provide: EventsApi, useValue: api },
+        { provide: ActivatedRoute, useValue: route },
         { provide: AuthService, useValue: fakeAuth() },
-        { provide: ActivatedRoute, useValue: { snapshot: { data } } },
       ],
     });
     await view.fixture.whenStable();
     view.fixture.detectChanges();
-    return { view, api };
+    const router = TestBed.inject(Router);
+    const navigate = jest.spyOn(router, 'navigate').mockResolvedValue(true);
+    const navigateByUrl = jest.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+    return { view, api, navigate, navigateByUrl };
   }
 
-  it('renders one row per dossier with state, organization and venue', async () => {
-    await setup();
+  it('renders one row per dossier with day, state, organization, venue and blockers', async () => {
+    const api = fakeApi({
+      listCards: jest.fn(() =>
+        of({ items: [makeCard({ blockerCount: 2 })], total: 1, limit: 100, offset: 0 }),
+      ),
+    });
+    await setup(api);
     const link = await screen.findByRole('link', { name: 'Movienight' });
     expect(link).toHaveAttribute('href', '/dossiers/ev-1');
     expect(screen.getByText('Planung')).toBeInTheDocument();
     expect(screen.getByText('FSI · Kinosaal 9-133')).toBeInTheDocument();
+    expect(screen.getByText('Do., 5. Nov.')).toBeInTheDocument();
+    expect(screen.getByText('2 offen')).toBeInTheDocument();
     expect(screen.getByText('1 Dossiers')).toBeInTheDocument();
   });
 
-  it('searches live after a short delay and filters by state', async () => {
-    const { api } = await setup();
-    await userEvent.type(screen.getByRole('searchbox', { name: 'Titel suchen' }), 'kino');
-    await waitFor(() => expect(api.list).toHaveBeenLastCalledWith({ q: 'kino', state: undefined, limit: 200 }));
-    await userEvent.click(screen.getByRole('combobox', { name: 'Zustand' }));
-    await userEvent.click(screen.getByRole('option', { name: 'Freigabe' }));
-    await waitFor(() => expect(api.list).toHaveBeenLastCalledWith({ q: 'kino', state: 'in_review', limit: 200 }));
-  });
-
-  it('offers to reset the filters when nothing matches', async () => {
-    const api = fakeApi({ list: jest.fn(() => of({ items: [], total: 0, limit: 200, offset: 0 })) });
-    await setup(api);
-    expect(await screen.findByText('Noch keine Dossiers.')).toBeInTheDocument();
-    await userEvent.type(screen.getByRole('searchbox', { name: 'Titel suchen' }), 'x');
-    expect(await screen.findByText('Keine Dossiers für diese Filter.')).toBeInTheDocument();
-    await userEvent.click(screen.getByRole('button', { name: 'Filter zurücksetzen' }));
-    expect(await screen.findByText('Noch keine Dossiers.')).toBeInTheDocument();
-  });
-
-  it('shows an error note when the list cannot be loaded', async () => {
-    await setup(fakeApi({ list: jest.fn(() => throwError(() => new HttpErrorResponse({ status: 500 }))) }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Die Dossiers konnten nicht geladen werden.');
-  });
-
-  it('goes to the new-event route from the header button', async () => {
+  it('uses the shared pane header with the h1, and hands the h1 to the open dossier', async () => {
     const { view } = await setup();
-    const navigate = jest.spyOn(view.fixture.debugElement.injector.get(Router), 'navigateByUrl').mockResolvedValue(true);
-    await userEvent.click(screen.getByRole('button', { name: 'Neues Event' }));
-    expect(navigate).toHaveBeenCalledWith('/dossiers/neu');
+    expect(view.container.querySelectorAll('h1')).toHaveLength(1);
+    expect(screen.getByRole('heading', { level: 1, name: 'Dossiers' })).toBeInTheDocument();
+    view.fixture.destroy();
   });
 
-  it('opens the dialog on the new route and opens the created dossier', async () => {
-    const { view } = await setup(fakeApi({ list: jest.fn(() => of({ items: [makeEvent({ state: 'idea' })], total: 1, limit: 200, offset: 0 })) }), { newEvent: true });
-    const navigate = jest.spyOn(view.fixture.debugElement.injector.get(Router), 'navigate').mockResolvedValue(true);
+  it('shows the title as plain text while a dossier is open', async () => {
+    const { view } = await setup(fakeApi(), {}, 'ev-1');
+    expect(view.container.querySelectorAll('h1')).toHaveLength(0);
+    expect(view.container.querySelector('p.ph__title')).toHaveTextContent('Dossiers');
+  });
+
+  it('searches live after a short delay with the filters of the board', async () => {
+    const { api } = await setup();
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Events suchen' }), 'kino');
+    await waitFor(() =>
+      expect(api.listCards).toHaveBeenLastCalledWith(
+        expect.objectContaining({ q: 'kino', limit: 100 }),
+      ),
+    );
+  });
+
+  it('offers to reset the filters when nothing matches and the first event when there is nothing', async () => {
+    const api = fakeApi({
+      listCards: jest.fn(() => of({ items: [], total: 0, limit: 100, offset: 0 })),
+    });
+    const { navigateByUrl } = await setup(api);
+    expect(await screen.findByText('Noch keine Dossiers.')).toBeInTheDocument();
+    await userEvent.click(screen.getAllByRole('button', { name: 'Neues Event' }).at(-1)!);
+    expect(navigateByUrl).toHaveBeenCalledWith('/dossiers/neu');
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Events suchen' }), 'x');
+    expect(await screen.findByText('Keine Dossiers für diese Filter.')).toBeInTheDocument();
+    await userEvent.click(screen.getAllByRole('button', { name: 'Filter zurücksetzen' })[0]);
+    expect(await screen.findByText('Noch keine Dossiers.')).toBeInTheDocument();
+  });
+
+  it('loads more rows on request', async () => {
+    const api = fakeApi({
+      listCards: jest.fn(() => of({ items: [makeCard()], total: 150, limit: 100, offset: 0 })),
+    });
+    await setup(api);
+    await userEvent.click(await screen.findByRole('button', { name: 'Weitere laden' }));
+    await waitFor(() =>
+      expect(api.listCards).toHaveBeenLastCalledWith(expect.objectContaining({ limit: 200 })),
+    );
+  });
+
+  it('shows an error note when the load fails', async () => {
+    await setup(
+      fakeApi({
+        listCards: jest.fn(() => throwError(() => new HttpErrorResponse({ status: 500 }))),
+      }),
+    );
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Die Dossiers konnten nicht geladen werden.',
+    );
+  });
+
+  it('marks the open dossier in the list and hints at the choice beside it', async () => {
+    await setup(fakeApi(), {}, 'ev-1');
+    expect(await screen.findByRole('link', { name: 'Movienight', hidden: true })).toHaveAttribute(
+      'aria-current',
+      'true',
+    );
+  });
+
+  it('does not fail while the child route has no snapshot yet', async () => {
+    const params = new BehaviorSubject(convertToParamMap({}));
+    const route = {
+      snapshot: { data: {}, queryParamMap: params.value },
+      queryParamMap: params,
+      firstChild: {},
+    };
+    await render(DossierListComponent, {
+      providers: [
+        provideRouter([]),
+        { provide: EventsApi, useValue: fakeApi() },
+        { provide: ActivatedRoute, useValue: route },
+        { provide: AuthService, useValue: fakeAuth() },
+      ],
+    });
+    expect(await screen.findByText('Wähle ein Dossier aus der Liste.')).toBeInTheDocument();
+  });
+
+  it('asks to pick a dossier when none is open', async () => {
+    await setup();
+    expect(await screen.findByText('Wähle ein Dossier aus der Liste.')).toBeInTheDocument();
+  });
+
+  it('opens the dialog on the new-event route and closes it back to the list', async () => {
+    const { navigateByUrl } = await setup(fakeApi(), { newEvent: true });
     expect(await screen.findByRole('dialog', { name: 'Neues Event' })).toBeInTheDocument();
-    const close = jest.spyOn(view.fixture.debugElement.injector.get(Router), 'navigateByUrl').mockResolvedValue(true);
-    await userEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
-    expect(close).toHaveBeenCalledWith('/dossiers');
-    expect(navigate).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    expect(navigateByUrl).toHaveBeenCalledWith('/dossiers');
+  });
+
+  it('opens the created dossier', async () => {
+    const { navigate } = await setup(fakeApi(), { newEvent: true });
+    await screen.findByRole('dialog', { name: 'Neues Event' });
+    await userEvent.type(screen.getByLabelText(/^Titel/), 'Neu');
+    await userEvent.type(screen.getByLabelText(/Beginn, Datum/), '05.11.2099');
+    await userEvent.type(screen.getByLabelText(/Beginn, Uhrzeit/), '19:00');
+    await userEvent.click(screen.getByRole('button', { name: 'Anlegen' }));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith(['/dossiers', 'ev-1']));
   });
 
   it('has no axe violations', async () => {
     const { view } = await setup();
     await screen.findByRole('link', { name: 'Movienight' });
     expect(await runAxe(view.container)).toHaveNoViolations();
-  });
-
-  it('opens a created dossier', async () => {
-    const { view } = await setup();
-    const navigate = jest.spyOn(view.fixture.debugElement.injector.get(Router), 'navigate').mockResolvedValue(true);
-    (view.fixture.componentInstance as unknown as { opened(e: unknown): void }).opened(makeEvent({ id: 'new-1' }));
-    expect(navigate).toHaveBeenCalledWith(['/dossiers', 'new-1']);
-  });
-
-  it('shows a placeholder for a dossier without organization and venue', async () => {
-    const api = fakeApi({ list: jest.fn(() => of({ items: [makeEvent({ organization: null, venueText: null })], total: 1, limit: 200, offset: 0 })) });
-    await setup(api);
-    expect(await screen.findByText('Ohne Organisation')).toBeInTheDocument();
   });
 });

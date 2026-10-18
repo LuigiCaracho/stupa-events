@@ -84,7 +84,9 @@ describe('SheetBarComponent', () => {
   it('puts a projected kicker in the place of the text kicker', () => {
     const fixture = TestBed.createComponent(SlotHostComponent);
     fixture.detectChanges();
-    const bar = (fixture.nativeElement as HTMLElement).querySelector('app-sheet-bar') as HTMLElement;
+    const bar = (fixture.nativeElement as HTMLElement).querySelector(
+      'app-sheet-bar',
+    ) as HTMLElement;
     const kickers = bar.querySelectorAll('.sheet-bar__kicker');
     expect(kickers).toHaveLength(1);
     const k = kickers[0] as HTMLElement;

@@ -1,10 +1,7 @@
 /** Copied from STUPA-Workflow@93c33d6 frontend/src/app/core/auth/auth.guard.spec.ts */
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting,
-} from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import {
   type ActivatedRouteSnapshot,
   type RouterStateSnapshot,
@@ -57,10 +54,7 @@ describe('authGuard', () => {
   });
 
   /** Runs the guard, flushes the `/me` probe and returns the result. */
-  function run(
-    data: Record<string, unknown>,
-    principal: Principal | null,
-  ): boolean | UrlTree {
+  function run(data: Record<string, unknown>, principal: Principal | null): boolean | UrlTree {
     let result!: boolean | UrlTree;
     TestBed.runInInjectionContext(() => {
       const out = authGuard(
@@ -69,7 +63,9 @@ describe('authGuard', () => {
       );
       (out as Observable<boolean | UrlTree>).subscribe((r) => (result = r));
     });
-    http.expectOne('/api/auth/me').flush(principal, principal ? {} : { status: 401, statusText: 'Unauthorized' });
+    http
+      .expectOne('/api/auth/me')
+      .flush(principal, principal ? {} : { status: 401, statusText: 'Unauthorized' });
     return result;
   }
 

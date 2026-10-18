@@ -130,7 +130,16 @@ describe('StickyBarComponent', () => {
       const pane = view.container.querySelector('.pane') as HTMLElement;
       const bar = view.container.querySelector('app-sticky-bar') as HTMLElement;
       pane.getBoundingClientRect = () =>
-        ({ top: 24, height: 800, bottom: 824, left: 0, right: 0, width: 0, x: 0, y: 24 }) as DOMRect;
+        ({
+          top: 24,
+          height: 800,
+          bottom: 824,
+          left: 0,
+          right: 0,
+          width: 0,
+          x: 0,
+          y: 24,
+        }) as DOMRect;
       return { view, pane, bar };
     }
 

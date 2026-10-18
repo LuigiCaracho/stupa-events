@@ -16,7 +16,13 @@ describe('reason-text', () => {
   });
 
   it('puts the field into the sentence', () => {
-    const reason = { code: 'field_missing', field: 'summary', severity: 'blocker' as const, messageKey: 'guards.field_missing', fixAction: null };
+    const reason = {
+      code: 'field_missing',
+      field: 'summary',
+      severity: 'blocker' as const,
+      messageKey: 'guards.field_missing',
+      fixAction: null,
+    };
     expect(reasonText(i18n(), reason)).toBe('Es fehlt: Kurztext.');
   });
 });

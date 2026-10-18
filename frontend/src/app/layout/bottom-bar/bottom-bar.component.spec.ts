@@ -28,12 +28,15 @@ async function setup(signedIn = true) {
 }
 
 describe('BottomBarComponent', () => {
-  it('shows Aufgaben, Dossiers and Konto with their paths', async () => {
+  it('shows Aufgaben, Pipeline, Dossiers and Konto with their paths', async () => {
     await setup();
     const bar = screen.getByRole('navigation', { name: 'Hauptnavigation' });
     const labels = Array.from(bar.querySelectorAll('.bb__label')).map((l) => l.textContent?.trim());
-    expect(labels).toEqual(['Aufgaben', 'Dossiers', 'Konto']);
-    expect(within(bar).getByRole('link', { name: 'Aufgaben' })).toHaveAttribute('href', '/aufgaben');
+    expect(labels).toEqual(['Aufgaben', 'Pipeline', 'Dossiers', 'Konto']);
+    expect(within(bar).getByRole('link', { name: 'Aufgaben' })).toHaveAttribute(
+      'href',
+      '/aufgaben',
+    );
     expect(within(bar).getByRole('link', { name: 'Konto' })).toHaveAttribute('href', '/konto');
   });
 

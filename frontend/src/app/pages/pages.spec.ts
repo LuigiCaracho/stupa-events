@@ -16,7 +16,12 @@ import { NotFoundComponent } from './not-found.component';
 import { PlaceholderComponent } from './placeholder/placeholder.component';
 
 function providers(location = createLocationMock()) {
-  return [provideRouter([]), provideHttpClient(), provideHttpClientTesting(), provideLocationMock(location)];
+  return [
+    provideRouter([]),
+    provideHttpClient(),
+    provideHttpClientTesting(),
+    provideLocationMock(location),
+  ];
 }
 
 describe('LoginComponent', () => {
@@ -29,7 +34,10 @@ describe('LoginComponent', () => {
 
   it('links to the public page', async () => {
     await render(LoginComponent, { providers: providers() });
-    expect(screen.getByRole('link', { name: 'Zur öffentlichen Seite' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: 'Zur öffentlichen Seite' })).toHaveAttribute(
+      'href',
+      '/',
+    );
   });
 
   it('has no axe violations', async () => {
@@ -53,15 +61,18 @@ describe('AccountComponent', () => {
     const view = await render(AccountComponent, { providers: providers(location) });
     const injector = view.fixture.debugElement.injector;
     injector.get(AuthService).ensureLoaded().subscribe();
-    injector.get(HttpTestingController).expectOne('/api/auth/me').flush({
-      sub: '1',
-      email: 'mia@hs-reutlingen.de',
-      displayName: 'Mia',
-      roles: ['organizer'],
-      permissions: [],
-      groups: ['events-fsi-organizer'],
-      organizations: [FSI_MEMBERSHIP],
-    });
+    injector
+      .get(HttpTestingController)
+      .expectOne('/api/auth/me')
+      .flush({
+        sub: '1',
+        email: 'mia@hs-reutlingen.de',
+        displayName: 'Mia',
+        roles: ['organizer'],
+        permissions: [],
+        groups: ['events-fsi-organizer'],
+        organizations: [FSI_MEMBERSHIP],
+      });
     view.fixture.detectChanges();
     return { ...view, location, http: injector.get(HttpTestingController) };
   }

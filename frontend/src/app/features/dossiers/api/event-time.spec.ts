@@ -1,4 +1,10 @@
-import { formatEventTime, isoToZoned, zonedToIso } from './event-time';
+import {
+  formatEventDay,
+  formatEventTime,
+  formatShortDate,
+  isoToZoned,
+  zonedToIso,
+} from './event-time';
 
 describe('event-time', () => {
   it('converts summer time (UTC+2) to UTC', () => {
@@ -33,5 +39,10 @@ describe('event-time', () => {
     const text = formatEventTime('2026-11-05T18:30:00Z', 'Europe/Berlin');
     expect(text).toContain('5');
     expect(text).toContain('19:30');
+  });
+
+  it('formats the day of a card and the short date of "geplant ab"', () => {
+    expect(formatEventDay('2026-11-05T18:30:00Z', 'Europe/Berlin')).toMatch(/Do\.?, 5\. Nov/);
+    expect(formatShortDate('2026-11-01T10:00:00Z', 'Europe/Berlin')).toBe('01.11.');
   });
 });

@@ -1,10 +1,7 @@
 /** Copied from STUPA-Workflow@93c33d6 frontend/src/app/core/auth/auth.service.spec.ts */
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting,
-} from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { AuthService, loginReturnTo } from './auth.service';
 import { IS_INSTALLED_APP } from '../browser/installed-app.token';
 import type { Principal } from '../api/models';
@@ -36,11 +33,7 @@ describe('AuthService', () => {
     location = createLocationMock();
     assign = location.assign;
     TestBed.configureTestingModule({
-      providers: [
-        provideHttpClient(),
-        provideHttpClientTesting(),
-        provideLocationMock(location),
-      ],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideLocationMock(location)],
     });
     auth = TestBed.inject(AuthService);
     http = TestBed.inject(HttpTestingController);
@@ -151,17 +144,13 @@ describe('AuthService', () => {
 
   it('logs out gracefully even if the request errors', () => {
     auth.logout();
-    http
-      .expectOne('/api/auth/logout')
-      .flush(null, { status: 500, statusText: 'Server Error' });
+    http.expectOne('/api/auth/logout').flush(null, { status: 500, statusText: 'Server Error' });
     expect(assign).toHaveBeenCalledWith('/');
   });
 
   it('falls back to the placeholder display name when name and email are blank', () => {
     auth.ensureLoaded().subscribe();
-    http
-      .expectOne('/api/auth/me')
-      .flush({ ...PRINCIPAL, displayName: null, email: '' });
+    http.expectOne('/api/auth/me').flush({ ...PRINCIPAL, displayName: null, email: '' });
     expect(auth.displayName()).toBe('-');
   });
 
@@ -177,7 +166,9 @@ describe('AuthService', () => {
 
   it('reads the snake_case wire names of the upstream backend too', () => {
     auth.ensureLoaded().subscribe();
-    http.expectOne('/api/auth/me').flush({ sub: '2', display_name: 'Max', roles: [], permissions: [], groups: [] });
+    http
+      .expectOne('/api/auth/me')
+      .flush({ sub: '2', display_name: 'Max', roles: [], permissions: [], groups: [] });
     expect(auth.displayName()).toBe('Max');
   });
 

@@ -31,6 +31,8 @@ _SKIP_DIRS = {
     ".angular",
     "__pycache__",
     "coverage",
+    "test-results",
+    "playwright-report",
 }
 _SELF = Path(__file__).resolve()
 

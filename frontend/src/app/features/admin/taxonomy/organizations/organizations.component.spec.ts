@@ -9,7 +9,20 @@ import { OrganizationsComponent } from './organizations.component';
 
 function fakeTaxonomy() {
   return {
-    organizations: jest.fn(() => of([makeOrganization(), makeOrganization({ id: 'org-mk', slug: 'makers', name: 'MAKERS', short: 'MK', kind: 'partner', trusted: true, instagram: [] })])),
+    organizations: jest.fn(() =>
+      of([
+        makeOrganization(),
+        makeOrganization({
+          id: 'org-mk',
+          slug: 'makers',
+          name: 'MAKERS',
+          short: 'MK',
+          kind: 'partner',
+          trusted: true,
+          instagram: [],
+        }),
+      ]),
+    ),
     categories: jest.fn(() => of([makeCategory({ id: 'c1', name: 'Informatik' })])),
     createOrganization: jest.fn(() => of(makeOrganization())),
     updateOrganization: jest.fn(() => of(makeOrganization())),
@@ -21,7 +34,10 @@ async function setup(canTrust: boolean) {
   const view = await render(OrganizationsComponent, {
     providers: [
       { provide: TaxonomyApi, useValue: api },
-      { provide: AuthService, useValue: { can: (p: string) => canTrust && p === 'admin.mappings' } },
+      {
+        provide: AuthService,
+        useValue: { can: (p: string) => canTrust && p === 'admin.mappings' },
+      },
     ],
   });
   await view.fixture.whenStable();
@@ -31,7 +47,10 @@ async function setup(canTrust: boolean) {
 
 describe('OrganizationsComponent', () => {
   it('still lists organizations when the category lookup fails', async () => {
-    const api = { ...fakeTaxonomy(), categories: jest.fn(() => throwError(() => new Error('down'))) };
+    const api = {
+      ...fakeTaxonomy(),
+      categories: jest.fn(() => throwError(() => new Error('down'))),
+    };
     await render(OrganizationsComponent, {
       providers: [
         { provide: TaxonomyApi, useValue: api },
@@ -68,19 +87,29 @@ describe('OrganizationsComponent', () => {
     const { api } = await setup(true);
     await userEvent.click(await screen.findByText('Fachschaft Informatik'));
     await userEvent.click(screen.getByRole('switch', { name: 'Vertraut' }));
-    expect(await screen.findByRole('dialog')).toHaveTextContent('Approver dieser Organisation dürfen eigene Events veröffentlichen.');
+    expect(await screen.findByRole('dialog')).toHaveTextContent(
+      'Approver dieser Organisation dürfen eigene Events veröffentlichen.',
+    );
     await userEvent.click(screen.getByRole('button', { name: 'Vertrauen' }));
     await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
-    expect(api.updateOrganization).toHaveBeenCalledWith('org-fsi', expect.objectContaining({ trusted: true }));
+    expect(api.updateOrganization).toHaveBeenCalledWith(
+      'org-fsi',
+      expect.objectContaining({ trusted: true }),
+    );
   });
 
   it('keeps trusted off when the confirmation is cancelled', async () => {
     const { api } = await setup(true);
     await userEvent.click(await screen.findByText('Fachschaft Informatik'));
     await userEvent.click(screen.getByRole('switch', { name: 'Vertraut' }));
-    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Abbrechen' }));
+    await userEvent.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Abbrechen' }),
+    );
     await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
-    expect(api.updateOrganization).toHaveBeenCalledWith('org-fsi', expect.objectContaining({ trusted: false }));
+    expect(api.updateOrganization).toHaveBeenCalledWith(
+      'org-fsi',
+      expect.objectContaining({ trusted: false }),
+    );
   });
 
   it('splits the instagram accounts at commas on create', async () => {
