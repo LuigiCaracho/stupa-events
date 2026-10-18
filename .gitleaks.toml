@@ -1,0 +1,13 @@
+# gitleaks: defaults plus an allowlist for throwaway local-dev fixtures (never real secrets).
+title = "stupa-events"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Local dev fixtures: Keycloak realm, dev env example, dev compose files"
+paths = [
+  '''deploy/\.env\.dev\.example''',
+  '''deploy/keycloak/.*''',
+  '''deploy/docker-compose\.(dev|keycloak)\.yml''',
+]

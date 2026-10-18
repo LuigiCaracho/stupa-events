@@ -1,0 +1,26 @@
+# Dev dossiers for scripts/seed_dev.py. A dossier is skipped when its title exists in the organization.
+events:
+  - title: "Movienight: Beispielfilm"
+    organization: fsi
+    category: kino
+    stage: planning
+    startsInDays: 14
+    durationHours: 3
+    venueText: "Kinosaal 9-133"
+    summary: "Ein Film, ein Saal, gute Laune. Eintritt frei."
+  - title: "Spieleabend der Fachschaft"
+    organization: fsi
+    category: get-together
+    stage: idea
+    startsInDays: 21
+    durationHours: 4
+    venueText: "FSI-Raum 9-U09"
+    summary: "Brettspiele und Snacks."
+  - title: "Workshop: Löten für Einsteiger:innen"
+    organization: makers
+    category: workshop
+    stage: idea
+    startsInDays: 28
+    durationHours: 2
+    venueText: "Maker Space 9-229"
+    summary: "Erste Schritte mit Lötkolben und Platine."

@@ -1,0 +1,1268 @@
+{
+  "upstream": {
+    "repo": "STUPA-MAKERS/STUPA-Workflow",
+    "commit": "93c33d6"
+  },
+  "files": [
+    {
+      "path": ".claude/skills/be-auth/SKILL.md",
+      "source": ".claude/skills/be-auth/SKILL.md",
+      "mode": "U"
+    },
+    {
+      "path": ".claude/skills/conventions/SKILL.md",
+      "source": ".claude/skills/conventions/SKILL.md",
+      "mode": "U"
+    },
+    {
+      "path": ".claude/skills/deploy/SKILL.md",
+      "source": ".claude/skills/deploy/SKILL.md",
+      "mode": "U"
+    },
+    {
+      "path": ".claude/skills/frontend/SKILL.md",
+      "source": ".claude/skills/frontend/SKILL.md",
+      "mode": "U"
+    },
+    {
+      "path": ".dockerignore",
+      "source": ".dockerignore",
+      "mode": "U"
+    },
+    {
+      "path": ".github/pull_request_template.md",
+      "source": ".github/pull_request_template.md",
+      "mode": "U"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "source": ".github/workflows/ci.yml",
+      "mode": "U"
+    },
+    {
+      "path": ".gitignore",
+      "source": ".gitignore",
+      "mode": "U"
+    },
+    {
+      "path": "CLAUDE.md",
+      "source": "CLAUDE.md",
+      "mode": "U"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "source": "CONTRIBUTING.md",
+      "mode": "U"
+    },
+    {
+      "path": "backend/Dockerfile",
+      "source": "backend/Dockerfile",
+      "mode": "U"
+    },
+    {
+      "path": "backend/alembic.ini",
+      "source": "backend/alembic.ini",
+      "mode": "U"
+    },
+    {
+      "path": "backend/app/db.py",
+      "source": "backend/app/db.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/app/deps.py",
+      "source": "backend/app/deps.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/app/logging_config.py",
+      "source": "backend/app/logging_config.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/app/main.py",
+      "source": "backend/app/main.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/app/middleware.py",
+      "source": "backend/app/middleware.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/app/models.py",
+      "source": "backend/app/models.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/app/modules/audit/actions.py",
+      "source": "backend/app/modules/audit/actions.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/app/modules/audit/hashing.py",
+      "source": "backend/app/modules/audit/hashing.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/app/modules/audit/models.py",
+      "source": "backend/app/modules/audit/models.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/app/modules/audit/router.py",
+      "source": "backend/app/modules/audit/router.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/app/modules/audit/schemas.py",
+      "source": "backend/app/modules/audit/schemas.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/app/modules/audit/service.py",
+      "source": "backend/app/modules/audit/service.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/app/modules/auth/bootstrap.py",
+      "source": "backend/app/modules/auth/bootstrap.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/app/modules/auth/models.py",
+      "source": "backend/app/modules/auth/models.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/app/modules/auth/oidc.py",
+      "source": "backend/app/modules/auth/oidc.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/app/modules/auth/principal.py",
+      "source": "backend/app/modules/auth/principal.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/app/modules/auth/rbac.py",
+      "source": "backend/app/modules/auth/rbac.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/app/modules/auth/router.py",
+      "source": "backend/app/modules/auth/router.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/app/modules/auth/schemas.py",
+      "source": "backend/app/modules/auth/schemas.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/app/modules/auth/service.py",
+      "source": "backend/app/modules/auth/service.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/app/modules/auth/session_renewal.py",
+      "source": "backend/app/modules/auth/session_renewal.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/app/modules/auth/sessions.py",
+      "source": "backend/app/modules/auth/sessions.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/app/modules/files/mime.py",
+      "source": "backend/app/modules/files/mime.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/app/modules/files/models.py",
+      "source": "backend/app/modules/files/models.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/app/modules/files/queue.py",
+      "source": "backend/app/modules/files/queue.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/app/modules/files/scanner.py",
+      "source": "backend/app/modules/files/scanner.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/app/modules/files/storage.py",
+      "source": "backend/app/modules/files/storage.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/app/modules/media/images.py",
+      "source": "backend/app/modules/media/images.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/app/modules/media/models.py",
+      "source": "backend/app/modules/media/models.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/app/modules/media/refs.py",
+      "source": "backend/app/modules/media/refs.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/app/modules/media/schemas.py",
+      "source": "backend/app/modules/media/schemas.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/app/modules/media/service.py",
+      "source": "backend/app/modules/media/service.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/app/modules/notifications/kinds.py",
+      "source": "backend/app/modules/notifications/kinds.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/app/modules/notifications/mail.py",
+      "source": "backend/app/modules/notifications/mail.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/app/modules/notifications/provider.py",
+      "source": "backend/app/modules/notifications/provider.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/app/modules/notifications/queue.py",
+      "source": "backend/app/modules/notifications/queue.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/app/modules/notifications/templating.py",
+      "source": "backend/app/modules/notifications/templating.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/app/settings.py",
+      "source": "backend/app/settings.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/app/shared/antiabuse.py",
+      "source": "backend/app/shared/antiabuse.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/app/shared/errors.py",
+      "source": "backend/app/shared/errors.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/app/shared/filenames.py",
+      "source": "backend/app/shared/filenames.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/app/shared/i18n.py",
+      "source": "backend/app/shared/i18n.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/app/shared/paging.py",
+      "source": "backend/app/shared/paging.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/app/shared/permissions.py",
+      "source": "backend/app/shared/permissions.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/app/shared/ratelimit.py",
+      "source": "backend/app/shared/ratelimit.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/app/shared/search.py",
+      "source": "backend/app/search.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/app/shared/ssrf.py",
+      "source": "backend/app/modules/webhooks/ssrf.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/migrations/env.py",
+      "source": "backend/migrations/env.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/migrations/versions/0001_baseline.py",
+      "source": "backend/migrations/versions/0001_baseline.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/pyproject.toml",
+      "source": "backend/pyproject.toml",
+      "mode": "U"
+    },
+    {
+      "path": "backend/tests/_support/audit_fakes.py",
+      "source": "backend/tests/_support/audit_fakes.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/tests/_support/auth_fakes.py",
+      "source": "backend/tests/_support/auth_fakes.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/tests/unit/audit/test_service_unit.py",
+      "source": "backend/tests/unit/modules/audit/test_audit_service_unit.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/tests/unit/audit/test_verification_unit.py",
+      "source": "backend/tests/unit/modules/audit/test_audit_verification_unit.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/tests/unit/auth/test_oidc.py",
+      "source": "backend/tests/unit/modules/auth/test_auth_oidc.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/tests/unit/auth/test_session_renewal.py",
+      "source": "backend/tests/unit/modules/auth/test_session_renewal.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/tests/unit/files/test_mime.py",
+      "source": "backend/tests/unit/modules/files/test_files_mime.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/tests/unit/files/test_queue.py",
+      "source": "backend/tests/unit/modules/files/test_files_queue.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/tests/unit/files/test_scanner.py",
+      "source": "backend/tests/unit/modules/files/test_files_scanner.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/tests/unit/files/test_storage.py",
+      "source": "backend/tests/unit/modules/files/test_files_storage.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/tests/unit/media/_images.py",
+      "source": "backend/tests/unit/modules/media/_images.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/tests/unit/media/test_images_upstream.py",
+      "source": "backend/tests/unit/modules/media/test_media_images.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/tests/unit/media/test_refs.py",
+      "source": "backend/tests/unit/modules/media/test_media_refs.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/tests/unit/notifications/test_direct_queue_bounded.py",
+      "source": "backend/tests/unit/modules/notifications/test_direct_queue_bounded.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/tests/unit/shared/test_filenames.py",
+      "source": "backend/tests/unit/shared/test_filenames.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/tests/unit/shared/test_ratelimit.py",
+      "source": "backend/tests/unit/shared/test_ratelimit.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/tests/unit/shared/test_shared.py",
+      "source": "backend/tests/unit/shared/test_shared.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/tests/unit/shared/test_ssrf.py",
+      "source": "backend/tests/unit/modules/webhooks/test_webhooks_ssrf.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/tests/unit/test_env_example_settings_parity.py",
+      "source": "backend/tests/unit/test_env_example_settings_parity.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/tests/unit/worker/test_audit_verify_cron.py",
+      "source": "backend/tests/unit/worker/test_audit_verify_cron.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/tests/unit/worker/test_mail.py",
+      "source": "backend/tests/unit/worker/test_worker_mail.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/worker/audit_verify.py",
+      "source": "backend/worker/audit_verify.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/worker/mail.py",
+      "source": "backend/worker/mail.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/worker/main.py",
+      "source": "backend/worker/main.py",
+      "mode": "U"
+    },
+    {
+      "path": "backend/worker/scan.py",
+      "source": "backend/worker/scan.py",
+      "mode": "U"
+    },
+    {
+      "path": "deploy/.env.example",
+      "source": "deploy/.env.example",
+      "mode": "U"
+    },
+    {
+      "path": "deploy/.gitignore",
+      "source": "deploy/.gitignore",
+      "mode": "U"
+    },
+    {
+      "path": "deploy/db/roles.sql",
+      "source": "deploy/db/roles.sql",
+      "mode": "U"
+    },
+    {
+      "path": "deploy/deploy.sh",
+      "source": "deploy/deploy.sh",
+      "mode": "U"
+    },
+    {
+      "path": "deploy/docker-compose.keycloak.yml",
+      "source": "deploy/docker-compose.keycloak.yml",
+      "mode": "U"
+    },
+    {
+      "path": "deploy/docker-compose.yml",
+      "source": "deploy/docker-compose.yml",
+      "mode": "U"
+    },
+    {
+      "path": "deploy/web/Dockerfile",
+      "source": "deploy/web/Dockerfile",
+      "mode": "U"
+    },
+    {
+      "path": "deploy/web/nginx.conf",
+      "source": "deploy/web/nginx.conf",
+      "mode": "U"
+    },
+    {
+      "path": "flake.nix",
+      "source": "flake.nix",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/.editorconfig",
+      "source": "frontend/.editorconfig",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/.gitignore",
+      "source": "frontend/.gitignore",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/eslint.config.js",
+      "source": "frontend/eslint.config.js",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/jest.config.js",
+      "source": "frontend/jest.config.js",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/playwright.config.ts",
+      "source": "frontend/playwright.config.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/setup-jest.ts",
+      "source": "frontend/setup-jest.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/app.config.ts",
+      "source": "frontend/src/app/app.config.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/app.routes.ts",
+      "source": "frontend/src/app/app.routes.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/app.ts",
+      "source": "frontend/src/app/app.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/core/api/api.config.ts",
+      "source": "frontend/src/app/core/api/api.config.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/core/auth/auth.guard.spec.ts",
+      "source": "frontend/src/app/core/auth/auth.guard.spec.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/core/auth/auth.guard.ts",
+      "source": "frontend/src/app/core/auth/auth.guard.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/core/auth/auth.interceptor.spec.ts",
+      "source": "frontend/src/app/core/auth/auth.interceptor.spec.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/core/auth/auth.interceptor.ts",
+      "source": "frontend/src/app/core/auth/auth.interceptor.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/core/auth/auth.service.spec.ts",
+      "source": "frontend/src/app/core/auth/auth.service.spec.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/core/auth/auth.service.ts",
+      "source": "frontend/src/app/core/auth/auth.service.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/core/auth/home-redirect.guard.spec.ts",
+      "source": "frontend/src/app/core/auth/home-redirect.guard.spec.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/core/auth/home-redirect.guard.ts",
+      "source": "frontend/src/app/core/auth/home-redirect.guard.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/core/browser/installed-app.token.spec.ts",
+      "source": "frontend/src/app/core/browser/installed-app.token.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/core/browser/installed-app.token.ts",
+      "source": "frontend/src/app/core/browser/installed-app.token.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/core/browser/location.token.ts",
+      "source": "frontend/src/app/core/browser/location.token.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/core/cache/cache.interceptor.spec.ts",
+      "source": "frontend/src/app/core/cache/cache.interceptor.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/core/cache/cache.interceptor.ts",
+      "source": "frontend/src/app/core/cache/cache.interceptor.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/core/cache/http-cache.service.spec.ts",
+      "source": "frontend/src/app/core/cache/http-cache.service.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/core/cache/http-cache.service.ts",
+      "source": "frontend/src/app/core/cache/http-cache.service.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/core/i18n/i18n.service.spec.ts",
+      "source": "frontend/src/app/core/i18n/i18n.service.spec.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/core/i18n/i18n.service.ts",
+      "source": "frontend/src/app/core/i18n/i18n.service.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/core/i18n/localized-date.pipe.spec.ts",
+      "source": "frontend/src/app/core/i18n/localized-date.pipe.spec.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/core/i18n/localized-date.pipe.ts",
+      "source": "frontend/src/app/core/i18n/localized-date.pipe.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/core/i18n/translate.pipe.spec.ts",
+      "source": "frontend/src/app/core/i18n/translate.pipe.spec.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/core/i18n/translate.pipe.ts",
+      "source": "frontend/src/app/core/i18n/translate.pipe.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/core/i18n/translations.ts",
+      "source": "frontend/src/app/core/i18n/translations.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/core/loading/loading.interceptor.spec.ts",
+      "source": "frontend/src/app/core/loading/loading.interceptor.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/core/loading/loading.interceptor.ts",
+      "source": "frontend/src/app/core/loading/loading.interceptor.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/core/loading/loading.service.spec.ts",
+      "source": "frontend/src/app/core/loading/loading.service.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/core/loading/loading.service.ts",
+      "source": "frontend/src/app/core/loading/loading.service.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/core/pwa/install-metadata.spec.ts",
+      "source": "frontend/src/app/core/pwa/install-metadata.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/core/pwa/ngsw-assets.spec.ts",
+      "source": "frontend/src/app/core/pwa/ngsw-assets.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/core/pwa/ngsw-navigation.spec.ts",
+      "source": "frontend/src/app/core/pwa/ngsw-navigation.spec.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/core/pwa/sw-update-prompt.component.html",
+      "source": "frontend/src/app/core/pwa/sw-update-prompt.component.html",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/core/pwa/sw-update-prompt.component.scss",
+      "source": "frontend/src/app/core/pwa/sw-update-prompt.component.scss",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/core/pwa/sw-update-prompt.component.spec.ts",
+      "source": "frontend/src/app/core/pwa/sw-update-prompt.component.spec.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/core/pwa/sw-update-prompt.component.ts",
+      "source": "frontend/src/app/core/pwa/sw-update-prompt.component.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/core/pwa/sw-update.service.spec.ts",
+      "source": "frontend/src/app/core/pwa/sw-update.service.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/core/pwa/sw-update.service.ts",
+      "source": "frontend/src/app/core/pwa/sw-update.service.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/core/theme/theme.service.spec.ts",
+      "source": "frontend/src/app/core/theme/theme.service.spec.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/core/theme/theme.service.ts",
+      "source": "frontend/src/app/core/theme/theme.service.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/core/theme/token-roles.spec.ts",
+      "source": "frontend/src/app/core/theme/token-roles.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/layout/bottom-bar/bottom-bar.component.html",
+      "source": "frontend/src/app/layout/bottom-bar/bottom-bar.component.html",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/layout/bottom-bar/bottom-bar.component.scss",
+      "source": "frontend/src/app/layout/bottom-bar/bottom-bar.component.scss",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/layout/bottom-bar/bottom-bar.component.spec.ts",
+      "source": "frontend/src/app/layout/bottom-bar/bottom-bar.component.spec.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/layout/bottom-bar/bottom-bar.component.ts",
+      "source": "frontend/src/app/layout/bottom-bar/bottom-bar.component.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/layout/breadcrumbs.component.html",
+      "source": "frontend/src/app/layout/breadcrumbs.component.html",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/layout/breadcrumbs.component.scss",
+      "source": "frontend/src/app/layout/breadcrumbs.component.scss",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/layout/breadcrumbs.component.spec.ts",
+      "source": "frontend/src/app/layout/breadcrumbs.component.spec.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/layout/breadcrumbs.component.ts",
+      "source": "frontend/src/app/layout/breadcrumbs.component.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/layout/load-bar/load-bar.component.html",
+      "source": "frontend/src/app/layout/load-bar/load-bar.component.html",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/layout/load-bar/load-bar.component.scss",
+      "source": "frontend/src/app/layout/load-bar/load-bar.component.scss",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/layout/load-bar/load-bar.component.spec.ts",
+      "source": "frontend/src/app/layout/load-bar/load-bar.component.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/layout/load-bar/load-bar.component.ts",
+      "source": "frontend/src/app/layout/load-bar/load-bar.component.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/layout/media-query.spec.ts",
+      "source": "frontend/src/app/layout/media-query.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/layout/media-query.ts",
+      "source": "frontend/src/app/layout/media-query.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/layout/nav-rail/nav-rail.component.html",
+      "source": "frontend/src/app/layout/nav-rail/nav-rail.component.html",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/layout/nav-rail/nav-rail.component.scss",
+      "source": "frontend/src/app/layout/nav-rail/nav-rail.component.scss",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/layout/nav-rail/nav-rail.component.spec.ts",
+      "source": "frontend/src/app/layout/nav-rail/nav-rail.component.spec.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/layout/nav-rail/nav-rail.component.ts",
+      "source": "frontend/src/app/layout/nav-rail/nav-rail.component.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/layout/nav.service.ts",
+      "source": "frontend/src/app/layout/nav.service.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/layout/page-frame.service.ts",
+      "source": "frontend/src/app/layout/page-frame.service.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/layout/public-header/public-header.component.html",
+      "source": "frontend/src/app/layout/public-header/public-header.component.html",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/layout/public-header/public-header.component.scss",
+      "source": "frontend/src/app/layout/public-header/public-header.component.scss",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/layout/public-header/public-header.component.spec.ts",
+      "source": "frontend/src/app/layout/public-header/public-header.component.spec.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/layout/public-header/public-header.component.ts",
+      "source": "frontend/src/app/layout/public-header/public-header.component.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/layout/shell.component.html",
+      "source": "frontend/src/app/layout/shell.component.html",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/layout/shell.component.scss",
+      "source": "frontend/src/app/layout/shell.component.scss",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/layout/shell.component.spec.ts",
+      "source": "frontend/src/app/layout/shell.component.spec.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/layout/shell.component.ts",
+      "source": "frontend/src/app/layout/shell.component.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/layout/site-footer/site-footer.component.html",
+      "source": "frontend/src/app/layout/site-footer/site-footer.component.html",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/layout/site-footer/site-footer.component.scss",
+      "source": "frontend/src/app/layout/site-footer/site-footer.component.scss",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/layout/site-footer/site-footer.component.spec.ts",
+      "source": "frontend/src/app/layout/site-footer/site-footer.component.spec.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/layout/site-footer/site-footer.component.ts",
+      "source": "frontend/src/app/layout/site-footer/site-footer.component.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/shared/status-kind.util.ts",
+      "source": "frontend/src/app/shared/status-kind.util.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/shared/truncated.directive.spec.ts",
+      "source": "frontend/src/app/shared/truncated.directive.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/truncated.directive.ts",
+      "source": "frontend/src/app/shared/truncated.directive.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/_option-menu.scss",
+      "source": "frontend/src/app/shared/ui/_option-menu.scss",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/date-block/date-block.component.html",
+      "source": "frontend/src/app/shared/ui/date-block/date-block.component.html",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/date-block/date-block.component.scss",
+      "source": "frontend/src/app/shared/ui/date-block/date-block.component.scss",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/date-block/date-block.component.spec.ts",
+      "source": "frontend/src/app/shared/ui/date-block/date-block.component.spec.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/date-block/date-block.component.ts",
+      "source": "frontend/src/app/shared/ui/date-block/date-block.component.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/empty-state/empty-state.component.html",
+      "source": "frontend/src/app/shared/ui/empty-state/empty-state.component.html",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/empty-state/empty-state.component.scss",
+      "source": "frontend/src/app/shared/ui/empty-state/empty-state.component.scss",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/empty-state/empty-state.component.spec.ts",
+      "source": "frontend/src/app/shared/ui/empty-state/empty-state.component.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/empty-state/empty-state.component.ts",
+      "source": "frontend/src/app/shared/ui/empty-state/empty-state.component.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/field-group/field-group.component.html",
+      "source": "frontend/src/app/shared/ui/field-group/field-group.component.html",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/field-group/field-group.component.scss",
+      "source": "frontend/src/app/shared/ui/field-group/field-group.component.scss",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/field-group/field-group.component.spec.ts",
+      "source": "frontend/src/app/shared/ui/field-group/field-group.component.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/field-group/field-group.component.ts",
+      "source": "frontend/src/app/shared/ui/field-group/field-group.component.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/field-group/field-row.component.html",
+      "source": "frontend/src/app/shared/ui/field-group/field-row.component.html",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/field-group/field-row.component.scss",
+      "source": "frontend/src/app/shared/ui/field-group/field-row.component.scss",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/file-drop-zone/file-drop-zone.component.html",
+      "source": "frontend/src/app/shared/ui/file-drop-zone/file-drop-zone.component.html",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/file-drop-zone/file-drop-zone.component.scss",
+      "source": "frontend/src/app/shared/ui/file-drop-zone/file-drop-zone.component.scss",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/file-drop-zone/file-drop-zone.component.spec.ts",
+      "source": "frontend/src/app/shared/ui/file-drop-zone/file-drop-zone.component.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/file-drop-zone/file-drop-zone.component.ts",
+      "source": "frontend/src/app/shared/ui/file-drop-zone/file-drop-zone.component.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/global-class-collision.spec.ts",
+      "source": "frontend/src/app/shared/ui/global-class-collision.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/image-thumb/image-thumb.component.scss",
+      "source": "frontend/src/app/shared/ui/image-thumb/image-thumb.component.scss",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/image-thumb/image-thumb.component.spec.ts",
+      "source": "frontend/src/app/shared/ui/image-thumb/image-thumb.component.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/image-thumb/image-thumb.component.ts",
+      "source": "frontend/src/app/shared/ui/image-thumb/image-thumb.component.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/index.ts",
+      "source": "frontend/src/app/shared/ui/index.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/list-detail/list-detail-layout.component.html",
+      "source": "frontend/src/app/shared/ui/list-detail/list-detail-layout.component.html",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/list-detail/list-detail-layout.component.scss",
+      "source": "frontend/src/app/shared/ui/list-detail/list-detail-layout.component.scss",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/list-detail/list-detail-layout.component.spec.ts",
+      "source": "frontend/src/app/shared/ui/list-detail/list-detail-layout.component.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/list-detail/list-detail-layout.component.ts",
+      "source": "frontend/src/app/shared/ui/list-detail/list-detail-layout.component.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/list-detail/list-geometry.contract.spec.ts",
+      "source": "frontend/src/app/shared/ui/list-detail/list-geometry.contract.spec.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/list-item/list-item.component.html",
+      "source": "frontend/src/app/shared/ui/list-item/list-item.component.html",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/list-item/list-item.component.scss",
+      "source": "frontend/src/app/shared/ui/list-item/list-item.component.scss",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/list-item/list-item.component.spec.ts",
+      "source": "frontend/src/app/shared/ui/list-item/list-item.component.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/list-item/list-item.component.ts",
+      "source": "frontend/src/app/shared/ui/list-item/list-item.component.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/note/note.component.html",
+      "source": "frontend/src/app/shared/ui/note/note.component.html",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/note/note.component.scss",
+      "source": "frontend/src/app/shared/ui/note/note.component.scss",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/note/note.component.spec.ts",
+      "source": "frontend/src/app/shared/ui/note/note.component.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/note/note.component.ts",
+      "source": "frontend/src/app/shared/ui/note/note.component.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/page-header/page-header.component.html",
+      "source": "frontend/src/app/shared/ui/page-header/page-header.component.html",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/page-header/page-header.component.scss",
+      "source": "frontend/src/app/shared/ui/page-header/page-header.component.scss",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/page-header/page-header.component.spec.ts",
+      "source": "frontend/src/app/shared/ui/page-header/page-header.component.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/page-header/page-header.component.ts",
+      "source": "frontend/src/app/shared/ui/page-header/page-header.component.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/select/no-native-select.contract.spec.ts",
+      "source": "frontend/src/app/shared/ui/select/no-native-select.contract.spec.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/select/select.component.html",
+      "source": "frontend/src/app/shared/ui/select/select.component.html",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/select/select.component.scss",
+      "source": "frontend/src/app/shared/ui/select/select.component.scss",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/select/select.component.spec.ts",
+      "source": "frontend/src/app/shared/ui/select/select.component.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/select/select.component.ts",
+      "source": "frontend/src/app/shared/ui/select/select.component.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/sheet-bar/sheet-bar.component.html",
+      "source": "frontend/src/app/shared/ui/sheet-bar/sheet-bar.component.html",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/sheet-bar/sheet-bar.component.scss",
+      "source": "frontend/src/app/shared/ui/sheet-bar/sheet-bar.component.scss",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/sheet-bar/sheet-bar.component.spec.ts",
+      "source": "frontend/src/app/shared/ui/sheet-bar/sheet-bar.component.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/sheet-bar/sheet-bar.component.ts",
+      "source": "frontend/src/app/shared/ui/sheet-bar/sheet-bar.component.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/side-sheet/side-sheet.component.html",
+      "source": "frontend/src/app/shared/ui/side-sheet/side-sheet.component.html",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/side-sheet/side-sheet.component.scss",
+      "source": "frontend/src/app/shared/ui/side-sheet/side-sheet.component.scss",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/side-sheet/side-sheet.component.spec.ts",
+      "source": "frontend/src/app/shared/ui/side-sheet/side-sheet.component.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/side-sheet/side-sheet.component.ts",
+      "source": "frontend/src/app/shared/ui/side-sheet/side-sheet.component.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/skeleton/loading-placeholders.spec.ts",
+      "source": "frontend/src/app/shared/ui/skeleton/loading-placeholders.spec.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/skeleton/skeleton.component.html",
+      "source": "frontend/src/app/shared/ui/skeleton/skeleton.component.html",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/skeleton/skeleton.component.scss",
+      "source": "frontend/src/app/shared/ui/skeleton/skeleton.component.scss",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/skeleton/skeleton.component.spec.ts",
+      "source": "frontend/src/app/shared/ui/skeleton/skeleton.component.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/skeleton/skeleton.component.ts",
+      "source": "frontend/src/app/shared/ui/skeleton/skeleton.component.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/status-text/status-text.component.html",
+      "source": "frontend/src/app/shared/ui/status-text/status-text.component.html",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/status-text/status-text.component.scss",
+      "source": "frontend/src/app/shared/ui/status-text/status-text.component.scss",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/status-text/status-text.component.spec.ts",
+      "source": "frontend/src/app/shared/ui/status-text/status-text.component.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/status-text/status-text.component.ts",
+      "source": "frontend/src/app/shared/ui/status-text/status-text.component.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/sticky-bar/sticky-bar.component.scss",
+      "source": "frontend/src/app/shared/ui/sticky-bar/sticky-bar.component.scss",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/sticky-bar/sticky-bar.component.spec.ts",
+      "source": "frontend/src/app/shared/ui/sticky-bar/sticky-bar.component.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/sticky-bar/sticky-bar.component.ts",
+      "source": "frontend/src/app/shared/ui/sticky-bar/sticky-bar.component.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/index.html",
+      "source": "frontend/src/index.html",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/main.ts",
+      "source": "frontend/src/main.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/styles.scss",
+      "source": "frontend/src/styles.scss",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/testing/a11y.ts",
+      "source": "frontend/src/testing/a11y.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/testing/location-mock.ts",
+      "source": "frontend/src/testing/location-mock.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/testing/style-mock.js",
+      "source": "frontend/src/testing/style-mock.js",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/tailwind.config.js",
+      "source": "frontend/tailwind.config.js",
+      "mode": "U"
+    }
+  ]
+}

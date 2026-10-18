@@ -1,0 +1,15 @@
+# Copied from STUPA-Workflow@93c33d6 .dockerignore (adapted).
+# Build context of deploy/web is the repository root; backend/ builds from its own context.
+**/node_modules
+**/dist
+frontend/.angular
+**/coverage
+.git
+**/__pycache__
+backend
+docs
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.dev.example
+**/secrets

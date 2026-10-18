@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "STUPA Events public feed, schema 2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "generatedAt", "items"],
+  "properties": {
+    "schema": { "const": 2 },
+    "generatedAt": { "type": "string", "format": "date-time", "pattern": "Z$" },
+    "items": { "type": "array", "items": { "$ref": "#/$defs/event" } }
+  },
+  "$defs": {
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "slug", "title", "summary", "startsAt", "endsAt", "allDay", "tzid", "status",
+        "organization", "venueText", "categories", "image", "url"
+      ],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "slug": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9-]+$" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "summary": { "type": ["string", "null"], "maxLength": 200 },
+        "startsAt": { "type": "string", "pattern": "Z$" },
+        "endsAt": { "type": "string", "pattern": "Z$" },
+        "allDay": { "type": "boolean" },
+        "tzid": { "const": "Europe/Berlin" },
+        "status": { "enum": ["scheduled", "cancelled", "postponed"] },
+        "organization": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "name", "short"],
+          "properties": {
+            "id": { "type": "string", "format": "uuid" },
+            "name": { "type": "string" },
+            "short": { "type": "string" }
+          }
+        },
+        "venueText": { "type": ["string", "null"] },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["slug", "name", "kind"],
+            "properties": {
+              "slug": { "type": "string" },
+              "name": { "type": "string" },
+              "kind": { "enum": ["format", "fachschaft", "partner"] }
+            }
+          }
+        },
+        "image": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["url", "width", "height", "alt", "credit"],
+              "properties": {
+                "url": { "type": "string", "pattern": "/api/public/media/[0-9a-f]{16}-card_1200\\.webp$" },
+                "width": { "type": "integer", "minimum": 1 },
+                "height": { "type": "integer", "minimum": 1 },
+                "alt": { "type": "string" },
+                "credit": { "type": "string" }
+              }
+            }
+          ]
+        },
+        "url": { "type": "string", "pattern": "/e/[a-z0-9-]+$" }
+      }
+    }
+  }
+}

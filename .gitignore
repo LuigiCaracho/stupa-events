@@ -1,0 +1,42 @@
+# Copied from STUPA-Workflow@93c33d6 .gitignore (adapted).
+# Secrets
+deploy/.env
+deploy/.env.dev
+deploy/secrets/
+.env
+*.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+*.egg-info/
+dist/
+build/
+
+# Node / Angular
+node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/playwright-report/
+frontend/test-results/
+frontend/e2e/.auth/
+
+# OS / Editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Claude Code: share skills, keep local state private
+.claude/*
+!.claude/skills/
+.claude/settings.local.json
+.playwright-mcp/
+/*.png
