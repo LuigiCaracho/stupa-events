@@ -1,0 +1,23 @@
+.dl__filters {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+@media (max-width: 599px) {
+  .dl__filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.dl__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dl__when {
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}

@@ -1,0 +1,50 @@
+<app-page-header [title]="'dossiers.title' | t" [meta]="meta()">
+  <app-button actions variant="fill" (click)="openNew()">{{ 'dossiers.new' | t }}</app-button>
+</app-page-header>
+
+<div class="dl__filters" role="search">
+  <app-input
+    class="dl__search"
+    type="search"
+    [ariaLabel]="'dossiers.search' | t"
+    [placeholder]="'dossiers.search' | t"
+    [ngModel]="search()"
+    (ngModelChange)="onSearch($event)"
+  />
+  <app-select
+    class="dl__state"
+    [ariaLabel]="'dossiers.filterState' | t"
+    [placeholder]="'dossiers.allStates' | t"
+    [options]="stateOptions()"
+    [(value)]="state"
+  />
+</div>
+
+@if (events.error()) {
+  <app-note kind="error" role="alert">{{ 'dossiers.loadFailed' | t }}</app-note>
+} @else if (events.isLoading() && !events.hasValue()) {
+  <app-skeleton variant="items" [count]="5" />
+} @else if (rows().length === 0) {
+  <app-empty-state plain [heading]="(filtered() ? 'dossiers.empty' : 'dossiers.emptyNone') | t">
+    @if (filtered()) {
+      <app-button variant="tonal" (click)="reset()">{{ 'dossiers.resetFilters' | t }}</app-button>
+    } @else {
+      <app-button variant="fill" (click)="openNew()">{{ 'dossiers.new' | t }}</app-button>
+    }
+  </app-empty-state>
+} @else {
+  <ul class="dl__list rowgroup">
+    @for (event of rows(); track event.id) {
+      <li>
+        <app-list-item [title]="event.title" [sub]="sub(event)" [link]="['/dossiers', event.id]">
+          <span lead class="dl__when num">{{ when(event) }}</span>
+          <app-status-text status [kind]="status(event).kind">{{ status(event).key | t }}</app-status-text>
+        </app-list-item>
+      </li>
+    }
+  </ul>
+}
+
+@if (newOpen) {
+  <app-new-event-dialog (closed)="closeNew()" (created)="opened($event)" />
+}

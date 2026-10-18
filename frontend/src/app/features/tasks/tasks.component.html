@@ -1,0 +1,52 @@
+<app-page-header [title]="'tasks.title' | t">
+  <app-button actions class="ts__new" variant="fill" (click)="openNew()">{{ 'dossiers.new' | t }}</app-button>
+</app-page-header>
+
+@if (events.error()) {
+  <app-note kind="error" role="alert">{{ 'tasks.loadFailed' | t }}</app-note>
+} @else if (events.isLoading() && !events.hasValue()) {
+  <app-skeleton variant="items" [count]="4" />
+} @else if (awaiting().length === 0 && mine().length === 0) {
+  <app-empty-state plain [heading]="'tasks.empty' | t" [body]="'tasks.emptyHint' | t">
+    <app-button variant="fill" (click)="openNew()">{{ 'dossiers.new' | t }}</app-button>
+  </app-empty-state>
+} @else {
+  @if (awaiting().length > 0) {
+    <app-card class="ts__card" [heading]="'tasks.awaiting' | t" [headingLevel]="2">
+      <app-badge card-header>{{ awaiting().length }}</app-badge>
+      <ul class="ts__list rowgroup">
+        @for (event of awaiting(); track event.id) {
+          <li>
+            <app-list-item [title]="event.title" [sub]="sub(event)" [link]="['/dossiers', event.id]">
+              <app-status-text status [kind]="status(event).kind">{{ status(event).key | t }}</app-status-text>
+            </app-list-item>
+          </li>
+        }
+      </ul>
+    </app-card>
+  }
+  @if (mine().length > 0) {
+    <app-card class="ts__card" [heading]="'tasks.mine' | t" [headingLevel]="2">
+      <app-badge card-header>{{ mine().length }}</app-badge>
+      <ul class="ts__list rowgroup">
+        @for (event of mine(); track event.id) {
+          <li>
+            <app-list-item [title]="event.title" [sub]="sub(event)" [link]="['/dossiers', event.id]">
+              <app-status-text status [kind]="status(event).kind">{{ status(event).key | t }}</app-status-text>
+            </app-list-item>
+          </li>
+        }
+      </ul>
+    </app-card>
+  }
+}
+
+<app-button
+  class="ts__fab"
+  variant="fab"
+  [iconOnly]="true"
+  [ariaLabel]="'dossiers.new' | t"
+  (click)="openNew()"
+>
+  <app-icon name="plus" [size]="24" />
+</app-button>

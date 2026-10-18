@@ -1,0 +1,23 @@
+<app-dialog
+  [open]="true"
+  [title]="'exception.title' | t"
+  [subtitle]="event().title"
+  [closeLabel]="'action.close' | t"
+  (closed)="closed.emit()"
+>
+  <div class="ie">
+    <app-note kind="warn">{{ 'exception.note' | t }}</app-note>
+    <app-input
+      [label]="'exception.reason' | t"
+      [hint]="'exception.hint' | t"
+      [required]="true"
+      [error]="attempted() && tooShort() ? ('exception.tooShort' | t) : ''"
+      [ngModel]="reason()"
+      (ngModelChange)="reason.set($event)"
+    />
+  </div>
+  <div dialog-footer class="ie__footer">
+    <app-button variant="text" (click)="closed.emit()">{{ 'action.cancel' | t }}</app-button>
+    <app-button variant="fill" [loading]="busy()" (click)="submit()">{{ 'exception.submit' | t }}</app-button>
+  </div>
+</app-dialog>

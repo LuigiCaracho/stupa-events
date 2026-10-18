@@ -1,0 +1,33 @@
+<form class="ef" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <app-input
+    formControlName="title"
+    [label]="'new.name' | t"
+    [required]="true"
+    [error]="form.controls.title.touched && form.controls.title.invalid ? ('new.errTitle' | t) : ''"
+  />
+  <app-input formControlName="summary" [label]="'detail.summary' | t" />
+  <div class="ef__row">
+    <app-datepicker formControlName="startDate" [label]="'new.startDate' | t" [required]="true" />
+    <app-time-input formControlName="startTime" [label]="'new.startTime' | t" [required]="true" />
+  </div>
+  <div class="ef__row">
+    <app-datepicker
+      formControlName="endDate"
+      [label]="'new.endDate' | t"
+      [required]="true"
+      [error]="endBeforeStart() ? ('new.errEnd' | t) : ''"
+    />
+    <app-time-input formControlName="endTime" [label]="'new.endTime' | t" [required]="true" />
+  </div>
+  <app-input formControlName="venueText" [label]="'new.venue' | t" />
+  <app-select
+    formControlName="primaryCategoryId"
+    [label]="'new.category' | t"
+    [placeholder]="'new.categoryPlaceholder' | t"
+    [options]="categoryOptions()"
+  />
+  <div class="ef__actions">
+    <app-button variant="text" (click)="cancelled.emit()">{{ 'detail.cancelEdit' | t }}</app-button>
+    <app-button type="submit" variant="fill" [loading]="busy()">{{ 'detail.save' | t }}</app-button>
+  </div>
+</form>

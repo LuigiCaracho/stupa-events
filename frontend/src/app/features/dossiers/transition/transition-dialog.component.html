@@ -1,0 +1,39 @@
+<app-dialog
+  [open]="true"
+  [title]="label[transition()] | t"
+  [subtitle]="event().title"
+  [closeLabel]="'action.close' | t"
+  (closed)="closed.emit()"
+>
+  <div class="td">
+    @if (guards.hasValue()) {
+      <app-guard-list headingId="transition-guards" [reasons]="reasons()" (fix)="fix.emit($event)" />
+    } @else if (guards.error()) {
+      <app-note kind="error" role="alert">{{ loadError() }}</app-note>
+      <app-button variant="text" (click)="retry()">{{ 'action.retry' | t }}</app-button>
+    } @else {
+      <app-skeleton variant="lines" [label]="'transition.checking' | t" />
+    }
+    @if (needsAck() && !blocked()) {
+      <app-checkbox [ngModel]="acknowledged()" (ngModelChange)="acknowledged.set($event)">
+        {{ 'transition.warnConfirm' | t }}
+      </app-checkbox>
+    }
+    <app-input
+      [label]="'transition.note' | t"
+      [hint]="'transition.noteHint' | t"
+      [error]="noteTooLong() ? ('transition.noteTooLong' | t) : ''"
+      [ngModel]="note()"
+      (ngModelChange)="note.set($event)"
+    />
+    @if (blocked()) {
+      <p class="td__blocked" role="status">{{ 'transition.blocked' | t }}</p>
+    }
+  </div>
+  <div dialog-footer class="td__footer">
+    <app-button variant="text" (click)="closed.emit()">{{ 'action.cancel' | t }}</app-button>
+    <app-button variant="fill" [disabled]="!canConfirm() || noteTooLong()" [loading]="busy()" (click)="confirm()">
+      {{ 'transition.confirm' | t }}
+    </app-button>
+  </div>
+</app-dialog>

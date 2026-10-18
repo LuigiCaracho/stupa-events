@@ -1,0 +1,23 @@
+.ne {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.ne__row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.ne__hint {
+  margin: 0;
+  color: var(--color-danger);
+}
+
+.ne__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}

@@ -1,0 +1,58 @@
+<app-dialog
+  [open]="true"
+  [title]="'new.title' | t"
+  [subtitle]="'new.subtitle' | t"
+  [closeLabel]="'action.close' | t"
+  (closed)="closed.emit()"
+>
+  <form id="new-event-form" class="ne" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <app-input
+      formControlName="title"
+      [label]="'new.name' | t"
+      [required]="true"
+      [error]="invalid('title') ? ('new.errTitle' | t) : ''"
+    />
+    @if (!lookups.isLoading() && orgOptions().length === 0) {
+      <p class="ne__hint" role="alert">{{ 'new.noOrgs' | t }}</p>
+    } @else {
+      <app-select
+        formControlName="organizationId"
+        [label]="'new.org' | t"
+        [placeholder]="'new.orgPlaceholder' | t"
+        [options]="orgOptions()"
+        [clearable]="false"
+        [required]="true"
+        [error]="invalid('organizationId') ? ('new.errOrg' | t) : ''"
+      />
+    }
+    <div class="ne__row">
+      <app-datepicker
+        formControlName="startDate"
+        [label]="'new.startDate' | t"
+        [required]="true"
+        [error]="invalid('startDate') || invalid('startTime') ? ('new.errStart' | t) : ''"
+      />
+      <app-time-input formControlName="startTime" [label]="'new.startTime' | t" [required]="true" />
+    </div>
+    <div class="ne__row">
+      <app-datepicker
+        formControlName="endDate"
+        [label]="'new.endDate' | t"
+        [hint]="'new.endHint' | t"
+        [error]="attempted() && endBeforeStart() ? ('new.errEnd' | t) : ''"
+      />
+      <app-time-input formControlName="endTime" [label]="'new.endTime' | t" />
+    </div>
+    <app-input formControlName="venueText" [label]="'new.venue' | t" [hint]="'new.venueHint' | t" />
+    <app-select
+      formControlName="primaryCategoryId"
+      [label]="'new.category' | t"
+      [placeholder]="'new.categoryPlaceholder' | t"
+      [options]="categoryOptions()"
+    />
+  </form>
+  <div dialog-footer class="ne__footer">
+    <app-button variant="text" (click)="closed.emit()">{{ 'action.cancel' | t }}</app-button>
+    <app-button type="submit" variant="fill" [loading]="busy()" (click)="submit()">{{ 'new.submit' | t }}</app-button>
+  </div>
+</app-dialog>
