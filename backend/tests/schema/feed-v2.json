@@ -30,9 +30,10 @@
         "organization": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["id", "name", "short"],
+          "required": ["id", "slug", "name", "short"],
           "properties": {
             "id": { "type": "string", "format": "uuid" },
+            "slug": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,59}$" },
             "name": { "type": "string" },
             "short": { "type": "string" }
           }

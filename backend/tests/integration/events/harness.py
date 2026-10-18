@@ -3,7 +3,9 @@
 `api` is an HTTP client on the real app with the real database (migrated testcontainer).
 A request names its user in the header `X-Test-User`; the fake login builds the principal
 through the real `rbac.resolve_principal`, so trust and group mapping behave as in
-production. Storage, scan queue and the Redis pool are fakes; `process_poster` runs the
+production. The fixture writes a `group_mapping` row for every group of `USERS` (the group
+name alone grants nothing since M2); the approver rows are inserted without the API check
+so that the downgrade of an untrusted approver stays testable. Storage, scan queue and the Redis pool are fakes; `process_poster` runs the
 scan and the derive job of the worker in process.
 """
 
@@ -32,13 +34,17 @@ from app.modules.auth.models import Principal as PrincipalRow
 from app.modules.dossier.deps import attachment_storage, public_storage, scan_queue
 from app.modules.dossier.derive import derive_poster
 from app.modules.files.scanner import ScanVerdict
+from app.modules.orgs.models import GroupMapping
 from app.modules.publicapi.db import get_public_session
+from app.shared.permissions import GroupGrant, grants_from_groups
 from tests._support.factories import make_settings, png_bytes
 from tests._support.memory_storage import MemoryStorage
 from worker.scan import scan_attachment
 
 USERS: dict[str, tuple[str, tuple[str, ...]]] = {
+    "admin": ("sub-admin", ("events-admin",)),
     "editor": ("sub-editor", ("events-editor",)),
+    "stupa": ("sub-stupa", ("events-stupa",)),
     "organizer-fsi": ("sub-org-fsi", ("events-fsi-organizer",)),
     "submitter-fsi": ("sub-sub-fsi", ("events-fsi-submitter",)),
     "submitter2-fsi": ("sub-sub2-fsi", ("events-fsi-submitter",)),
@@ -46,6 +52,8 @@ USERS: dict[str, tuple[str, tuple[str, ...]]] = {
     "approver-fsi": ("sub-app-fsi", ("events-fsi-approver",)),
     "approver-stupa": ("sub-app-stupa", ("events-stupa-approver",)),
     "organizer-makers": ("sub-org-makers", ("events-makers-organizer",)),
+    "submitter-ekhg": ("sub-sub-ekhg", ("events-ekhg-submitter",)),
+    "member": ("sub-member", ()),
     "nobody": ("sub-nobody", ()),
 }
 ROLES_SQL = Path(__file__).resolve().parents[4] / "deploy" / "db" / "roles.sql"
@@ -114,6 +122,21 @@ class Api:
     maker: async_sessionmaker[AsyncSession]
     org_ids: dict[str, str] = field(default_factory=dict)
     category_ids: dict[str, str] = field(default_factory=dict)
+    users: dict[str, tuple[str, tuple[str, ...]]] = field(default_factory=lambda: dict(USERS))
+
+    async def add_user(self, name: str, mappings: dict[str, tuple[str, str | None]]) -> None:
+        """Add a test user whose groups map to `(role, organization slug)` as given."""
+        self.users[name] = (f"sub-{name}", tuple(mappings))
+        async with self.maker() as session:
+            for group, (role, slug) in mappings.items():
+                session.add(
+                    GroupMapping(
+                        oidc_group=group,
+                        role=role,
+                        organization_id=self.org_ids[slug] if slug else None,
+                    )
+                )
+            await session.commit()
 
     async def request(self, user: str | None, method: str, url: str, **kw: Any) -> Response:
         headers = {**kw.pop("headers", {}), **({"X-Test-User": user} if user else {})}
@@ -236,12 +259,30 @@ def clean_events(engine: Engine) -> Iterator[None]:
     wipe()
 
 
-def _fake_login(maker: async_sessionmaker[AsyncSession]):  # noqa: ANN202
+async def add_user_mappings(session: AsyncSession, org_ids: dict[str, str]) -> None:
+    """Insert one `group_mapping` row per group of `USERS` and commit."""
+    groups = {group for _, names in USERS.values() for group in names}
+    for grant in grants_from_groups(groups):
+        session.add(
+            GroupMapping(
+                oidc_group=_group_of(grant),
+                role=grant.role,
+                organization_id=org_ids[grant.org] if grant.org else None,
+            )
+        )
+    await session.commit()
+
+
+def _group_of(grant: GroupGrant) -> str:
+    return f"events-{grant.org}-{grant.role}" if grant.org else f"events-{grant.role}"
+
+
+def _fake_login(users: dict[str, tuple[str, tuple[str, ...]]]):  # noqa: ANN202
     async def login(request: Request, db: DbSession, settings: SettingsDep):  # noqa: ANN202
         name = request.headers.get("x-test-user")
         if name is None:
             return None
-        sub, groups = USERS[name]
+        sub, groups = users[name]
         row = PrincipalRow(sub=sub, email=f"{name}@example.org", oidc_groups=list(groups))
         row.active = True
         row.bootstrap_admin = False
@@ -280,7 +321,6 @@ async def api(
     overrides = app.dependency_overrides
     overrides[get_session] = session_override
     overrides[get_public_session] = public_session_override
-    overrides[get_current_principal] = _fake_login(maker)
     overrides[attachment_storage] = lambda: private
     overrides[public_storage] = lambda: public
     overrides[scan_queue] = lambda: queue
@@ -292,11 +332,13 @@ async def api(
         pool,
         maker,
     )
+    overrides[get_current_principal] = _fake_login(handle.users)
     async with maker() as session:
         rows = await session.execute(text("SELECT slug, id FROM organization"))
         handle.org_ids = {slug: str(oid) for slug, oid in rows}
         rows = await session.execute(text("SELECT slug, id FROM category"))
         handle.category_ids = {slug: str(cid) for slug, cid in rows}
+        await add_user_mappings(session, handle.org_ids)
     try:
         yield handle
     finally:

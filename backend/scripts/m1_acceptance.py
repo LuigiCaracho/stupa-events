@@ -15,15 +15,11 @@ the API itself, which works because cookies are not port-bound.
 from __future__ import annotations
 
 import asyncio
-import html
 import io
-import os
-import re
-import sys
 import time
 from datetime import UTC, datetime, timedelta
 from typing import Any
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import urlsplit
 
 import httpx
 from PIL import Image
@@ -34,67 +30,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from app.db import get_sessionmaker
 from app.modules.audit.service import AuditService
 from app.settings import get_settings
-
-API = os.environ.get("M1_API", "http://localhost:8000")
-PASSWORD = "password"
-_FORM_ACTION = re.compile(r'<form[^>]*id="kc-form-login"[^>]*action="([^"]+)"')
-
-
-def step(message: str) -> None:
-    """Print one protocol line."""
-    print(f"[m1] {message}", flush=True)
-
-
-def check(condition: bool, message: str) -> None:
-    """Stop the run with `message` unless `condition` holds."""
-    if not condition:
-        print(f"[m1] FAIL: {message}", flush=True)
-        sys.exit(1)
-    step(f"ok   {message}")
-
-
-def _to_api(url: str) -> str:
-    """Point a URL of the dev frontend (any localhost port) at the API."""
-    parts, api = urlsplit(url), urlsplit(API)
-    return urlunsplit((api.scheme, api.netloc, parts.path, parts.query, ""))
-
-
-def login(username: str) -> httpx.Client:
-    """Log in `username` through Keycloak; return a client with session and CSRF header."""
-    client = httpx.Client(base_url=API, timeout=20.0)
-    to_idp = client.get("/api/auth/login", follow_redirects=False)
-    check(to_idp.status_code in {302, 303, 307}, f"{username}: /api/auth/login redirects")
-    idp_url = to_idp.headers["location"]
-    check(urlsplit(idp_url).hostname == "localhost", "IdP is the local Keycloak")
-    form = client.get(idp_url, follow_redirects=True)
-    # Keycloak marks its cookies Secure even on http; browsers send them to localhost anyway.
-    for cookie in client.cookies.jar:
-        cookie.secure = False
-    action = _FORM_ACTION.search(form.text)
-    check(action is not None, f"{username}: Keycloak shows the login form")
-    assert action is not None
-    back = client.post(
-        html.unescape(action.group(1)),
-        data={"username": username, "password": PASSWORD, "credentialId": ""},
-        follow_redirects=False,
-    )
-    callback = back.headers.get("location", "")
-    check("/api/auth/callback" in callback, f"{username}: Keycloak returns a code")
-    done = client.get(_to_api(callback), follow_redirects=False)
-    check(done.status_code in {302, 303, 307}, f"{username}: callback opens the session")
-    client.get("/api/auth/me")
-    token = client.cookies.get("XSRF-TOKEN")
-    if token:
-        client.headers["X-XSRF-TOKEN"] = token
-    return client
-
-
-def expect(response: httpx.Response, status: int, what: str) -> Any:
-    """Check the status of `response`; return its JSON body."""
-    body = response.json() if response.content else {}
-    detail = "" if response.status_code == status else f" (got {response.status_code}: {body})"
-    check(response.status_code == status, f"{what} -> {status}{detail}")
-    return body
+from scripts.acceptance_common import API, check, expect, login, step, to_api
 
 
 def poster_png() -> bytes:
@@ -179,7 +115,7 @@ def happy_path(organizer: httpx.Client, editor: httpx.Client) -> str:
     check(item is not None, "event appears in the feed")
     assert item is not None
     check(item["image"] is not None and item["image"]["alt"], f"feed image {item['image']['url']}")
-    media = httpx.get(_to_api(item["image"]["url"]), timeout=20.0)
+    media = httpx.get(to_api(item["image"]["url"]), timeout=20.0)
     check(
         media.status_code == 200 and media.headers["content-type"] == "image/webp",
         f"derivative served as webp ({len(media.content)} bytes)",
@@ -239,9 +175,8 @@ def main() -> None:
     check(urlsplit(API).hostname in {"localhost", "127.0.0.1"}, f"API {API} is local")
     organizer, editor = login("organizer-fsi"), login("editor")
     me = expect(organizer.get("/api/auth/me"), 200, "/api/auth/me organizer-fsi")
-    check(
-        me["organizations"] == [{"slug": "fsi", "role": "organizer"}], f"orgs {me['organizations']}"
-    )
+    orgs = [(o["slug"], o["role"]) for o in me["organizations"]]
+    check(orgs == [("fsi", "organizer")], f"orgs {orgs}")
     me_editor = expect(editor.get("/api/auth/me"), 200, "/api/auth/me editor")
     check("editor" in me_editor["roles"], f"editor roles {me_editor['roles']}")
     happy_path(organizer, editor)

@@ -31,23 +31,14 @@ async def planning(api: Api) -> str:
     return event["id"]
 
 
-async def add_viewer_mapping(api: Api) -> None:
-    async with api.maker() as session:
-        await session.execute(
-            text(
-                "INSERT INTO group_mapping (oidc_group, role, organization_id) "
-                "SELECT 'events-makers-organizer', 'viewer', id FROM organization WHERE slug = 'fsi'"
-            )
-        )
-        await session.commit()
-
-
 async def test_a_reader_without_attach_right_in_the_event_org_is_403(api: Api) -> None:
     eid = await planning(api)
-    await add_viewer_mapping(api)
-    assert (await api.upload_poster("organizer-makers", eid)).status_code == 403
+    await api.add_user(
+        "reader", {"makers-team": ("organizer", "makers"), "fsi-readers": ("viewer", "fsi")}
+    )
+    assert (await api.upload_poster("reader", eid)).status_code == 403
     patch = await api.request(
-        "organizer-makers", "PATCH", f"/api/events/{eid}", json={"rev": 2, "summary": "x"}
+        "reader", "PATCH", f"/api/events/{eid}", json={"rev": 2, "summary": "x"}
     )
     assert patch.status_code == 403
 

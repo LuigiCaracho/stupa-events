@@ -35,7 +35,7 @@ test('organizer-fsi: login shows the role from the group', async ({ browser }) =
   const page = await fresh(browser);
   await login(page, 'organizer-fsi');
   const me = await (await page.request.get('/api/auth/me')).json();
-  expect(me.organizations).toEqual(expect.arrayContaining([{ slug: 'fsi', role: 'organizer' }]));
+  expect(me.organizations).toEqual(expect.arrayContaining([expect.objectContaining({ slug: 'fsi', role: 'organizer' })]));
   await expect(page.getByRole('heading', { level: 1, name: 'Meine Aufgaben' })).toBeVisible();
 
   dossierId = await createDossier(page, TITLE);
