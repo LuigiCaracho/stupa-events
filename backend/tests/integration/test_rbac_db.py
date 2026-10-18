@@ -1,9 +1,4 @@
-"""RBAC resolution and `/auth/me` against a real database.
-
-The tables `organization` and `group_mapping` belong to migration `0002_events_core`. When
-that migration is not part of the checkout yet, the fixture creates minimal versions and
-drops them again, so the resolver SQL is exercised either way.
-"""
+"""RBAC resolution and `/auth/me` against a real database (the tables of `0002`/`0003`)."""
 
 from __future__ import annotations
 
@@ -30,44 +25,31 @@ SECRET = "test-session-secret"
 
 @pytest_asyncio.fixture
 async def org_tables(engine: Engine, session: AsyncSession) -> AsyncIterator[None]:
+    """Make `fsi` untrusted and `makers` trusted and start from an empty mapping table."""
     with engine.begin() as conn:
-        had = conn.execute(text("SELECT to_regclass('organization') IS NOT NULL")).scalar_one()
-        if not had:
-            conn.execute(
-                text(
-                    "CREATE TABLE organization (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), "
-                    "slug text UNIQUE NOT NULL, trusted boolean NOT NULL DEFAULT false)"
-                )
+        conn.execute(text("DELETE FROM group_mapping"))
+        updated = conn.execute(
+            text(
+                "UPDATE organization SET trusted = (slug = 'makers') "
+                "WHERE slug IN ('fsi', 'makers')"
             )
-            conn.execute(
-                text(
-                    "CREATE TABLE group_mapping (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), "
-                    "oidc_group text UNIQUE NOT NULL, role text NOT NULL, "
-                    "organization_id uuid REFERENCES organization(id))"
-                )
-            )
-        if not had:
-            conn.execute(
-                text(
-                    "INSERT INTO organization (slug, trusted) VALUES ('fsi', false), ('makers', true)"
-                )
-            )
-        else:
-            updated = conn.execute(
-                text(
-                    "UPDATE organization SET trusted = (slug = 'makers') "
-                    "WHERE slug IN ('fsi', 'makers')"
-                )
-            ).rowcount
-            if updated != 2:
-                pytest.skip("the seeded organizations fsi and makers are missing")
+        ).rowcount
+        assert updated == 2
     yield
     await session.rollback()
     with engine.begin() as conn:
-        if not had:
-            conn.execute(text("DROP TABLE group_mapping, organization"))
-        else:
-            conn.execute(text("DELETE FROM group_mapping"))
+        conn.execute(text("DELETE FROM group_mapping"))
+
+
+async def _map(session: AsyncSession, group: str, role: str, slug: str | None = None) -> None:
+    await session.execute(
+        text(
+            "INSERT INTO group_mapping (oidc_group, role, organization_id) "
+            "VALUES (:g, :r, (SELECT id FROM organization WHERE slug = :s))"
+        ),
+        {"g": group, "r": role, "s": slug},
+    )
+    await session.commit()
 
 
 async def _principal(session: AsyncSession, groups: list[str], **fields: object) -> Principal:
@@ -77,9 +59,12 @@ async def _principal(session: AsyncSession, groups: list[str], **fields: object)
     return row
 
 
-async def test_groups_and_trust_resolve_against_the_real_tables(
+async def test_mappings_and_trust_resolve_against_the_real_tables(
     session: AsyncSession, org_tables: None
 ) -> None:
+    await _map(session, "events-fsi-approver", "approver", "fsi")
+    await _map(session, "events-makers-approver", "approver", "makers")
+    await _map(session, "events-editor", "editor")
     row = await _principal(
         session, ["events-fsi-approver", "events-makers-approver", "events-editor"]
     )
@@ -90,17 +75,21 @@ async def test_groups_and_trust_resolve_against_the_real_tables(
     }
     assert principal.has("event.approve") is True
     assert principal.roles == ["editor", "member"]
+    assert set(principal.org_ids) == {"fsi", "makers"}
+
+
+async def test_a_group_without_a_mapping_grants_nothing(
+    session: AsyncSession, org_tables: None
+) -> None:
+    row = await _principal(session, ["events-fsi-organizer", "events-admin"])
+    principal = await rbac.resolve_principal(session, row, make_settings())
+    assert principal.roles == ["member"] and principal.org_roles == {}
 
 
 async def test_group_mapping_row_grants_an_org_role(
     session: AsyncSession, org_tables: None
 ) -> None:
-    await session.execute(
-        text(
-            "INSERT INTO group_mapping (oidc_group, role, organization_id) "
-            "SELECT 'Fachschaft-Informatik', 'organizer', id FROM organization WHERE slug='fsi'"
-        )
-    )
+    await _map(session, "Fachschaft-Informatik", "organizer", "fsi")
     row = await _principal(session, ["Fachschaft-Informatik"])
     principal = await rbac.resolve_principal(session, row, make_settings())
     assert principal.org_roles == {"fsi": frozenset({"organizer"})}
@@ -126,6 +115,7 @@ async def api(migrated: tuple[str, str], org_tables: None) -> AsyncIterator[http
 
 
 async def test_me_with_a_real_session_cookie(api: httpx.AsyncClient, session: AsyncSession) -> None:
+    await _map(session, "events-fsi-organizer", "organizer", "fsi")
     row = await _principal(session, ["events-fsi-organizer", "events-system:events-admin"])
     cookie = await sessions.create_principal_session(
         session,
@@ -142,7 +132,9 @@ async def test_me_with_a_real_session_cookie(api: httpx.AsyncClient, session: As
     response = await api.get("/api/auth/me", cookies={"ev_session": cookie})
     assert response.status_code == 200
     body = response.json()
-    assert body["organizations"] == [{"slug": "fsi", "role": "organizer"}]
+    assert [
+        (o["slug"], o["role"], o["name"], o["short"], o["trusted"]) for o in body["organizations"]
+    ] == [("fsi", "organizer", "Fachschaft Informatik", "FSI", False)]
     assert body["roles"] == ["member"]
     assert body["groups"] == ["events-fsi-organizer"]
     forged = await api.get("/api/auth/me", cookies={"ev_session": "forged"})

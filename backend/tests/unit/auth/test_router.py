@@ -6,6 +6,7 @@ from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from typing import Any
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -20,6 +21,7 @@ from tests._support.auth_fakes import fake_session, result
 from tests._support.factories import make_principal, make_settings
 
 SECRET = "test-session-secret"
+FSI_ID = uuid4()
 
 
 def _oidc_settings() -> Any:
@@ -189,13 +191,123 @@ def test_me_lists_roles_permissions_and_organizations(
     principal.email, principal.display_name = "a@b.de", "Ada"
     client.app.dependency_overrides[get_current_principal] = lambda: principal  # type: ignore[attr-defined]
     expires = datetime.now(UTC) + timedelta(days=3)
-    state["db"] = fake_session(result(SimpleNamespace(sid="sid-1", expires_at=expires)))
+    org = SimpleNamespace(
+        id=FSI_ID, slug="fsi", name="Fachschaft Informatik", short="FSI", trusted=False
+    )
+    state["db"] = fake_session(
+        result(SimpleNamespace(sid="sid-1", expires_at=expires)), result(org)
+    )
     client.cookies.set("ev_session", sessions.sign_principal_sid(SECRET, "sid-1"))
     response = client.get("/api/auth/me")
     body = response.json()
     assert body["sub"] == "sub-1" and body["displayName"] == "Ada"
     assert body["roles"] == ["editor", "member"]
-    assert body["organizations"] == [{"slug": "fsi", "role": "organizer"}]
+    assert body["organizations"] == [
+        {
+            "slug": "fsi",
+            "role": "organizer",
+            "organizationId": str(FSI_ID),
+            "name": "Fachschaft Informatik",
+            "short": "FSI",
+            "trusted": False,
+        }
+    ]
     assert "event.submit" in body["permissions"] and "event.approve" in body["permissions"]
     assert body["groups"] == ["events-editor", "events-fsi-organizer"]
     assert any("ev_session" in c for c in response.headers.get_list("set-cookie"))
+
+
+def test_callback_without_return_to_lands_on_the_base_url(
+    app_client: tuple[TestClient, dict[str, Any]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client, _ = app_client
+
+    async def fake_callback(db: Any, settings: Any, **kwargs: Any) -> tuple[str, Any]:
+        return "signed-sid", SimpleNamespace(sub="s")
+
+    monkeypatch.setattr(service, "oidc_callback", fake_callback)
+    client.cookies.set("ev_oidc_tx", _tx_cookie(return_to=None))
+    response = client.get("/api/auth/callback?code=c&state=st")
+    assert response.headers["location"] == "http://localhost:8081"
+
+
+def test_logout_without_oidc_or_without_a_session_row_gives_no_idp_url(
+    app_client: tuple[TestClient, dict[str, Any]],
+) -> None:
+    client, state = app_client
+    client.cookies.set("ev_session", sessions.sign_principal_sid(SECRET, "sid-1"))
+    client.cookies.set("XSRF-TOKEN", "t")
+    state["db"] = fake_session(result())
+    gone = client.post("/api/auth/logout", headers={"X-XSRF-TOKEN": "t"})
+    assert gone.json() == {"logoutUrl": None}
+    state["settings"] = make_settings()
+    state["db"] = fake_session(result(SimpleNamespace(id_token="idt", sid="sid-1")))
+    local = client.post("/api/auth/logout", headers={"X-XSRF-TOKEN": "t"})
+    assert local.json() == {"logoutUrl": None}
+
+
+def test_me_does_not_renew_the_cookie_of_an_unknown_session(
+    app_client: tuple[TestClient, dict[str, Any]],
+) -> None:
+    client, state = app_client
+    principal = make_principal("events-editor")
+    client.app.dependency_overrides[get_current_principal] = lambda: principal  # type: ignore[attr-defined]
+    state["db"] = fake_session(result())
+    client.cookies.set("ev_session", sessions.sign_principal_sid(SECRET, "sid-1"))
+    response = client.get("/api/auth/me")
+    assert response.status_code == 200 and response.json()["organizations"] == []
+    assert not any("ev_session" in c for c in response.headers.get_list("set-cookie"))
+
+
+def test_a_signed_transaction_cookie_without_the_keys_is_refused() -> None:
+    forged = sessions._serializer(SECRET, sessions._OIDC_TX_SALT).dumps({"x": 1})
+    assert sessions.load_oidc_tx(SECRET, forged, 600) is None
+
+
+def _revoke(
+    client: TestClient, state: dict[str, Any], *results: Any, cookie: str | None = None
+) -> Any:
+    principal = make_principal("events-editor")
+    client.app.dependency_overrides[get_current_principal] = lambda: principal  # type: ignore[attr-defined]
+    state["db"] = fake_session(*results)
+    if cookie:
+        client.cookies.set("ev_session", cookie)
+    client.cookies.set("XSRF-TOKEN", "t")
+    return client.post("/api/auth/sessions/revoke", headers={"X-XSRF-TOKEN": "t"})
+
+
+def test_revoke_is_a_noop_for_a_person_without_a_row(
+    app_client: tuple[TestClient, dict[str, Any]],
+) -> None:
+    response = _revoke(*app_client, result())
+    assert response.status_code == 200 and response.json() == {"revoked": 0}
+
+
+def test_revoke_keeps_the_session_of_the_cookie(
+    app_client: tuple[TestClient, dict[str, Any]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client, state = app_client
+    kept: list[Any] = []
+    audits: list[Any] = []
+
+    async def end_other(db: Any, principal_id: Any, keep_sid: Any) -> int:
+        kept.append(keep_sid)
+        return 3
+
+    async def audit(db: Any, **kwargs: Any) -> None:
+        audits.append(kwargs)
+
+    from app.modules.auth import router as auth_router
+
+    monkeypatch.setattr(sessions, "end_other_principal_sessions", end_other)
+    monkeypatch.setattr(auth_router, "audit_record", audit)
+    person = SimpleNamespace(id="pid", sub="sub-1")
+    expires = datetime.now(UTC) + timedelta(days=1)
+    session_row = SimpleNamespace(sid="sid-1", expires_at=expires)
+    cookie = sessions.sign_principal_sid(SECRET, "sid-1")
+    with_cookie = _revoke(client, state, result(person), result(session_row), cookie=cookie)
+    assert with_cookie.json() == {"revoked": 3} and kept == ["sid-1"]
+    assert audits[0]["data"] == {"scope": "own", "count": 3}
+    client.cookies.clear()
+    without = _revoke(client, state, result(person))
+    assert without.json() == {"revoked": 3} and kept[-1] is None

@@ -5,6 +5,8 @@ Copied from STUPA-Workflow@93c33d6 backend/app/modules/auth/schemas.py (events `
 
 from __future__ import annotations
 
+from uuid import UUID
+
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 
@@ -27,11 +29,19 @@ class LogoutOut(CamelModel):
     logout_url: str | None = None
 
 
-class OrgRoleOut(CamelModel):
-    """One organization membership of the principal."""
+class MeOrganization(CamelModel):
+    """One organization role of the principal, with the organization's own data.
+
+    `role` is the effective role: an approver of an organization that is not trusted
+    shows as `organizer`.
+    """
 
     slug: str
     role: str
+    organization_id: UUID
+    name: str
+    short: str
+    trusted: bool
 
 
 class MeOut(CamelModel):
@@ -43,4 +53,10 @@ class MeOut(CamelModel):
     roles: list[str]
     permissions: list[str]
     groups: list[str]
-    organizations: list[OrgRoleOut]
+    organizations: list[MeOrganization]
+
+
+class RevokeResult(CamelModel):
+    """Result of a session revoke: how many sessions ended."""
+
+    revoked: int

@@ -14,6 +14,7 @@ import logging
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.admin.membership_sync import sync_principal_memberships
 from app.modules.audit.actions import AuditAction
 from app.modules.audit.service import record as audit_record
 from app.modules.auth import oidc, sessions
@@ -29,7 +30,10 @@ logger = logging.getLogger("app.auth")
 
 
 async def upsert_principal(db: AsyncSession, claims: oidc.OidcClaims) -> PrincipalRow:
-    """Create or update a principal by the OIDC `sub` (identity and group cache)."""
+    """Create or update a principal by the OIDC `sub` (identity and group cache).
+
+    Login and revalidation both come through here, so the membership sync runs on both.
+    """
     row = (
         await db.execute(select(PrincipalRow).where(PrincipalRow.sub == claims.sub))
     ).scalar_one_or_none()
@@ -41,6 +45,7 @@ async def upsert_principal(db: AsyncSession, claims: oidc.OidcClaims) -> Princip
     row.oidc_groups = list(claims.groups)
     row.last_login = utcnow()
     await db.flush()
+    await sync_principal_memberships(db, row)
     return row
 
 

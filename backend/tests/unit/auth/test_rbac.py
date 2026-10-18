@@ -1,14 +1,18 @@
-"""RBAC resolution with a fake session: groups, reserved names, mappings and trust."""
+"""RBAC resolution with a fake session: only `group_mapping` decides, trust downgrades approvers."""
 
 from __future__ import annotations
 
 from types import SimpleNamespace
 from typing import Any
+from uuid import uuid4
 
 import pytest
 
 from app.modules.auth import rbac
 from tests._support.factories import make_settings
+
+FSI, MAKERS = uuid4(), uuid4()
+ORG_IDS = {"fsi": FSI, "makers": MAKERS}
 
 
 class _Rows:
@@ -18,24 +22,24 @@ class _Rows:
     def all(self) -> list[Any]:
         return self._rows
 
-    def scalars(self) -> _Rows:
-        return self
-
 
 class FakeDb:
-    """Answers the two resolver queries: group mappings first, then the trusted slugs."""
+    """Answers the one resolver query with `(role, org id, slug, trusted, group)` rows."""
 
-    def __init__(self, mapped: list[tuple[str, str | None]], trusted: list[str]) -> None:
+    def __init__(self, mapped: list[tuple[str, str | None, bool]]) -> None:
         self.mapped = mapped
-        self.trusted = trusted
         self.calls = 0
 
     async def execute(self, statement: Any) -> _Rows:
         self.calls += 1
-        sql = str(statement)
-        if "group_mapping" in sql:
-            return _Rows(self.mapped)
-        return _Rows(self.trusted)
+        assert "group_mapping" in str(statement)
+        group = sorted(statement.compile().params["oidc_group_1"])[0]
+        return _Rows(
+            [
+                (role, ORG_IDS.get(slug or ""), slug, trusted, group)
+                for role, slug, trusted in self.mapped
+            ]
+        )
 
 
 def _row(groups: list[str], **extra: Any) -> Any:
@@ -48,18 +52,23 @@ def _row(groups: list[str], **extra: Any) -> Any:
     )
 
 
-async def _resolve(groups: list[str], db: FakeDb | None = None, **extra: Any):
-    return await rbac.resolve_principal(
-        db or FakeDb([], []), _row(groups, **extra), make_settings(**extra.get("settings", {}))
-    )
+async def _resolve(groups: list[str], mapped: list[tuple[str, str | None, bool]] | None = None):
+    return await rbac.resolve_principal(FakeDb(mapped or []), _row(groups), make_settings())
 
 
-async def test_global_and_org_roles_come_from_the_group_names() -> None:
+async def test_a_group_name_alone_grants_nothing() -> None:
     principal = await _resolve(["events-editor", "events-fsi-organizer", "random"])
+    assert principal.roles == ["member"]
+    assert principal.org_roles == {}
+    assert principal.groups == {"events-editor", "events-fsi-organizer", "random"}
+
+
+async def test_mapping_rows_grant_global_and_org_roles_and_bind_the_ids() -> None:
+    principal = await _resolve(["Campus"], [("editor", None, False), ("organizer", "fsi", False)])
     assert principal.roles == ["editor", "member"]
     assert principal.org_roles == {"fsi": frozenset({"organizer"})}
-    assert "event.approve" in principal.permissions
-    assert principal.groups == {"events-editor", "events-fsi-organizer", "random"}
+    assert principal.org_ids == {"fsi": str(FSI)}
+    assert principal.has("event.approve") and principal.has("event.create", FSI)
 
 
 async def test_reserved_namespace_never_enters_the_group_set() -> None:
@@ -69,27 +78,31 @@ async def test_reserved_namespace_never_enters_the_group_set() -> None:
 
 
 async def test_no_groups_means_member_only_and_no_query() -> None:
-    db = FakeDb([], [])
+    db = FakeDb([])
     principal = await rbac.resolve_principal(db, _row([]), make_settings())
     assert principal.roles == ["member"]
     assert db.calls == 0
 
 
 async def test_approver_of_an_untrusted_org_falls_back_to_organizer() -> None:
-    principal = await _resolve(
-        ["events-fsi-approver", "events-makers-approver"], FakeDb([], ["makers"])
-    )
+    principal = await _resolve(["g"], [("approver", "fsi", False), ("approver", "makers", True)])
     assert principal.org_roles == {
         "fsi": frozenset({"organizer"}),
         "makers": frozenset({"approver"}),
     }
 
 
-async def test_group_mapping_adds_grants_and_ignores_invalid_ones() -> None:
-    db = FakeDb([("organizer", "fsi"), ("editor", None), ("approver", None), ("editor", "fsi")], [])
-    principal = await _resolve(["Campus-Gruppe"], db)
-    assert principal.roles == ["editor", "member"]
-    assert principal.org_roles == {"fsi": frozenset({"organizer"})}
+async def test_rows_with_a_role_that_does_not_fit_their_scope_are_ignored() -> None:
+    principal = await _resolve(
+        ["g"], [("approver", None, False), ("editor", "fsi", False), ("viewer", "fsi", False)]
+    )
+    assert principal.roles == ["member"]
+    assert principal.org_roles == {"fsi": frozenset({"viewer"})}
+
+
+async def test_two_groups_in_one_org_give_both_roles() -> None:
+    principal = await _resolve(["a", "b"], [("viewer", "fsi", False), ("submitter", "fsi", False)])
+    assert principal.org_roles == {"fsi": frozenset({"viewer", "submitter"})}
 
 
 @pytest.mark.parametrize(
@@ -105,6 +118,6 @@ async def test_bootstrap_admin_needs_flag_and_list(
     flag: bool, settings: dict[str, str], expected: bool
 ) -> None:
     principal = await rbac.resolve_principal(
-        FakeDb([], []), _row([], bootstrap_admin=flag), make_settings(**settings)
+        FakeDb([]), _row([], bootstrap_admin=flag), make_settings(**settings)
     )
     assert ("admin" in principal.roles) is expected

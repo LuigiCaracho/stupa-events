@@ -14,12 +14,17 @@ from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Query, Request, Response, status
 from fastapi.responses import RedirectResponse
+from sqlalchemy import select
 
 from app.deps import DbSession, Principal, SettingsDep, require_principal
+from app.modules.audit.actions import AuditAction
+from app.modules.audit.service import record as audit_record
 from app.modules.auth import oidc, service, sessions
 from app.modules.auth.models import SESSION_CLIENT_WEB, session_days
+from app.modules.auth.models import Principal as PrincipalRow
 from app.modules.auth.oidc import OidcError, OidcUnavailableError
-from app.modules.auth.schemas import LogoutOut, MeOut, OrgRoleOut
+from app.modules.auth.schemas import LogoutOut, MeOrganization, MeOut, RevokeResult
+from app.modules.orgs.scope import org_refs
 from app.settings import Settings
 from app.shared.errors import (
     BadRequestError,
@@ -222,10 +227,11 @@ async def me(
 ) -> MeOut:
     """Return the principal plus the resolved roles, permissions, groups and organizations.
 
-    The organizations come from the group grammar alone, without a database lookup. The
-    response also renews the session cookie (see `_renew_session_cookie`).
+    The organizations carry their name, short name and `trusted` flag from one query
+    (`org_refs`). The response also renews the session cookie (see `_renew_session_cookie`).
     """
     await _renew_session_cookie(request, response, db, settings)
+    refs = await org_refs(db, principal)
     return MeOut(
         sub=principal.sub,
         email=principal.email,
@@ -233,10 +239,67 @@ async def me(
         roles=sorted(principal.roles),
         permissions=sorted(principal.permissions | _org_permissions(principal)),
         groups=sorted(principal.groups),
-        organizations=[OrgRoleOut(slug=slug, role=role) for slug, role in principal.organizations],
+        organizations=[
+            MeOrganization(
+                slug=slug,
+                role=role,
+                organization_id=refs[slug].id,
+                name=refs[slug].name,
+                short=refs[slug].short,
+                trusted=refs[slug].trusted,
+            )
+            for slug, role in principal.organizations
+            if slug in refs
+        ],
     )
 
 
 def _org_permissions(principal: Principal) -> set[str]:
     """Collect the permissions that any organization role grants (for the UI only)."""
     return set().union(*(permissions_of(roles) for roles in principal.org_roles.values()))
+
+
+@router.post(
+    "/sessions/revoke",
+    response_model=RevokeResult,
+    responses=_errors(401),
+)
+async def revoke_other_sessions(
+    request: Request,
+    principal: Annotated[Principal, Depends(require_principal())],
+    db: DbSession,
+    settings: SettingsDep,
+) -> RevokeResult:
+    """End every other session of the caller; the running session stays.
+
+    Rights come from the IdP groups and are read afresh at the next login, so this is the
+    way to make a session that predates a withdrawal in the IdP log in again at once.
+    """
+    row = (
+        await db.execute(select(PrincipalRow).where(PrincipalRow.sub == principal.sub))
+    ).scalar_one_or_none()
+    if row is None:
+        return RevokeResult(revoked=0)
+    current = request.cookies.get(settings.session_cookie_name)
+    keep = (
+        await sessions.load_principal_session(
+            db,
+            secret=settings.session_secret,
+            cookie_value=current,
+            now=datetime.now(UTC),
+            max_age=sessions.SESSION_COOKIE_MAX_AGE,
+        )
+        if current
+        else None
+    )
+    count = await sessions.end_other_principal_sessions(db, row.id, keep.sid if keep else None)
+    await audit_record(
+        db,
+        actor=principal.sub,
+        action=AuditAction.SESSION_REVOKE,
+        target_type="principal",
+        target_id=str(row.id),
+        data={"scope": "own", "count": count},
+    )
+    await db.commit()
+    return RevokeResult(revoked=count)

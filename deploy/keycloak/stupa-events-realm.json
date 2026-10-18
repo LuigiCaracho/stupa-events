@@ -26,6 +26,34 @@
     {
       "name": "events-makers-organizer",
       "path": "/events-makers-organizer"
+    },
+    {
+      "name": "events-admin",
+      "path": "/events-admin"
+    },
+    {
+      "name": "events-stupa",
+      "path": "/events-stupa"
+    },
+    {
+      "name": "events-stupa-approver",
+      "path": "/events-stupa-approver"
+    },
+    {
+      "name": "events-fsi-approver",
+      "path": "/events-fsi-approver"
+    },
+    {
+      "name": "events-fsi-viewer",
+      "path": "/events-fsi-viewer"
+    },
+    {
+      "name": "events-ekhg-submitter",
+      "path": "/events-ekhg-submitter"
+    },
+    {
+      "name": "events-users",
+      "path": "/events-users"
     }
   ],
   "clients": [
@@ -95,7 +123,8 @@
         }
       ],
       "groups": [
-        "/events-editor"
+        "/events-editor",
+        "/events-users"
       ],
       "realmRoles": [
         "offline_access"
@@ -116,7 +145,8 @@
         }
       ],
       "groups": [
-        "/events-fsi-organizer"
+        "/events-fsi-organizer",
+        "/events-users"
       ],
       "realmRoles": [
         "offline_access"
@@ -137,7 +167,8 @@
         }
       ],
       "groups": [
-        "/events-fsi-submitter"
+        "/events-fsi-submitter",
+        "/events-users"
       ],
       "realmRoles": [
         "offline_access"
@@ -158,7 +189,161 @@
         }
       ],
       "groups": [
-        "/events-makers-organizer"
+        "/events-makers-organizer",
+        "/events-users"
+      ],
+      "realmRoles": [
+        "offline_access"
+      ]
+    },
+    {
+      "username": "admin",
+      "enabled": true,
+      "email": "admin@example.test",
+      "emailVerified": true,
+      "firstName": "Adam",
+      "lastName": "Admin",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/events-admin",
+        "/events-users"
+      ],
+      "realmRoles": [
+        "offline_access"
+      ]
+    },
+    {
+      "username": "stupa",
+      "enabled": true,
+      "email": "stupa@example.test",
+      "emailVerified": true,
+      "firstName": "Stella",
+      "lastName": "Stupa",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/events-stupa",
+        "/events-users"
+      ],
+      "realmRoles": [
+        "offline_access"
+      ]
+    },
+    {
+      "username": "approver-stupa",
+      "enabled": true,
+      "email": "approver-stupa@example.test",
+      "emailVerified": true,
+      "firstName": "Anton",
+      "lastName": "Freigeber",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/events-stupa-approver",
+        "/events-users"
+      ],
+      "realmRoles": [
+        "offline_access"
+      ]
+    },
+    {
+      "username": "approver-fsi",
+      "enabled": true,
+      "email": "approver-fsi@example.test",
+      "emailVerified": true,
+      "firstName": "Anja",
+      "lastName": "Freigeberin",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/events-fsi-approver",
+        "/events-users"
+      ],
+      "realmRoles": [
+        "offline_access"
+      ]
+    },
+    {
+      "username": "viewer-fsi",
+      "enabled": true,
+      "email": "viewer-fsi@example.test",
+      "emailVerified": true,
+      "firstName": "Vera",
+      "lastName": "Leserin",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/events-fsi-viewer",
+        "/events-users"
+      ],
+      "realmRoles": [
+        "offline_access"
+      ]
+    },
+    {
+      "username": "submitter-ekhg",
+      "enabled": true,
+      "email": "submitter-ekhg@example.test",
+      "emailVerified": true,
+      "firstName": "Eva",
+      "lastName": "Partnerin",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/events-ekhg-submitter",
+        "/events-users"
+      ],
+      "realmRoles": [
+        "offline_access"
+      ]
+    },
+    {
+      "username": "member",
+      "enabled": true,
+      "email": "member@example.test",
+      "emailVerified": true,
+      "firstName": "Mia",
+      "lastName": "Mitglied",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/events-users"
       ],
       "realmRoles": [
         "offline_access"

@@ -85,15 +85,35 @@ def test_migrator_owns_every_table_and_view(events_db: dict[str, Engine]) -> Non
 def test_public_role_reads_only_the_view(events_db: dict[str, Engine]) -> None:
     with events_db["public"].connect() as conn:
         conn.exec_driver_sql("SELECT count(*) FROM public_event_v").scalar_one()
-    for table in ("event", "organization", "category", "attachment", "audit_entry"):
+    for table in (
+        "event",
+        "organization",
+        "category",
+        "attachment",
+        "audit_entry",
+        "venue",
+        "membership",
+        "group_mapping",
+    ):
         with pytest.raises(ProgrammingError) as err, events_db["public"].connect() as conn:
             conn.exec_driver_sql(f"SELECT 1 FROM {table}")
         assert "InsufficientPrivilege" in type(err.value.orig).__name__
 
 
 def test_app_role_has_no_delete_on_domain_tables(events_db: dict[str, Engine]) -> None:
-    for table in ("event", "attachment", "organization", "category"):
+    for table in ("event", "attachment", "organization", "category", "venue"):
         _fails(events_db["app"], f"DELETE FROM {table}")
+
+
+def test_app_role_deletes_mappings_and_memberships_but_not_venues(
+    events_db: dict[str, Engine],
+) -> None:
+    with events_db["app"].begin() as conn:
+        conn.exec_driver_sql("DELETE FROM group_mapping WHERE false")
+        conn.exec_driver_sql("DELETE FROM membership WHERE false")
+        conn.exec_driver_sql("SELECT count(*) FROM venue").scalar_one()
+        conn.exec_driver_sql("UPDATE venue SET notes = notes WHERE false")
+    _fails(events_db["app"], "DELETE FROM venue WHERE false")
 
 
 def test_app_role_cannot_rewrite_history(events_db: dict[str, Engine]) -> None:

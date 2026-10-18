@@ -183,14 +183,29 @@ async def load_principal_session(
     return row
 
 
-async def end_principal_sessions(db: AsyncSession, principal_id: Any) -> None:
-    """Delete every session of a principal. The caller commits.
+async def end_principal_sessions(db: AsyncSession, principal_id: Any) -> int:
+    """Delete every session of a principal and return how many ended. The caller commits.
 
     A session lives for months and renews itself at the IdP. So a deactivation or a
     revoke of rights must end the sessions, or an existing cookie keeps working (and,
     after a reactivation, works again).
     """
-    await db.execute(delete(AuthSession).where(AuthSession.principal_id == principal_id))
+    result = await db.execute(delete(AuthSession).where(AuthSession.principal_id == principal_id))
+    return result.rowcount or 0  # type: ignore[attr-defined]
+
+
+async def end_other_principal_sessions(
+    db: AsyncSession, principal_id: Any, keep_sid: str | None
+) -> int:
+    """Delete every session of a principal except the one with `keep_sid`; return the count.
+
+    The caller commits. With `keep_sid=None` no session is kept.
+    """
+    statement = delete(AuthSession).where(AuthSession.principal_id == principal_id)
+    if keep_sid is not None:
+        statement = statement.where(AuthSession.sid != keep_sid)
+    result = await db.execute(statement)
+    return result.rowcount or 0  # type: ignore[attr-defined]
 
 
 def sign_principal_sid(secret: str, sid: str) -> str:

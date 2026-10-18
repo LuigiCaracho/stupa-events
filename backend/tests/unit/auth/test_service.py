@@ -47,6 +47,11 @@ async def test_upsert_creates_and_updates() -> None:
     assert again is existing and existing.oidc_groups == ["events-editor"]
 
 
+async def test_upsert_runs_the_membership_sync_for_the_stored_row(sync_calls: list[Any]) -> None:
+    row = await service.upsert_principal(fake_session(result()), CLAIMS)
+    assert sync_calls == [row]
+
+
 async def test_callback_opens_a_session_and_audits_the_login(idp: list[dict[str, Any]]) -> None:
     db = fake_session(result())
     cookie, row = await service.oidc_callback(
