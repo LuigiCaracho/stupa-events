@@ -1,137 +1,258 @@
-"""The transition table of M1 as data, and the pure decision function.
+"""The 14 transitions T01 to T12 as data (PLAN 4.3, M3 contract 2.2).
 
-`TRANSITIONS` is the single source for the API, the guard list and the tests. T00
-(create) is not a transition of an existing dossier and lives in the event service.
-`decide` answers in a fixed order: the right, then the state, then the guards.
+`TRANSITIONS` is the single source for the API, the guard list and the tests. T00 (create)
+is not an edge of an existing dossier and lives in the event service. The guards of a
+transition stand in the order of the guard table (contract 2.3), which is the order of the
+`reasons[]`. `decision.decide` evaluates the right, the state, the mandatory note, Four-Eyes
+and then these guards.
 """
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Literal
 
-from app.modules.events.states import EventState
+from app.modules.events.states import EventState as S
 from app.modules.pipeline.guards import (
     Guard,
+    attachments_scanned,
+    checklist_done,
     date_in_future,
-    four_eyes,
+    end_estimated,
+    ended_more_than,
+    facts_valid,
+    flyer_date_confirmed,
+    followup_older_than,
     has_field,
+    howto_verified,
+    human_approval,
     image_or_exception,
+    location_confirmed,
+    long_running,
+    no_open_comment_on_hero,
+    no_open_duplicate,
+    open_comment_required,
+    origin_is,
+    outcome_set_or_waived,
+    publish_at_reached,
+    retrospective_filled,
+    rights_complete,
+    system_only,
+    title_clean,
+    venue_or_text,
+    wall_clock_ok,
 )
-from app.modules.pipeline.reasons import Reason, blockers
 from app.modules.pipeline.snapshot import Actor, Snapshot
 
 ACTION_FEED_INVALIDATE = "invalidate_feed_cache"
 ACTION_ENSURE_DERIVATIVES = "ensure_derivatives"
 
+type Right = Callable[[Snapshot, Actor], bool]
+
 
 @dataclass(frozen=True, slots=True)
 class Transition:
-    """One edge of the state machine with its right, its guards and its follow-up."""
+    """One edge of the state machine with its right, its guards and its follow-up.
+
+    Attributes:
+        permission: Right held in the organization of the dossier; `None` for the
+            worker-only transitions.
+        own_only: A role without `event.submit` fires only on its own dossiers.
+        alt_right: A second way to hold the right (the proposer withdrawing).
+        system: The worker may fire it (without any permission).
+        note_required: The request needs a mandatory note.
+        four_eyes: The Four-Eyes rule applies (evaluated before the other guards).
+        sets: `(column, rule)` pairs written besides `state` and `rev`. Rules: `actor` (the
+            firing sub), `null`, `plus_one`, `slug`, `new_rev` (the revision being written),
+            `body` (taken from the request), `scheduled` (reset the public status).
+    """
 
     id: str
-    source: EventState
-    target: EventState
-    permission: str
-    guards: tuple[Guard, ...]
+    source: tuple[S, ...]
+    target: S
+    permission: str | None
+    guards: tuple[Guard, ...] = ()
     own_only: bool = False
-    sets: tuple[str, ...] = field(default=())
+    alt_right: Right | None = None
+    system: bool = False
+    note_required: bool = False
+    four_eyes: bool = False
+    sets: tuple[tuple[str, str], ...] = ()
     actions: tuple[str, ...] = field(default=())
 
+
+def _may_withdraw(snapshot: Snapshot, actor: Actor) -> bool:
+    if snapshot.organization_id is None:
+        return snapshot.created_by == actor.sub
+    return (
+        actor.can("event.edit")
+        and snapshot.created_by == actor.sub
+        and snapshot.state == S.IDEA.value
+    )
+
+
+_PUBLISH_GUARDS = (
+    image_or_exception,
+    rights_complete,
+    attachments_scanned,
+    no_open_duplicate,
+    title_clean,
+    no_open_comment_on_hero,
+    flyer_date_confirmed,
+)
+_T02_FIELDS = ("title", "summary", "starts_at", "ends_at", "primary_category_id")
 
 TRANSITIONS: Mapping[str, Transition] = {
     t.id: t
     for t in (
         Transition(
             "T01",
-            EventState.IDEA,
-            EventState.PLANNING,
+            (S.IDEA,),
+            S.PLANNING,
             "event.edit",
             (has_field("title", "starts_at", "organization_id"),),
             own_only=True,
         ),
         Transition(
             "T02",
-            EventState.PLANNING,
-            EventState.IN_REVIEW,
+            (S.PLANNING,),
+            S.IN_REVIEW,
             "event.submit",
             (
-                has_field(
-                    "title",
-                    "summary",
-                    "starts_at",
-                    "ends_at",
-                    "primary_category_id",
-                    "venue_text",
-                ),
+                has_field(*_T02_FIELDS),
+                venue_or_text,
                 date_in_future,
+                facts_valid,
+                checklist_done,
+                wall_clock_ok,
+                end_estimated,
+                long_running,
             ),
-            sets=("submitted_by",),
+            sets=(("submitted_by", "actor"),),
+        ),
+        Transition(
+            "T03",
+            (S.IN_REVIEW,),
+            S.PLANNING,
+            "event.approve",
+            (open_comment_required,),
+            note_required=True,
+            sets=(("submitted_by", "null"), ("approved_by", "null")),
         ),
         Transition(
             "T04",
-            EventState.IN_REVIEW,
-            EventState.APPROVED,
+            (S.IN_REVIEW,),
+            S.APPROVED,
             "event.approve",
-            (date_in_future, image_or_exception, four_eyes),
-            sets=("slug", "public_seq", "approved_by"),
+            (
+                has_field(*_T02_FIELDS),
+                date_in_future,
+                image_or_exception,
+                rights_complete,
+                attachments_scanned,
+                no_open_duplicate,
+                title_clean,
+                no_open_comment_on_hero,
+                flyer_date_confirmed,
+                location_confirmed,
+                wall_clock_ok,
+                end_estimated,
+                long_running,
+            ),
+            four_eyes=True,
+            sets=(
+                ("slug", "slug"),
+                ("public_seq", "plus_one"),
+                ("approved_by", "actor"),
+                ("publish_at", "body"),
+            ),
             actions=(ACTION_ENSURE_DERIVATIVES,),
         ),
         Transition(
             "T05",
-            EventState.APPROVED,
-            EventState.LIVE,
+            (S.APPROVED,),
+            S.LIVE,
             "event.approve",
-            (image_or_exception,),
+            (
+                system_only(date_in_future),
+                *_PUBLISH_GUARDS,
+                publish_at_reached,
+                human_approval,
+            ),
+            system=True,
+            sets=(("published_rev", "new_rev"),),
             actions=(ACTION_FEED_INVALIDATE,),
+        ),
+        Transition(
+            "T06",
+            (S.APPROVED,),
+            S.IN_REVIEW,
+            "event.approve",
+            note_required=True,
+            sets=(("approved_by", "null"), ("publish_at", "null")),
+        ),
+        Transition(
+            "T07",
+            (S.LIVE,),
+            S.APPROVED,
+            "event.approve",
+            note_required=True,
+            sets=(
+                ("public_seq", "plus_one"),
+                ("published_rev", "null"),
+                ("publish_at", "null"),
+                ("public_status", "scheduled"),
+            ),
+            actions=(ACTION_FEED_INVALIDATE,),
+        ),
+        Transition(
+            "T08",
+            (S.LIVE,),
+            S.FOLLOWUP,
+            None,
+            (ended_more_than(12), origin_is("internal", "mcp")),
+            system=True,
+            sets=(("published_rev", "null"),),
+        ),
+        Transition(
+            "T08b",
+            (S.LIVE,),
+            S.ARCHIVED,
+            None,
+            (ended_more_than(12), origin_is("imported", "legacy")),
+            system=True,
+            sets=(("published_rev", "null"),),
+        ),
+        Transition(
+            "T09",
+            (S.FOLLOWUP,),
+            S.ARCHIVED,
+            "event.submit",
+            (checklist_done, retrospective_filled, outcome_set_or_waived, howto_verified),
+        ),
+        Transition(
+            "T09b",
+            (S.FOLLOWUP,),
+            S.ARCHIVED,
+            None,
+            (followup_older_than(30),),
+            system=True,
+        ),
+        Transition("T10", (S.ARCHIVED,), S.FOLLOWUP, "event.restore", note_required=True),
+        Transition(
+            "T11",
+            (S.IDEA, S.PLANNING, S.IN_REVIEW, S.APPROVED),
+            S.WITHDRAWN,
+            "event.cancel",
+            alt_right=_may_withdraw,
+            note_required=True,
+        ),
+        Transition(
+            "T12",
+            (S.WITHDRAWN,),
+            S.IDEA,
+            "event.restore",
+            sets=(("submitted_by", "null"), ("approved_by", "null"), ("publish_at", "null")),
         ),
     )
 }
-
-
-@dataclass(frozen=True, slots=True)
-class Verdict:
-    """Result of `decide`: `ok`, or why the transition must not run."""
-
-    outcome: Literal["ok", "forbidden", "invalid_transition", "blocked"]
-    reasons: tuple[Reason, ...] = ()
-
-
-def permitted(transition: Transition, snapshot: Snapshot, actor: Actor) -> bool:
-    """Tell if the actor holds the right for this transition on this dossier."""
-    if not actor.can(transition.permission):
-        return False
-    return not (
-        transition.own_only and not actor.can("event.submit") and snapshot.created_by != actor.sub
-    )
-
-
-def guard_reasons(
-    transition: Transition, snapshot: Snapshot, actor: Actor, now: datetime
-) -> list[Reason]:
-    """Run all guards of the transition and collect their reasons in guard order."""
-    return [reason for guard in transition.guards for reason in guard(snapshot, actor, now)]
-
-
-def decide(transition: Transition, snapshot: Snapshot, actor: Actor, now: datetime) -> Verdict:
-    """Decide whether `actor` may fire `transition` on `snapshot` at `now`.
-
-    Same input, same decision, whatever the caller (REST, worker, factory).
-    """
-    if not permitted(transition, snapshot, actor):
-        return Verdict("forbidden")
-    if snapshot.state != transition.source:
-        return Verdict("invalid_transition")
-    reasons = guard_reasons(transition, snapshot, actor, now)
-    return Verdict("blocked" if blockers(reasons) else "ok", tuple(reasons))
-
-
-def allowed_transitions(snapshot: Snapshot, actor: Actor) -> list[str]:
-    """List the transitions the actor can try from the current state (UX hint only)."""
-    return [
-        t.id
-        for t in TRANSITIONS.values()
-        if t.source == snapshot.state and permitted(t, snapshot, actor)
-    ]

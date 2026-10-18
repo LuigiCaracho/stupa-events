@@ -263,6 +263,28 @@
       ]
     },
     {
+      "username": "approver2-stupa",
+      "enabled": true,
+      "email": "approver2-stupa@example.test",
+      "emailVerified": true,
+      "firstName": "Berta",
+      "lastName": "Gegenzeichnerin",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/events-stupa-approver",
+        "/events-users"
+      ],
+      "realmRoles": [
+        "offline_access"
+      ]
+    },
+    {
       "username": "approver-fsi",
       "enabled": true,
       "email": "approver-fsi@example.test",

@@ -49,6 +49,7 @@ STATUS_CODE_MAP: dict[int, str] = {
     413: "payload_too_large",
     415: "unsupported_media_type",
     422: "validation_error",
+    428: "precondition_required",
     429: "rate_limited",
     500: "internal_error",
     503: "service_unavailable",
@@ -65,6 +66,7 @@ STATUS_TITLE_MAP: dict[int, str] = {
     413: "Payload Too Large",
     415: "Unsupported Media Type",
     422: "Unprocessable Entity",
+    428: "Precondition Required",
     429: "Too Many Requests",
     500: "Internal Server Error",
     503: "Service Unavailable",
@@ -175,6 +177,12 @@ class UnsupportedMediaTypeError(AppError):
     """415 - file type not allowed or MIME sniff != extension."""
 
     status = 415
+
+
+class PreconditionRequiredError(AppError):
+    """428 - the request must name the version it changes (If-Match)."""
+
+    status = 428
 
 
 class ValidationProblem(AppError):

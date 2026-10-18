@@ -4,7 +4,8 @@ Run after `pytest --cov` (it reads `.coverage`):
 
     uv run python -m scripts.coverage_critical
 
-The packages are `auth`, `audit`, `pipeline` and `publicapi`. A file may sit in `EXEMPT`
+The packages are `auth`, `audit`, `pipeline` (since M3 with `guards/`, `fieldclass`, `advance`,
+the actions) and `publicapi`. A file may sit in `EXEMPT`
 with the reason why it stays below 100 % until a later milestone changes it. `files` and
 `media` follow with M4, which changes them (M2 contract, 10.2). Exit status 1 lists the
 files below the bar.

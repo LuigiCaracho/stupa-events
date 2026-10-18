@@ -7,31 +7,32 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.audit.actions import AuditAction
 from app.modules.auth.principal import Principal
-from app.modules.events import revisions
-from app.modules.events.access import load_visible
-from app.modules.events.models import Event
 from app.modules.events.states import EventState
-from app.shared.errors import ConflictError, ForbiddenError
+from app.modules.pipeline.action_base import finish, prepare
+from app.modules.pipeline.service import Fired
+from app.shared.errors import ConflictError
 from app.shared.timeutil import utcnow
 
-OPEN_STATES = frozenset(
-    {
-        EventState.IDEA.value,
-        EventState.PLANNING.value,
-        EventState.IN_REVIEW.value,
-        EventState.APPROVED.value,
-    }
+OPEN_STATES = (
+    EventState.IDEA.value,
+    EventState.PLANNING.value,
+    EventState.IN_REVIEW.value,
+    EventState.APPROVED.value,
 )
 
 
 async def grant_image_exception(
-    session: AsyncSession, principal: Principal, event_id: UUID, reason: str
-) -> Event:
+    session: AsyncSession,
+    principal: Principal,
+    event_id: UUID,
+    reason: str,
+    *,
+    expected_rev: int | None = None,
+) -> Fired:
     """Record the image exception on the event (no commit).
 
     Raises:
@@ -39,24 +40,18 @@ async def grant_image_exception(
         ForbiddenError: The principal lacks `event.image_exception`.
         ConflictError: `field_locked` once the event is live, `conflict` on a race.
     """
-    event = await load_visible(session, principal, event_id)
-    if not principal.has("event.image_exception", event.organization_id):
-        raise ForbiddenError("Missing permission: event.image_exception")
-    if event.state not in OPEN_STATES:
+    ctx = await prepare(
+        session, principal, event_id, "event.image_exception", expected_rev=expected_rev
+    )
+    if ctx.event.state not in OPEN_STATES:
         raise ConflictError("Field is locked in this state.", code="field_locked")
     grant = {"granted_by": principal.sub, "reason": reason, "at": utcnow().isoformat()}
-    result = await session.execute(
-        update(Event)
-        .where(Event.id == event.id, Event.rev == event.rev)
-        .values(image_exception=grant, rev=Event.rev + 1)
-        .returning(Event)
-        .execution_options(populate_existing=True, synchronize_session=False)
+    fired = await finish(
+        session,
+        ctx,
+        {"image_exception": grant},
+        audit_action=AuditAction.EVENT_IMAGE_EXCEPTION,
+        field_class="dossier",
+        states=OPEN_STATES,
     )
-    updated = result.scalar_one_or_none()
-    if updated is None:
-        raise ConflictError("The dossier was changed in the meantime.")
-    await revisions.append_revision(session, updated, actor=principal.sub, field_class="dossier")
-    await revisions.audit(
-        session, updated, actor=principal.sub, action=AuditAction.EVENT_IMAGE_EXCEPTION
-    )
-    return updated
+    return fired
