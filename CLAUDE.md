@@ -14,7 +14,7 @@ events appear in the public feed `GET /api/public/feed/events` (schema 2) for th
 It is a second, fully separate stack beside the Workflow tool (STUPA-Workflow). Files copied from there
 carry `Copied from STUPA-Workflow@93c33d6 <path>` and an entry in `PROVENANCE.json`. The binding
 specification lives outside the repo (`stupa-events-plan/PLAN.md`); the contract of the current
-milestone is `docs/M2-KONTRAKT.md` (on top of `docs/M1-KONTRAKT.md`, which still holds).
+milestone is `docs/M3-KONTRAKT.md` (on top of `docs/M2-KONTRAKT.md` and `docs/M1-KONTRAKT.md`, which still hold).
 
 **Stack:** Python 3.13, FastAPI, Pydantic v2 (camelCase, `extra=forbid`), SQLAlchemy 2 async,
 Alembic, arq worker. Angular 20 (standalone, OnPush, signals, strict TS, separate `.html`/`.scss`),
@@ -26,7 +26,7 @@ Alembic, arq worker. Angular 20 (standalone, OnPush, signals, strict TS, separat
 - **conventions**: house rules, Definition of Done, gates, migration policy. **Start here.**
 - **be-auth**: OIDC with PKCE, sessions, groups to roles, `/auth/me`
 - **be-events**: event model, organizations, categories, poster, public feed, `public_event_v`
-- **be-pipeline**: state machine T00 to T05, guards, optimistic locking, audit and revisions
+- **be-pipeline**: state machine T01 to T12, guards, Four-Eyes, field classes, actions, worker, optimistic locking
 - **frontend**: Angular app, shell, features, i18n, tests
 - **deploy**: compose stack, nginx and CSP, DB roles, backup, CI, dev IdP
 

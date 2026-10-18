@@ -890,6 +890,26 @@
       "mode": "U"
     },
     {
+      "path": "frontend/src/app/shared/long-press.directive.spec.ts",
+      "source": "frontend/src/app/shared/long-press.directive.spec.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/shared/long-press.directive.ts",
+      "source": "frontend/src/app/shared/long-press.directive.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/scroll-fade.directive.spec.ts",
+      "source": "frontend/src/app/shared/scroll-fade.directive.spec.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/shared/scroll-fade.directive.ts",
+      "source": "frontend/src/app/shared/scroll-fade.directive.ts",
+      "mode": "K"
+    },
+    {
       "path": "frontend/src/app/shared/status-kind.util.ts",
       "source": "frontend/src/app/shared/status-kind.util.ts",
       "mode": "U"
@@ -908,6 +928,26 @@
       "path": "frontend/src/app/shared/ui/_option-menu.scss",
       "source": "frontend/src/app/shared/ui/_option-menu.scss",
       "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/avatar/avatar.component.html",
+      "source": "frontend/src/app/shared/ui/avatar/avatar.component.html",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/avatar/avatar.component.scss",
+      "source": "frontend/src/app/shared/ui/avatar/avatar.component.scss",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/avatar/avatar.component.spec.ts",
+      "source": "frontend/src/app/shared/ui/avatar/avatar.component.spec.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/avatar/avatar.component.ts",
+      "source": "frontend/src/app/shared/ui/avatar/avatar.component.ts",
+      "mode": "U"
     },
     {
       "path": "frontend/src/app/shared/ui/date-block/date-block.component.html",
@@ -997,6 +1037,26 @@
     {
       "path": "frontend/src/app/shared/ui/file-drop-zone/file-drop-zone.component.ts",
       "source": "frontend/src/app/shared/ui/file-drop-zone/file-drop-zone.component.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/filter-select/filter-select.component.html",
+      "source": "frontend/src/app/shared/ui/filter-select/filter-select.component.html",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/filter-select/filter-select.component.scss",
+      "source": "frontend/src/app/shared/ui/filter-select/filter-select.component.scss",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/filter-select/filter-select.component.spec.ts",
+      "source": "frontend/src/app/shared/ui/filter-select/filter-select.component.spec.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/filter-select/filter-select.component.ts",
+      "source": "frontend/src/app/shared/ui/filter-select/filter-select.component.ts",
       "mode": "K"
     },
     {
@@ -1108,6 +1168,46 @@
       "path": "frontend/src/app/shared/ui/page-header/page-header.component.ts",
       "source": "frontend/src/app/shared/ui/page-header/page-header.component.ts",
       "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/row-menu/row-menu.component.html",
+      "source": "frontend/src/app/shared/ui/row-menu/row-menu.component.html",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/row-menu/row-menu.component.scss",
+      "source": "frontend/src/app/shared/ui/row-menu/row-menu.component.scss",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/row-menu/row-menu.component.spec.ts",
+      "source": "frontend/src/app/shared/ui/row-menu/row-menu.component.spec.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/row-menu/row-menu.component.ts",
+      "source": "frontend/src/app/shared/ui/row-menu/row-menu.component.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/search-pill/search-pill.component.html",
+      "source": "frontend/src/app/shared/ui/search-pill/search-pill.component.html",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/search-pill/search-pill.component.scss",
+      "source": "frontend/src/app/shared/ui/search-pill/search-pill.component.scss",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/search-pill/search-pill.component.spec.ts",
+      "source": "frontend/src/app/shared/ui/search-pill/search-pill.component.spec.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/search-pill/search-pill.component.ts",
+      "source": "frontend/src/app/shared/ui/search-pill/search-pill.component.ts",
+      "mode": "U"
     },
     {
       "path": "frontend/src/app/shared/ui/select/no-native-select.contract.spec.ts",

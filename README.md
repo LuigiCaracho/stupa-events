@@ -39,17 +39,22 @@ nix develop .#backend  -c bash -c 'cd backend && uv run --env-file .env arq work
 nix develop .#frontend -c bash -c 'cd frontend && npm ci && npm start'   # http://localhost:4200
 ```
 
-The worker is needed for posters: without ClamAV scan and WebP derivatives no dossier can be approved.
-`backend/scripts/m1_acceptance.py` walks the M1 criterion against this setup (see `docs/M1-ABNAHME.md`).
+The worker is needed for posters (ClamAV scan, WebP derivatives) and moves dossiers on: `advance_states` every quarter
+hour (scheduled publication `approved` to `live`, `live` to `followup`/`archived` 12 h after the end, `followup` to
+`archived` after 30 days) and `purge_drafts` daily at 03:30 UTC (autosave drafts older than 14 days).
+A `T05` without `publishAt` always waits for a person.
+`backend/scripts/m1_acceptance.py`, `m2_acceptance.py` and `m3_acceptance.py` walk the criteria of M1 to M3 against this
+setup (see `docs/M1-ABNAHME.md`, `docs/M2-ABNAHME.md`, `docs/M3-ABNAHME.md`). `m3_acceptance` waits for one worker run.
 
 The roles in `deploy/db/roles.sql` are created on the first Postgres start; after migrations run
 `psql -U postgres -d events -f /db/roles.sql` once more for stage 2 (the grants that need the tables).
 
 Run `python -m scripts.seed_dev` once after the migrations: it maps the realm groups in `group_mapping`
-(a group name grants nothing without a row) and loads the reference data and three dossiers.
+(a group name grants nothing without a row) and loads the reference data and nine dossiers in every stage up to the archive, one of them a proposal.
 
 Test users (password `password`, local Keycloak only), all in `events-users`: `admin` (events-admin), `editor`
-(events-editor), `stupa` (events-stupa), `approver-stupa` (events-stupa-approver, trusted), `approver-fsi`
+(events-editor), `stupa` (events-stupa), `approver-stupa` and `approver2-stupa` (events-stupa-approver, trusted; the second person approves what the first
+submitted, Four-Eyes), `approver-fsi`
 (events-fsi-approver, acts as organizer), `organizer-fsi`, `submitter-fsi`, `viewer-fsi`, `organizer-makers`,
 `submitter-ekhg` (partner account) and `member` (no role group). A running Keycloak gets the new users with
 `python -m scripts.m2_acceptance` (it syncs the realm file first). Instead of Keycloak you can use Luis' Authentik, see
