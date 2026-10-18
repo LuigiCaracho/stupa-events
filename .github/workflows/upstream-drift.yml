@@ -1,0 +1,43 @@
+# Weekly check: did upstream (STUPA-Workflow) change a file we copied? Compares the PROVENANCE.json
+# source files at the pinned commit with upstream HEAD and opens or updates ONE issue. It never
+# changes code. UPSTREAM_READ_TOKEN is only needed while the upstream repo is private.
+name: upstream-drift
+
+on:
+  schedule:
+    - cron: "0 5 * * 1" # Mondays 05:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Clone upstream
+        env:
+          UPSTREAM_READ_TOKEN: ${{ secrets.UPSTREAM_READ_TOKEN }}
+        run: |
+          repo="$(jq -r .upstream.repo PROVENANCE.json)"
+          auth="${UPSTREAM_READ_TOKEN:+x-access-token:${UPSTREAM_READ_TOKEN}@}"
+          git clone --quiet "https://${auth}github.com/${repo}.git" "${RUNNER_TEMP}/upstream"
+      - name: Report
+        id: report
+        run: |
+          .github/scripts/upstream-drift.sh PROVENANCE.json "${RUNNER_TEMP}/upstream" > "${RUNNER_TEMP}/drift.md"
+          echo "drift=$([ -s "${RUNNER_TEMP}/drift.md" ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+      - name: Open or update the issue
+        if: steps.report.outputs.drift == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="Upstream drift: copied files changed in STUPA-Workflow"
+          number="$(gh issue list --state open --search "\"${title}\" in:title" --json number --jq '.[0].number // empty')"
+          if [ -n "${number}" ]; then
+            gh issue edit "${number}" --body-file "${RUNNER_TEMP}/drift.md"
+          else
+            gh issue create --title "${title}" --body-file "${RUNNER_TEMP}/drift.md"
+          fi

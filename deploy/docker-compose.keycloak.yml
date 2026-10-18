@@ -1,0 +1,45 @@
+# Local-only Keycloak as dev IdP. NEVER use it in production.
+# Start: docker compose -f docker-compose.yml -f docker-compose.keycloak.yml --env-file .env.dev up -d
+# Copied from STUPA-Workflow@93c33d6 deploy/docker-compose.keycloak.yml (adapted: port 8090, realm stupa-events).
+#
+# Admin console: http://127.0.0.1:8090 (admin / admin). Test users: see keycloak/stupa-events-realm.json.
+#
+# WARNING: every credential here AND in keycloak/stupa-events-realm.json (admin/admin, the user
+# passwords, the confidential client secret) is a throwaway fixture of a local Keycloak. NEVER copy
+# or reuse these values in a real IdP. JSON allows no comments, so this warning stands here.
+#
+# The issuer http://host.docker.internal:8090/realms/stupa-events must resolve the same way for
+# the browser AND for the api container:
+#   - Browser:   add `127.0.0.1 host.docker.internal` to /etc/hosts once
+#   - Container: extra_hosts host-gateway (below) -> host IP -> published port 8090
+# Keycloak start-dev derives the issuer claim from the Host header (KC_HOSTNAME_STRICT=false).
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import:ro
+    ports:
+      - "127.0.0.1:8090:8080"
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && printf 'GET /realms/master HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q 200"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  api:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  worker:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

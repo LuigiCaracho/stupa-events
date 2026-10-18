@@ -1,0 +1,209 @@
+# Copied from STUPA-Workflow@93c33d6 .github/workflows/ci.yml (adapted).
+# CI gate (PLAN 12.4). Flat fan-out: every check job starts in
+# parallel. M1 jobs: backend lint, typecheck, unit; backend integration and migrations with
+# Postgres and Redis; frontend lint, typecheck, jest, build; compose lint; gitleaks. The
+# compose-smoke job builds the whole stack and is opt-in (dispatch, label or main push).
+name: ci
+
+on:
+  push:
+    branches: [main, development]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.13"
+  NODE_VERSION: "24"
+
+jobs:
+  be-lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install uv
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+
+  be-typecheck:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install uv
+      - run: uv run basedpyright
+
+  be-unit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install uv
+      - name: Pytest (unit) and coverage gate
+        run: uv run pytest -m 'not integration and not e2e and not live' --cov --cov-report=xml --cov-report=term-missing
+      - uses: actions/upload-artifact@v7
+        with:
+          name: backend-coverage
+          path: backend/coverage.xml
+          retention-days: 7
+
+  be-integration:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: events
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install uv
+      - name: Pytest (integration; testcontainers start the rest on the runner's Docker)
+        run: uv run pytest -m integration
+
+  migrations-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: events
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      PGPASSWORD: ci
+      DATABASE_URL: postgresql+asyncpg://events_app:ci@localhost:5432/events
+      DB_MIGRATION_URL: postgresql+asyncpg://events_migrator:ci@localhost:5432/events
+      SESSION_SECRET: ci-session-secret-0001
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install uv
+      - name: Roles, stage 1
+        run: |
+          psql -h localhost -U postgres -d events -v ON_ERROR_STOP=1 -f ../deploy/db/roles.sql
+          psql -h localhost -U postgres -d events -c "ALTER ROLE events_app PASSWORD 'ci'" -c "ALTER ROLE events_migrator PASSWORD 'ci'"
+      - name: Exactly one Alembic head, revision ids at most 32 characters
+        run: |
+          test "$(uv run alembic heads | grep -c '(head)')" = 1
+          ! grep -hoE '^revision(: str)? *=+ *"[^"]{33,}"' migrations/versions/*.py
+      - name: alembic upgrade head on a fresh database
+        run: uv run alembic upgrade head
+      - name: Roles, stage 2
+        run: psql -h localhost -U postgres -d events -v ON_ERROR_STOP=1 -f ../deploy/db/roles.sql
+
+  fe-unit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - name: Jest and coverage gate
+        run: npm test -- --coverage --watch=false
+      - run: npm run build
+
+  compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Compose lint (project name, ports, FORWARDED_ALLOW_IPS, limits, no prune)
+        run: deploy/compose-lint.sh
+      - name: Shell syntax
+        run: for f in deploy/*.sh deploy/db/*.sh .github/scripts/*.sh; do bash -n "$f"; done
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        run: >
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.24.3
+          detect --source /repo --config /repo/.gitleaks.toml --no-banner --redact
+
+  compose-smoke:
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'workflow_dispatch'
+      || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+      || contains(github.event.pull_request.labels.*.name, 'run-compose-smoke')
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+      - name: Stack up with the dev env
+        working-directory: deploy
+        run: |
+          cp .env.dev.example .env.dev
+          docker compose --env-file .env.dev up -d --build --wait --wait-timeout 600
+      - name: Smoke (health and CSP in every location)
+        run: deploy/smoke.sh
+      - name: Logs on failure
+        if: failure()
+        working-directory: deploy
+        run: docker compose --env-file .env.dev logs --tail 200
+      - name: Stack down
+        if: always()
+        working-directory: deploy
+        run: docker compose --env-file .env.dev down -v

@@ -1,0 +1,7 @@
+# Copied from STUPA-Workflow@93c33d6 deploy/.gitignore (adapted).
+.env
+.env.*
+!.env.example
+!.env.dev.example
+!.env.host.example
+secrets/

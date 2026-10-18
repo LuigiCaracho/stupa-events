@@ -1,0 +1,80 @@
+# Backing services for local development WITHOUT web/api/worker containers: run uvicorn, arq and
+# `ng serve` on the host against these ports. Loopback only; every credential is a throwaway.
+# Start: docker compose -f deploy/docker-compose.dev.yml up -d
+# Host ports: postgres 5434, redis 6381, minio 9100 (console 9101), clamav 3311, keycloak 8090.
+# Do not run it together with docker-compose.yml: same postgres port 5434.
+# Keycloak needs `127.0.0.1 host.docker.internal` in /etc/hosts (see docker-compose.keycloak.yml).
+
+name: stupa-events-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: events
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev-postgres}
+      EVENTS_APP_PASSWORD: ${EVENTS_APP_PASSWORD:-dev-app}
+      EVENTS_MIGRATOR_PASSWORD: ${EVENTS_MIGRATOR_PASSWORD:-dev-migrator}
+      EVENTS_PUBLIC_PASSWORD: ${EVENTS_PUBLIC_PASSWORD:-dev-public}
+    ports:
+      - "127.0.0.1:5434:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./db/init-roles.sh:/docker-entrypoint-initdb.d/10-roles.sh:ro
+      - ./db/roles.sql:/db/roles.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d events"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:6381:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+    pull_policy: missing
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-dev-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-dev-minio-secret}
+    ports:
+      - "127.0.0.1:9100:9000"
+      - "127.0.0.1:9101:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9000/minio/health/live || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  clamav:
+    image: clamav/clamav:1.4.3
+    pull_policy: missing
+    mem_limit: 3g
+    ports:
+      - "127.0.0.1:3311:3310"
+    volumes:
+      - clamav_data:/var/lib/clamav
+
+  keycloak:
+    extends:
+      file: docker-compose.keycloak.yml
+      service: keycloak
+
+volumes:
+  pg_data:
+  minio_data:
+  clamav_data:
+
+networks:
+  internal:

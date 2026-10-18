@@ -1,0 +1,168 @@
+{
+  "realm": "stupa-events",
+  "displayName": "STUPA Events (LOCAL DEV ONLY)",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "offlineSessionIdleTimeout": 2592000,
+  "groups": [
+    {
+      "name": "events-editor",
+      "path": "/events-editor"
+    },
+    {
+      "name": "events-fsi-organizer",
+      "path": "/events-fsi-organizer"
+    },
+    {
+      "name": "events-fsi-submitter",
+      "path": "/events-fsi-submitter"
+    },
+    {
+      "name": "events-makers-organizer",
+      "path": "/events-makers-organizer"
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "stupa-events",
+      "name": "STUPA Events (local dev)",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "stupa-events-dev-secret-0001",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:8081/*",
+        "http://localhost:4200/*"
+      ],
+      "webOrigins": [
+        "http://localhost:8081",
+        "http://localhost:4200"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:8081/*##http://localhost:4200/*",
+        "use.refresh.tokens": "true"
+      },
+      "defaultClientScopes": [
+        "web-origins",
+        "profile",
+        "roles",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "offline_access"
+      ],
+      "protocolMappers": [
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "groups",
+            "full.path": "false",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "editor",
+      "enabled": true,
+      "email": "editor@example.test",
+      "emailVerified": true,
+      "firstName": "Edith",
+      "lastName": "Editor",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/events-editor"
+      ],
+      "realmRoles": [
+        "offline_access"
+      ]
+    },
+    {
+      "username": "organizer-fsi",
+      "enabled": true,
+      "email": "organizer-fsi@example.test",
+      "emailVerified": true,
+      "firstName": "Olga",
+      "lastName": "Organisator",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/events-fsi-organizer"
+      ],
+      "realmRoles": [
+        "offline_access"
+      ]
+    },
+    {
+      "username": "submitter-fsi",
+      "enabled": true,
+      "email": "submitter-fsi@example.test",
+      "emailVerified": true,
+      "firstName": "Sven",
+      "lastName": "Einreicher",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/events-fsi-submitter"
+      ],
+      "realmRoles": [
+        "offline_access"
+      ]
+    },
+    {
+      "username": "organizer-makers",
+      "enabled": true,
+      "email": "organizer-makers@example.test",
+      "emailVerified": true,
+      "firstName": "Max",
+      "lastName": "Maker",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "groups": [
+        "/events-makers-organizer"
+      ],
+      "realmRoles": [
+        "offline_access"
+      ]
+    }
+  ]
+}
