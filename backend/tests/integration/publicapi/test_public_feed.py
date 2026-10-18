@@ -42,7 +42,8 @@ async def test_public_feed_schema(api: Api) -> None:
     SCHEMA.validate(response.json())
     item = response.json()["items"][0]
     assert item["id"] == live["id"] and item["slug"] == live["slug"]
-    assert item["organization"]["short"] == "FSI" and item["venueText"] == "Kinosaal 9-133"
+    assert item["organization"]["short"] == "FSI" and item["organization"]["slug"] == "fsi"
+    assert item["venueText"] == "Kinosaal 9-133"
     assert item["categories"][0]["slug"] == "kino" and item["status"] == "scheduled"
     assert item["image"]["alt"] == "Ein Filmplakat" and item["image"]["credit"] == "Foto: Ada"
     assert item["image"]["width"] == 1200 and item["url"].endswith(f"/e/{live['slug']}")

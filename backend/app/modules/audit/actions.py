@@ -28,6 +28,8 @@ class AuditAction(StrEnum):
     ATTACHMENT_SCAN = "attachment_scan"
     ATTACHMENT_REPLACE = "attachment_replace"
     ROLE_MAPPING_CHANGE = "role_mapping_change"
+    # A membership row that the OIDC sync added or removed.
+    ROLE_CHANGE = "role_change"
     SESSION_REVOKE = "session_revoke"
     CONFIG_CHANGE = "config_change"
     EXPORT = "export"

@@ -16,9 +16,13 @@ from app.modules.auth.schemas import CamelModel
 
 
 class PublicOrganization(CamelModel):
-    """The organizer: name and short name only, no contact data."""
+    """The organizer: slug, name and short name only, no contact data.
+
+    The slug is the value of the feed filter `?org=`.
+    """
 
     id: UUID
+    slug: str
     name: str
     short: str
 

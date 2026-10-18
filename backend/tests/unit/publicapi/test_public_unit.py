@@ -41,6 +41,7 @@ def row(**over: Any) -> SimpleNamespace:
         "tzid": "Europe/Berlin",
         "public_status": "scheduled",
         "organization_id": uuid4(),
+        "organization_slug": "fsi",
         "organization_name": "Fachschaft Informatik",
         "organization_short": "FSI",
         "venue_text": "Kinosaal",

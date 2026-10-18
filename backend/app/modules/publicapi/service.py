@@ -95,7 +95,10 @@ def to_public_event(row: Row[Any], base_url: str) -> PublicEventOut:
         tzid=row.tzid,
         status=row.public_status,
         organization=PublicOrganization(
-            id=row.organization_id, name=row.organization_name, short=row.organization_short
+            id=row.organization_id,
+            slug=row.organization_slug,
+            name=row.organization_name,
+            short=row.organization_short,
         ),
         venue_text=row.venue_text,
         categories=(

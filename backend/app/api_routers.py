@@ -9,6 +9,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
+from app.modules.admin.mappings_router import router as mappings_router
+from app.modules.admin.principals_router import router as principals_router
+from app.modules.admin.taxonomy_router import ROUTERS as ADMIN_TAXONOMY_ROUTERS
 from app.modules.audit.router import router as audit_router
 from app.modules.auth.router import router as auth_router
 from app.modules.dossier.router import router as dossier_router
@@ -21,6 +24,9 @@ from app.modules.taxonomy.router import router as taxonomy_router
 ROUTERS: tuple[APIRouter, ...] = (
     auth_router,
     audit_router,
+    mappings_router,
+    principals_router,
+    *ADMIN_TAXONOMY_ROUTERS,
     orgs_router,
     taxonomy_router,
     events_router,
