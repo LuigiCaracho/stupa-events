@@ -16,6 +16,7 @@ from arq import cron, func
 from arq.connections import RedisSettings
 
 from app.modules.dossier.worker_jobs import WORKER_FUNCTIONS
+from worker.advance import advance_states, purge_drafts
 from worker.audit_verify import process_audit_verification
 from worker.mail import on_startup as mail_on_startup
 from worker.mail import send_mail
@@ -44,6 +45,8 @@ class WorkerSettings:
         send_mail,
         scan_attachment,
         func(process_audit_verification, timeout=AUDIT_VERIFY_JOB_TIMEOUT_SECONDS),
+        advance_states,
+        purge_drafts,
         *WORKER_FUNCTIONS,
     ]
     cron_jobs = [
@@ -53,6 +56,8 @@ class WorkerSettings:
             minute=30,
             timeout=AUDIT_VERIFY_JOB_TIMEOUT_SECONDS,
         ),
+        cron(advance_states, minute={0, 15, 30, 45}, timeout=300, unique=True),
+        cron(purge_drafts, hour=3, minute=30),
     ]
     on_startup = _on_startup
     queue_name = os.environ.get("ARQ_QUEUE_NAME", "events")
