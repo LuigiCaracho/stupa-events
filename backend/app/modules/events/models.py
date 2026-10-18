@@ -33,6 +33,7 @@ from app.modules.events.states import EventState, PublicStatus
 
 EVENT_STATES = tuple(s.value for s in EventState)
 PUBLIC_STATUSES = tuple(s.value for s in PublicStatus)
+PUBLIC_REASON_CODES = ("none", "room", "speaker", "illness", "registration", "weather", "other")
 ORIGIN_KINDS = ("internal", "imported", "legacy", "mcp")
 ACTOR_TYPES = ("human", "agent", "system")
 FIELD_CLASSES = ("critical", "text", "dossier", "state")
@@ -77,9 +78,30 @@ class Event(UUIDPkMixin, TimestampMixin, Base):
     created_by: Mapped[str] = mapped_column(Text)
     submitted_by: Mapped[str | None] = mapped_column(Text, nullable=True)
     approved_by: Mapped[str | None] = mapped_column(Text, nullable=True)
+    ticket_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    website_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    cost_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    venue_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("venue.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    publish_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    public_reason_code: Mapped[str] = mapped_column(Text, server_default="none")
+    public_reason_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    end_estimated: Mapped[bool] = mapped_column(Boolean, server_default="false")
+    flyer_checked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    text_reviewed_rev: Mapped[int] = mapped_column(Integer, server_default="0")
+    published_rev: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     __table_args__ = (
         CheckConstraint(_in("state", EVENT_STATES), name="state"),
+        CheckConstraint(_in("public_reason_code", PUBLIC_REASON_CODES), name="public_reason_code"),
+        CheckConstraint(
+            "public_status <> 'scheduled' OR "
+            "(public_reason_code = 'none' AND public_reason_text IS NULL)",
+            name="public_reason_scheduled",
+        ),
         CheckConstraint(_in("public_status", PUBLIC_STATUSES), name="public_status"),
         CheckConstraint(_in("origin_kind", ORIGIN_KINDS), name="origin_kind"),
         CheckConstraint("ends_at >= starts_at", name="time_order"),
@@ -133,10 +155,32 @@ class EventStatusEvent(Base):
     actor_type: Mapped[str] = mapped_column(Text, server_default="human")
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    four_eyes: Mapped[bool] = mapped_column(Boolean, server_default="false")
+    submitted_by: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     __table_args__ = (
+        CheckConstraint(
+            "transition_id <> 'T04' OR NOT four_eyes OR "
+            "(submitted_by IS NOT NULL AND actor_id IS DISTINCT FROM submitted_by)",
+            name="four_eyes",
+        ),
         CheckConstraint(_in("to_state", EVENT_STATES), name="to_state"),
         CheckConstraint(_in("actor_type", ACTOR_TYPES), name="actor_type"),
         CheckConstraint("note IS NULL OR length(note) <= 500", name="note_length"),
         Index("ix_event_status_event_event_id", "event_id"),
     )
+
+
+class EditorDraft(Base):
+    """Autosave draft of one person for one dossier (E21); never a revision."""
+
+    __tablename__ = "editor_draft"
+
+    owner_kind: Mapped[str] = mapped_column(Text, primary_key=True)
+    owner_id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
+    principal_sub: Mapped[str] = mapped_column(Text, primary_key=True)
+    base_rev: Mapped[int] = mapped_column(Integer)
+    fields: Mapped[dict] = mapped_column(JSONB)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (CheckConstraint("owner_kind IN ('event')", name="owner_kind"),)

@@ -52,6 +52,8 @@ class AttachmentOut(CamelModel):
     alt_text: str | None
     credit: str | None
     rights_basis: RightsBasis
+    persons_depicted: bool
+    consent_note: str | None
     derivatives: DerivativesOut | None
     supersedes_id: UUID | None
     created_at: datetime
@@ -63,6 +65,8 @@ class PosterMeta(CamelModel):
     alt_text: str = Field(min_length=1, max_length=250)
     credit: str = Field(min_length=1, max_length=200)
     rights_basis: RightsBasis
+    persons_depicted: bool = False
+    consent_note: str | None = Field(default=None, max_length=500)
 
 
 def derivatives_out(raw: dict | None) -> DerivativesOut | None:
@@ -86,6 +90,8 @@ def attachment_out(row: Attachment) -> AttachmentOut:
         alt_text=row.alt_text,
         credit=row.credit,
         rights_basis=row.rights_basis,  # type: ignore[arg-type]
+        persons_depicted=row.persons_depicted,
+        consent_note=row.consent_note,
         derivatives=derivatives_out(row.derivatives),
         supersedes_id=row.supersedes_id,
         created_at=row.created_at,

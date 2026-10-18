@@ -23,6 +23,7 @@ from app.modules.events.access import load_visible, poster_of
 from app.modules.files.storage import StorageError
 from app.shared.antiabuse import enforce_attachment_body_cap, rate_limit_attachments
 from app.shared.errors import (
+    ConflictError,
     FieldError,
     NotFoundError,
     ProblemDetail,
@@ -50,10 +51,22 @@ async def _read_capped(file: UploadFile, max_bytes: int) -> bytes:
     return await file.read(max_bytes + 1)
 
 
-def _meta(alt_text: str, credit: str, rights_basis: str) -> PosterMeta:
+def _meta(
+    alt_text: str,
+    credit: str,
+    rights_basis: str,
+    persons_depicted: bool,
+    consent_note: str | None,
+) -> PosterMeta:
     try:
         return PosterMeta.model_validate(
-            {"altText": alt_text, "credit": credit, "rightsBasis": rights_basis}
+            {
+                "altText": alt_text,
+                "credit": credit,
+                "rightsBasis": rights_basis,
+                "personsDepicted": persons_depicted,
+                "consentNote": consent_note,
+            }
         )
     except ValidationError as exc:
         raise ValidationProblem(
@@ -80,9 +93,11 @@ async def upload_poster(
     alt_text: Annotated[str, Form(alias="altText")],
     credit: Annotated[str, Form()],
     rights_basis: Annotated[str, Form(alias="rightsBasis")],
+    persons_depicted: Annotated[bool, Form(alias="personsDepicted")] = False,
+    consent_note: Annotated[str | None, Form(alias="consentNote")] = None,
 ) -> AttachmentOut:
     """Upload the poster of a dossier; it starts in `pending` until ClamAV has scanned it."""
-    meta = _meta(alt_text, credit, rights_basis)
+    meta = _meta(alt_text, credit, rights_basis, persons_depicted, consent_note)
     data = await _read_capped(file, settings.attachment_max_bytes)
     row = await posters.upload_poster(
         db,
@@ -122,6 +137,8 @@ async def poster_file(
     """Return a derivative of the poster to a reader of the dossier (private cache)."""
     event = await load_visible(db, principal, event_id)
     poster = await poster_of(db, event)
+    if poster is not None and poster.scan_status == "infected":
+        raise ConflictError("The poster was quarantined.", code="quarantined")
     derivative = (poster.derivatives or {}).get(VARIANT_KEYS[variant]) if poster else None
     if derivative is None:
         raise NotFoundError("poster derivative not ready")

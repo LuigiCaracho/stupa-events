@@ -45,6 +45,13 @@ class PublicImage(CamelModel):
     credit: str
 
 
+class PublicStatusReason(CamelModel):
+    """Why an event is cancelled or postponed: a fixed code and a short public text."""
+
+    code: Literal["none", "room", "speaker", "illness", "registration", "weather", "other"]
+    text: str | None
+
+
 class PublicEventOut(CamelModel):
     """One event of the feed."""
 
@@ -59,6 +66,7 @@ class PublicEventOut(CamelModel):
     status: Literal["scheduled", "cancelled", "postponed"]
     organization: PublicOrganization
     venue_text: str | None
+    status_reason: PublicStatusReason | None
     categories: list[PublicCategory]
     image: PublicImage | None
     url: str

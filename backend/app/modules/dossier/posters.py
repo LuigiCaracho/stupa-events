@@ -124,6 +124,8 @@ async def upload_poster(
         alt_text=meta.alt_text,
         credit=meta.credit,
         rights_basis=meta.rights_basis,
+        persons_depicted=meta.persons_depicted,
+        consent_note=(meta.consent_note or "").strip() or None,
         supersedes_id=previous.id if previous else None,
     )
     session.add(row)

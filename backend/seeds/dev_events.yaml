@@ -24,3 +24,49 @@ events:
     durationHours: 2
     venueText: "Maker Space 9-229"
     summary: "Erste Schritte mit Lötkolben und Platine."
+  - title: "Filmquiz: Wer weiß mehr?"
+    organization: fsi
+    category: kino
+    stage: in_review
+    startsInDays: 35
+    durationHours: 3
+    venueText: "Kinosaal 9-133"
+    summary: "Ein Quiz rund um Filme, in Teams."
+  - title: "Sommerfest der Fachschaft"
+    organization: fsi
+    category: get-together
+    stage: approved
+    startsInDays: 49
+    durationHours: 5
+    venueText: "Innenhof Gebäude 9"
+    summary: "Grillen, Musik und Spiele im Innenhof."
+  - title: "Spieleabend: Brettspielklassiker"
+    organization: fsi
+    category: get-together
+    stage: live
+    startsInDays: 7
+    durationHours: 4
+    venueText: "FSI-Raum 9-U09"
+    summary: "Klassiker und Neuheiten, Snacks inklusive."
+  - title: "Löten für Einsteiger:innen: Rückblick"
+    organization: makers
+    category: workshop
+    stage: followup
+    startsInDays: 3
+    durationHours: 2
+    venueText: "Maker Space 9-229"
+    summary: "Der Workshop ist vorbei, die Nachbereitung steht aus."
+  - title: "Archivtreffen"
+    organization: makers
+    category: workshop
+    stage: archived
+    startsInDays: 2
+    durationHours: 2
+    venueText: "Maker Space 9-229"
+    summary: "Abgeschlossen und im Archiv."
+  - title: "Vorschlag: Karaoke-Abend"
+    category: get-together
+    stage: idea
+    startsInDays: 60
+    durationHours: 3
+    summary: "Ein Vorschlag von einer Person ohne Organisation."

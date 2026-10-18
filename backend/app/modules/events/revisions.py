@@ -35,6 +35,17 @@ _SNAPSHOT_FIELDS = (
     "created_by",
     "submitted_by",
     "approved_by",
+    "venue_id",
+    "ticket_url",
+    "website_url",
+    "cost_text",
+    "publish_at",
+    "public_reason_code",
+    "public_reason_text",
+    "end_estimated",
+    "flyer_checked_at",
+    "text_reviewed_rev",
+    "published_rev",
 )
 
 
@@ -58,6 +69,7 @@ async def append_revision(
     actor: str,
     field_class: str,
     note: str | None = None,
+    actor_type: str = "human",
 ) -> None:
     """Write the revision row for the current `event.rev` (no commit)."""
     session.add(
@@ -65,6 +77,7 @@ async def append_revision(
             event_id=event.id,
             rev=event.rev,
             actor_id=actor,
+            actor_type=actor_type,
             field_class=field_class,
             change_note=note,
             snapshot=revision_payload(event),
@@ -81,6 +94,9 @@ async def append_status(
     from_state: str | None,
     actor: str,
     note: str | None = None,
+    actor_type: str = "human",
+    four_eyes: bool = False,
+    submitted_by: str | None = None,
 ) -> None:
     """Write the status event for the current state of `event` (no commit)."""
     session.add(
@@ -90,7 +106,10 @@ async def append_status(
             to_state=event.state,
             transition_id=transition_id,
             actor_id=actor,
+            actor_type=actor_type,
             note=note,
+            four_eyes=four_eyes,
+            submitted_by=submitted_by,
         )
     )
     await session.flush()

@@ -67,7 +67,10 @@ def create_dossier(client: httpx.Client, title: str) -> dict[str, Any]:
 
 def fire(client: httpx.Client, event_id: str, transition: str, status: int = 200) -> Any:
     """Fire `transition` on the event; return the response body."""
-    response = client.post(f"/api/events/{event_id}/transitions/{transition}", json={})
+    etag = client.get(f"/api/events/{event_id}").headers.get("etag", "")
+    response = client.post(
+        f"/api/events/{event_id}/transitions/{transition}", json={}, headers={"If-Match": etag}
+    )
     return expect(response, status, f"{transition} on {event_id[:8]}")
 
 

@@ -36,6 +36,19 @@ def fsi_roles(client: httpx.Client) -> list[tuple[str, str, bool]]:
     return [(o["slug"], o["role"], o["trusted"]) for o in me["organizations"] if o["slug"] == "fsi"]
 
 
+def listed_ids(client: httpx.Client, label: str) -> set[str]:
+    """Return the ids of every dossier the person may list, page by page."""
+    ids: set[str] = set()
+    offset = 0
+    while True:
+        params = {"limit": 200, "offset": offset}
+        page = expect(client.get("/api/events", params=params), 200, f"{label}: GET /api/events")
+        ids |= {e["id"] for e in page["items"]}
+        offset += len(page["items"])
+        if not page["items"] or offset >= page["total"]:
+            return ids
+
+
 def create_fsi_dossier(client: httpx.Client, title: str) -> str:
     """Create an `idea` dossier in `fsi`; return its id."""
     orgs = expect(client.get("/api/organizations", params={"creatable": "true"}), 200, "orgs")
@@ -81,8 +94,7 @@ def withdrawal(keycloak: Keycloak) -> str:
     organizer = login(ORGANIZER)
     check(fsi_roles(organizer) == [("fsi", "organizer", False)], "a: /auth/me names fsi/organizer")
     eid = create_fsi_dossier(organizer, f"M2 Entzug {int(time.time())}")
-    listed = expect(organizer.get("/api/events"), 200, "a: GET /api/events")["items"]
-    check(eid in [e["id"] for e in listed], "a: the dossier of fsi is listed")
+    check(eid in listed_ids(organizer, "a"), "a: the dossier of fsi is listed")
     keycloak.set_membership(ORGANIZER, GROUP, member=False)
     step("b: removed organizer-fsi from events-fsi-organizer in Keycloak")
     expect(
@@ -115,8 +127,7 @@ def partner(eid: str) -> None:
             404,
             f"partner: {transition} on the fsi dossier",
         )
-    listed = expect(ekhg.get("/api/events"), 200, "partner: list")["items"]
-    check(eid not in [e["id"] for e in listed], "partner: the fsi dossier is not in the list")
+    check(eid not in listed_ids(ekhg, "partner"), "partner: the fsi dossier is not in the list")
 
 
 def observe_empty_claim(keycloak: Keycloak) -> None:

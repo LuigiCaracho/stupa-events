@@ -22,11 +22,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_sessionmaker
 from app.modules.admin.mappings_service import MappingService
+from app.modules.auth.models import Principal as PrincipalRow
 from app.modules.auth.principal import Principal
 from app.modules.events.models import Event
 from app.modules.events.schemas import EventCreate
 from app.modules.events.service import EventService
 from app.modules.orgs.models import GroupMapping, Organization
+from app.modules.pipeline.exception import grant_image_exception
 from app.modules.pipeline.service import PipelineService
 from app.modules.taxonomy.models import Category
 from app.modules.taxonomy.seeding import ensure_reference
@@ -43,6 +45,19 @@ def seed_editor() -> Principal:
     """Return the principal that creates the dev dossiers (global editor role)."""
     roles = ["member", "editor"]
     return Principal(sub="seed-dev", roles=roles, permissions=set(permissions_of(roles)))
+
+
+async def seed_member(session: AsyncSession) -> Principal:
+    """Return the principal that makes the dev proposal: the dev user `member` once they
+    logged in, else a stand-in with the sub `seed-member`."""
+    sub = await session.scalar(select(PrincipalRow.sub).where(PrincipalRow.email.ilike("member@%")))
+    return Principal(
+        sub=sub or "seed-member", roles=["member"], permissions=set(permissions_of(["member"]))
+    )
+
+
+STAGE_ORDER = ("idea", "planning", "in_review", "approved", "live", "followup", "archived")
+SEED_EXCEPTION = "Entwicklungsdaten ohne Motiv"
 
 
 def load_definitions(path: Path = SEEDS) -> list[dict[str, Any]]:
@@ -74,14 +89,44 @@ async def _ids(session: AsyncSession, model: type[Organization] | type[Category]
     return {slug: id_ for slug, id_ in await session.execute(select(model.slug, model.id))}
 
 
+async def advance(session: AsyncSession, principal: Principal, event: Event, stage: str) -> None:
+    """Move a new dossier to `stage` through the services, as the editors would.
+
+    The follow-up stages use a clock set after the end of the event, because a dossier
+    only leaves `live` once it ended.
+    """
+    reached = STAGE_ORDER.index(stage)
+    pipeline = PipelineService(session, editor_four_eyes=False)
+    if reached >= 1:
+        await pipeline.stage_fire(principal, event.id, "T01")
+    if reached >= 2:
+        await grant_image_exception(session, principal, event.id, SEED_EXCEPTION)
+        await pipeline.stage_fire(principal, event.id, "T02")
+    if reached >= 3:
+        await pipeline.stage_fire(principal, event.id, "T04")
+    if reached >= 4:
+        await pipeline.stage_fire(principal, event.id, "T05")
+    if reached >= 5:
+        await pipeline.stage_system_fire(event.id, "T08", event.ends_at + timedelta(hours=13))
+    if reached >= 6:
+        await pipeline.stage_fire(principal, event.id, "T09")
+
+
 async def seed_event(
     session: AsyncSession, principal: Principal, definition: dict[str, Any], ids: dict[str, dict]
 ) -> bool:
-    """Create one dossier and move it to its stage. Return `False` when it exists."""
-    organization_id = ids["organization"][definition["organization"]]
+    """Create one dossier and move it to its stage. Return `False` when it exists.
+
+    A definition without `organization` is a proposal of the dev member.
+    """
+    slug = definition.get("organization")
+    organization_id = ids["organization"][slug] if slug else None
     exists = await session.scalar(
         select(Event.id).where(
-            Event.organization_id == organization_id, Event.title == definition["title"]
+            Event.organization_id.is_(None)
+            if organization_id is None
+            else Event.organization_id == organization_id,
+            Event.title == definition["title"],
         )
     )
     if exists is not None:
@@ -89,8 +134,9 @@ async def seed_event(
     start = (utcnow() + timedelta(days=definition["startsInDays"])).replace(
         minute=0, second=0, microsecond=0
     )
+    author = principal if organization_id else await seed_member(session)
     created = await EventService(session).create(
-        principal,
+        author,
         EventCreate.model_validate(
             {
                 "title": definition["title"],
@@ -103,8 +149,7 @@ async def seed_event(
             }
         ),
     )
-    if definition.get("stage") == "planning":
-        await PipelineService(session).stage_fire(principal, created.id, "T01")
+    await advance(session, principal, created, definition.get("stage", "idea"))
     return True
 
 

@@ -25,6 +25,7 @@ from app.modules.publicapi.schemas import (
     PublicEventOut,
     PublicImage,
     PublicOrganization,
+    PublicStatusReason,
 )
 
 MEDIA_PATH = "/api/public/media"
@@ -54,6 +55,8 @@ PUBLIC_EVENT_V = table(
     column("hero_alt", Text),
     column("hero_credit", Text),
     column("updated_at", DateTime(timezone=True)),
+    column("public_reason_code", Text),
+    column("public_reason_text", Text),
 )
 V = PUBLIC_EVENT_V.c
 
@@ -101,6 +104,11 @@ def to_public_event(row: Row[Any], base_url: str) -> PublicEventOut:
             short=row.organization_short,
         ),
         venue_text=row.venue_text,
+        status_reason=(
+            None
+            if row.public_status == "scheduled"
+            else PublicStatusReason(code=row.public_reason_code, text=row.public_reason_text)
+        ),
         categories=(
             [PublicCategory(slug=row.category_slug, name=row.category_name, kind=row.category_kind)]
             if row.category_slug

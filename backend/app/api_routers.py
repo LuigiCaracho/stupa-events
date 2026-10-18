@@ -15,10 +15,15 @@ from app.modules.admin.taxonomy_router import ROUTERS as ADMIN_TAXONOMY_ROUTERS
 from app.modules.audit.router import router as audit_router
 from app.modules.auth.router import router as auth_router
 from app.modules.dossier.router import router as dossier_router
+from app.modules.events.drafts_router import router as drafts_router
+from app.modules.events.revisions_router import router as revisions_router
 from app.modules.events.router import router as events_router
 from app.modules.orgs.router import router as orgs_router
+from app.modules.pipeline.actions_router import alias_router as image_exception_alias_router
+from app.modules.pipeline.actions_router import router as actions_router
 from app.modules.pipeline.router import router as pipeline_router
 from app.modules.publicapi.router import router as public_router
+from app.modules.tasks.router import router as tasks_router
 from app.modules.taxonomy.router import router as taxonomy_router
 
 ROUTERS: tuple[APIRouter, ...] = (
@@ -30,7 +35,12 @@ ROUTERS: tuple[APIRouter, ...] = (
     orgs_router,
     taxonomy_router,
     events_router,
+    drafts_router,
+    revisions_router,
     pipeline_router,
+    actions_router,
+    image_exception_alias_router,
+    tasks_router,
     dossier_router,
     public_router,
 )
