@@ -18,3 +18,15 @@ export function reasonText(i18n: I18nService, reason: ProblemReason): string {
   const key = known(reason.messageKey) ? reason.messageKey : 'guards.unknown';
   return i18n.translate(key, { field: fieldLabel(i18n, reason.field) });
 }
+
+/** The fix buttons the app can act on in M3; the others (comments, duplicates, facts, checklists) come with M4 to M7. */
+export const HANDLED_FIXES: ReadonlySet<string> = new Set([
+  'fill_field',
+  'change_date',
+  'upload_poster',
+  'pick_venue',
+  'fill_rights',
+  'mark_cancellation',
+  'confirm_flyer',
+  'set_end',
+]);

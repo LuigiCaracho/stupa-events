@@ -1,0 +1,92 @@
+<form class="ef" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <fieldset class="ef__group">
+    <legend class="sec">{{ 'form.critical' | t }}</legend>
+    <app-input
+      formControlName="title"
+      [label]="'new.name' | t"
+      [required]="true"
+      [hint]="hint('title') ? (hint('title')! | t) : ''"
+      [error]="
+        form.controls.title.touched && form.controls.title.invalid ? ('new.errTitle' | t) : ''
+      "
+    />
+    <div class="ef__row">
+      <app-datepicker
+        formControlName="startDate"
+        [label]="'new.startDate' | t"
+        [required]="true"
+        [hint]="hint('startDate') ? (hint('startDate')! | t) : ''"
+      />
+      <app-time-input formControlName="startTime" [label]="'new.startTime' | t" [required]="true" />
+    </div>
+    <div class="ef__row">
+      <app-datepicker
+        formControlName="endDate"
+        [label]="'new.endDate' | t"
+        [required]="true"
+        [hint]="hint('endDate') ? (hint('endDate')! | t) : ''"
+        [error]="endError() ? ('new.errEnd' | t) : ''"
+      />
+      <app-time-input formControlName="endTime" [label]="'new.endTime' | t" [required]="true" />
+    </div>
+    <app-select
+      formControlName="venueId"
+      [label]="'form.venue' | t"
+      [placeholder]="'form.venuePlaceholder' | t"
+      [options]="venueOptions()"
+      [hint]="hint('venueId') ? (hint('venueId')! | t) : ''"
+    />
+    <app-input
+      formControlName="venueText"
+      [label]="'form.venueText' | t"
+      [hint]="hint('venueText') ? (hint('venueText')! | t) : ('new.venueHint' | t)"
+    />
+    <app-select
+      formControlName="primaryCategoryId"
+      [label]="'new.category' | t"
+      [placeholder]="'new.categoryPlaceholder' | t"
+      [options]="categoryOptions()"
+      [hint]="hint('primaryCategoryId') ? (hint('primaryCategoryId')! | t) : ''"
+    />
+    <app-input
+      formControlName="ticketUrl"
+      type="url"
+      [label]="'form.ticketUrl' | t"
+      [hint]="hint('ticketUrl') ? (hint('ticketUrl')! | t) : ''"
+      [error]="linkError('ticketUrl') ? ('form.errTicket' | t) : ''"
+    />
+    <app-input
+      formControlName="websiteUrl"
+      type="url"
+      [label]="'form.websiteUrl' | t"
+      [hint]="hint('websiteUrl') ? (hint('websiteUrl')! | t) : ''"
+      [error]="linkError('websiteUrl') ? ('form.errWebsite' | t) : ''"
+    />
+  </fieldset>
+  <fieldset class="ef__group">
+    <legend class="sec">{{ 'form.text' | t }}</legend>
+    <app-input
+      formControlName="summary"
+      [label]="'detail.summary' | t"
+      [hint]="hint('summary') ? (hint('summary')! | t) : ''"
+    />
+    <app-textarea
+      formControlName="descriptionMd"
+      [label]="'detail.description' | t"
+      [rows]="6"
+      [hint]="hint('descriptionMd') ? (hint('descriptionMd')! | t) : ''"
+    />
+    <app-input
+      formControlName="costText"
+      [label]="'form.cost' | t"
+      [hint]="hint('costText') ? (hint('costText')! | t) : ('form.costHint' | t)"
+    />
+  </fieldset>
+  @if (anyEditable()) {
+    <div class="ef__actions">
+      <app-button type="submit" variant="fill" [loading]="busy()">{{
+        'detail.save' | t
+      }}</app-button>
+    </div>
+  }
+</form>

@@ -1,0 +1,18 @@
+<div class="dtf">
+  <app-datepicker
+    [label]="dateLabel()"
+    [required]="required()"
+    [error]="error()"
+    [hint]="hint()"
+    [ngModel]="date()"
+    [disabled]="disabled()"
+    (ngModelChange)="date.set($event)"
+  />
+  <app-time-input
+    [label]="timeLabel()"
+    [required]="required()"
+    [ngModel]="time()"
+    [disabled]="disabled()"
+    (ngModelChange)="time.set($event)"
+  />
+</div>

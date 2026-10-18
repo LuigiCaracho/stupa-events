@@ -1,0 +1,90 @@
+@switch (state()?.kind) {
+  @case ('transition') {
+    <app-transition-dialog
+      [target]="event()"
+      [transition]="$any(state()).id"
+      (done)="applied.emit($event)"
+      (partial)="partial.emit($event)"
+      (stale)="stale.emit()"
+      (fix)="fix.emit($event)"
+      (closed)="closed.emit()"
+    />
+  }
+  @case ('cancel') {
+    <app-cancel-dialog
+      [event]="event()"
+      (done)="applied.emit($event)"
+      (stale)="stale.emit()"
+      (closed)="closed.emit()"
+    />
+  }
+  @case ('reinstate') {
+    <app-reason-dialog
+      heading="head.reinstateTitle"
+      [subtitle]="event().title"
+      label="head.reinstateReason"
+      confirm="head.reinstate"
+      [busy]="working()"
+      (submitted)="reinstate($event)"
+      (closed)="closed.emit()"
+    />
+  }
+  @case ('exception') {
+    <app-image-exception-dialog
+      [event]="event()"
+      (granted)="applied.emit($event)"
+      (closed)="closed.emit()"
+    />
+  }
+  @case ('assign') {
+    <app-assign-org-dialog
+      [event]="event()"
+      (done)="applied.emit($event)"
+      (stale)="stale.emit()"
+      (closed)="closed.emit()"
+    />
+  }
+  @case ('revert') {
+    <app-reason-dialog
+      heading="history.revertTitle"
+      [subtitle]="event().title"
+      label="tasks.revertNote"
+      confirm="history.revert"
+      [required]="false"
+      [busy]="working()"
+      (submitted)="revert($any(state()).rev, $event)"
+      (closed)="closed.emit()"
+    />
+  }
+  @case ('conflict') {
+    <app-conflict-dialog
+      [current]="$any(state()).current"
+      [mine]="$any(state()).mine"
+      [base]="$any(state()).base"
+      [venues]="venues()"
+      [categories]="categories()"
+      [busy]="busy()"
+      (keep)="keep.emit($event)"
+      (reload)="theirs.emit()"
+      (closed)="closed.emit()"
+    />
+  }
+  @case ('leave') {
+    <app-dialog
+      [open]="true"
+      [title]="'leave.title' | t"
+      [subtitle]="event().title"
+      [closeLabel]="'action.close' | t"
+      (closed)="leave.emit('stay')"
+    >
+      <p>{{ 'leave.body' | t }}</p>
+      <div dialog-footer class="dd__leave">
+        <app-button variant="text" (click)="leave.emit('stay')">{{ 'leave.stay' | t }}</app-button>
+        <app-button variant="outlined" (click)="leave.emit('discard')">{{
+          'leave.discard' | t
+        }}</app-button>
+        <app-button variant="fill" (click)="leave.emit('save')">{{ 'leave.save' | t }}</app-button>
+      </div>
+    </app-dialog>
+  }
+}

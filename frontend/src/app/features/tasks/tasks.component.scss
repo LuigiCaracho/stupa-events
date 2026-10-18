@@ -27,3 +27,8 @@
     z-index: var(--z-sticky);
   }
 }
+
+.ts__hint {
+  color: var(--color-text-muted);
+  font-size: var(--fs-small);
+}

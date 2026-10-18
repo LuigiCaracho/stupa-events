@@ -1,5 +1,12 @@
 /** Copied from STUPA-Workflow@93c33d6 frontend/src/app/shared/ui/empty-state/empty-state.component.ts */
-import { booleanAttribute, ChangeDetectionStrategy, Component, computed, input, numberAttribute } from '@angular/core';
+import {
+  booleanAttribute,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+  numberAttribute,
+} from '@angular/core';
 import { IconComponent, type IconName } from '@stupa-makers/ui-kit';
 
 /** Bar widths in percent of the ghost rows, title and sub line. Uneven, so they read as text. */
@@ -26,16 +33,7 @@ const GHOST_ROWS: readonly { title: number; sub: number }[] = [
  * - `text`: lines of running text (a protocol text).
  */
 export type EmptyStateShape =
-  | 'row'
-  | 'choice'
-  | 'person'
-  | 'date'
-  | 'agenda'
-  | 'file'
-  | 'table'
-  | 'card'
-  | 'chat'
-  | 'text';
+  'row' | 'choice' | 'person' | 'date' | 'agenda' | 'file' | 'table' | 'card' | 'chat' | 'text';
 
 /**
  * One shape for "there is nothing here", in two looks.

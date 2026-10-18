@@ -1,0 +1,36 @@
+<section aria-labelledby="history-heading">
+  <h2 class="sec" id="history-heading">{{ 'history.title' | t }}</h2>
+  @if (revisions.error() && !revisions.hasValue()) {
+    <app-note kind="error" role="alert">{{ 'history.loadFailed' | t }}</app-note>
+  } @else if (!revisions.hasValue()) {
+    <app-skeleton variant="rows" />
+  } @else {
+    <ol class="dhi__list rowgroup">
+      @for (r of items(); track r.rev) {
+        <li class="dhi__row">
+          <div class="dhi__main">
+            <span class="dhi__rev num">{{ 'history.rev' | t: { rev: r.rev } }}</span>
+            <span>{{ who(r) }}</span>
+            <span class="dhi__muted num">{{ when(r) }}</span>
+            <span class="dhi__muted">{{ classLabel(r) }}</span>
+          </div>
+          @if (r.changeNote) {
+            <p class="dhi__note">{{ r.changeNote }}</p>
+          }
+          @if (fields(r).length > 0) {
+            <ul class="dhi__chips" [attr.aria-label]="'history.fields' | t">
+              @for (f of fields(r); track f) {
+                <li class="dhi__chip">{{ f }}</li>
+              }
+            </ul>
+          }
+          @if (canRevert() && r.rev < rev()) {
+            <app-button variant="text" size="sm" (click)="revert.emit(r.rev)">{{
+              'history.revert' | t
+            }}</app-button>
+          }
+        </li>
+      }
+    </ol>
+  }
+</section>

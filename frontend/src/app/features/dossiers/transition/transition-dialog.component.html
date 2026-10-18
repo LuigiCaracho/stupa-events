@@ -1,13 +1,17 @@
 <app-dialog
   [open]="true"
   [title]="label[transition()] | t"
-  [subtitle]="event().title"
+  [subtitle]="target().title"
   [closeLabel]="'action.close' | t"
   (closed)="closed.emit()"
 >
   <div class="td">
     @if (guards.hasValue()) {
-      <app-guard-list headingId="transition-guards" [reasons]="reasons()" (fix)="fix.emit($event)" />
+      <app-guard-list
+        headingId="transition-guards"
+        [reasons]="reasons()"
+        (fix)="fix.emit($event)"
+      />
     } @else if (guards.error()) {
       <app-note kind="error" role="alert">{{ loadError() }}</app-note>
       <app-button variant="text" (click)="retry()">{{ 'action.retry' | t }}</app-button>
@@ -19,21 +23,54 @@
         {{ 'transition.warnConfirm' | t }}
       </app-checkbox>
     }
+    @if (isPublish()) {
+      <app-switch
+        [checked]="immediate()"
+        [hint]="'transition.immediateHint' | t"
+        (checkedChange)="immediate.set($event)"
+      >
+        {{ 'transition.immediate' | t }}
+      </app-switch>
+      <app-datetime-field
+        [dateLabel]="'transition.publishDate' | t"
+        [timeLabel]="'transition.publishTime' | t"
+        [disabled]="immediate()"
+        [error]="attempted() && error() === 'publishAt' ? ('transition.errPublishAt' | t) : ''"
+        [(date)]="publishDate"
+        [(time)]="publishTime"
+      />
+    }
     <app-input
-      [label]="'transition.note' | t"
+      [label]="noteLabel() | t"
       [hint]="'transition.noteHint' | t"
-      [error]="noteTooLong() ? ('transition.noteTooLong' | t) : ''"
+      [required]="noteRequired()"
+      [error]="
+        error() === 'noteTooLong'
+          ? ('transition.noteTooLong' | t)
+          : attempted() && error() === 'noteRequired'
+            ? ('transition.errReason' | t)
+            : ''
+      "
       [ngModel]="note()"
       (ngModelChange)="note.set($event)"
     />
     @if (blocked()) {
-      <p class="td__blocked" role="status">{{ 'transition.blocked' | t }}</p>
+      <p id="td-blocked" class="td__blocked" role="status">{{ blockedReason() | t }}</p>
+    }
+    @if (followUpFailed()) {
+      <app-note kind="warn" role="alert">{{
+        'transition.followUpFailed' | t: { reason: followUpFailed() }
+      }}</app-note>
     }
   </div>
   <div dialog-footer class="td__footer">
     <app-button variant="text" (click)="closed.emit()">{{ 'action.cancel' | t }}</app-button>
-    <app-button variant="fill" [disabled]="!canConfirm() || noteTooLong()" [loading]="busy()" (click)="confirm()">
-      {{ 'transition.confirm' | t }}
-    </app-button>
+    @if (followUpFailed()) {
+      <app-button variant="fill" (click)="closed.emit()">{{ 'action.close' | t }}</app-button>
+    } @else {
+      <app-button variant="fill" [disabled]="!canConfirm()" [loading]="busy()" (click)="confirm()">
+        {{ 'transition.confirm' | t }}
+      </app-button>
+    }
   </div>
 </app-dialog>

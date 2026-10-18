@@ -1,0 +1,17 @@
+.cd {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.cd__muted {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--fs-small);
+}
+
+.cd__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}

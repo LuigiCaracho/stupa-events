@@ -15,6 +15,9 @@ export class SessionsApi {
   }
 
   revokePrincipal(principalId: string): Observable<RevokeResult> {
-    return this.http.post<RevokeResult>(`${this.base}/admin/principals/${principalId}/sessions/revoke`, {});
+    return this.http.post<RevokeResult>(
+      `${this.base}/admin/principals/${principalId}/sessions/revoke`,
+      {},
+    );
   }
 }

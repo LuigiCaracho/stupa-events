@@ -1,7 +1,7 @@
 <app-dialog
   [open]="true"
-  [title]="'new.title' | t"
-  [subtitle]="'new.subtitle' | t"
+  [title]="(proposal() ? 'new.titleProposal' : 'new.title') | t"
+  [subtitle]="(proposal() ? 'new.subtitleProposal' : 'new.subtitle') | t"
   [closeLabel]="'action.close' | t"
   (closed)="closed.emit()"
 >
@@ -12,9 +12,13 @@
       [required]="true"
       [error]="invalid('title') ? ('new.errTitle' | t) : ''"
     />
-    @if (!lookups.isLoading() && orgOptions().length === 0) {
-      <p class="ne__hint" role="alert">{{ 'new.noOrgs' | t }}</p>
-    } @else {
+    @if (proposal()) {
+      <app-input
+        [label]="'new.org' | t"
+        [formControl]="proposalOrg"
+        [hint]="'new.proposalHint' | t"
+      />
+    } @else if (!lookups.isLoading()) {
       <app-select
         formControlName="organizationId"
         [label]="'new.org' | t"
@@ -53,6 +57,8 @@
   </form>
   <div dialog-footer class="ne__footer">
     <app-button variant="text" (click)="closed.emit()">{{ 'action.cancel' | t }}</app-button>
-    <app-button type="submit" variant="fill" [loading]="busy()" (click)="submit()">{{ 'new.submit' | t }}</app-button>
+    <app-button type="submit" variant="fill" [loading]="busy()" (click)="submit()">{{
+      'new.submit' | t
+    }}</app-button>
   </div>
 </app-dialog>

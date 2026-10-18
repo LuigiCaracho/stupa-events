@@ -40,5 +40,15 @@
     [required]="true"
     [error]="invalid('rightsBasis') ? ('poster.errRights' | t) : ''"
   />
+  <app-checkbox formControlName="personsDepicted">{{ 'poster.persons' | t }}</app-checkbox>
+  @if (form.controls.personsDepicted.value) {
+    <app-input
+      formControlName="consentNote"
+      [label]="'poster.consent' | t"
+      [hint]="'poster.consentHint' | t"
+      [error]="attempted() && consentMissing() ? ('poster.errConsent' | t) : ''"
+      [required]="true"
+    />
+  }
   <app-button type="submit" variant="fill" [loading]="busy()">{{ 'poster.submit' | t }}</app-button>
 </form>

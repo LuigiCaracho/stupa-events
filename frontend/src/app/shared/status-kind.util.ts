@@ -27,14 +27,7 @@ export interface StatusView {
 
 /** The eight states of an event dossier (`event_state`, PLAN 4.1). */
 export type EventState =
-  | 'idea'
-  | 'planning'
-  | 'in_review'
-  | 'approved'
-  | 'live'
-  | 'followup'
-  | 'archived'
-  | 'withdrawn';
+  'idea' | 'planning' | 'in_review' | 'approved' | 'live' | 'followup' | 'archived' | 'withdrawn';
 
 const EVENT_STATE: Record<EventState, StatusView> = {
   idea: { kind: 'muted', key: 'event.state.idea' },

@@ -1,0 +1,36 @@
+<button
+  type="button"
+  class="bc"
+  [class.bc--lifted]="lifted()"
+  [attr.data-card-id]="card().id"
+  [attr.aria-pressed]="lifted()"
+  [attr.aria-describedby]="describedBy()"
+  (click)="open.emit(card())"
+>
+  <span class="bc__title">{{ card().title }}</span>
+  <span class="bc__meta">
+    <span class="num">{{ day() }}</span>
+    <span class="bc__place">{{ place() }}</span>
+  </span>
+  @if (status(); as s) {
+    <app-status-text class="bc__status" [kind]="s.kind">{{ s.text }}</app-status-text>
+  }
+  @if (shown().length > 0) {
+    <span class="bc__blockers">
+      @for (r of shown(); track $index) {
+        <span class="bc__blocker">{{ reason(r) }}</span>
+      }
+      @if (more() > 0) {
+        <span class="bc__blocker">{{ 'board.moreBlockers' | t: { count: more() } }}</span>
+      }
+    </span>
+  }
+  <span class="bc__foot">
+    @if (card().openQuestions > 0) {
+      <span class="bc__questions">{{
+        'board.questions' | t: { count: card().openQuestions }
+      }}</span>
+    }
+    <app-avatar class="bc__avatar" size="xs" [name]="author()" />
+  </span>
+</button>

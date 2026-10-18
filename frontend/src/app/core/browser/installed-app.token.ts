@@ -24,7 +24,9 @@ export function isInstalledApp(host: DisplayModeHost): boolean {
   if (host.navigator.standalone === true) return true;
   const match = host.matchMedia;
   if (typeof match !== 'function') return false;
-  return INSTALLED_DISPLAY_MODES.some((mode) => match.call(host, `(display-mode: ${mode})`).matches);
+  return INSTALLED_DISPLAY_MODES.some(
+    (mode) => match.call(host, `(display-mode: ${mode})`).matches,
+  );
 }
 
 /**

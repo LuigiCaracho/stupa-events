@@ -1,0 +1,42 @@
+:host {
+  display: block;
+}
+
+.ef {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.ef__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.ef__group > legend {
+  margin-bottom: var(--space-3);
+  padding: 0;
+}
+
+.ef__row {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--space-3);
+}
+
+@media (max-width: 479px) {
+  .ef__row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.ef__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}

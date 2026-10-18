@@ -1,7 +1,9 @@
 <section class="ss" [attr.aria-labelledby]="'ss-heading'">
   <h2 id="ss-heading" class="ss__heading">{{ 'account.sessions.heading' | t }}</h2>
   <p class="ss__hint">{{ 'account.sessions.hint' | t }}</p>
-  <app-button variant="danger" (click)="confirming.set(true)">{{ 'account.sessions.revoke' | t }}</app-button>
+  <app-button variant="danger" (click)="confirming.set(true)">{{
+    'account.sessions.revoke' | t
+  }}</app-button>
 </section>
 
 <app-dialog
@@ -12,7 +14,11 @@
 >
   <p>{{ 'account.sessions.confirm' | t }}</p>
   <div dialog-footer class="ss__footer">
-    <app-button variant="text" (click)="confirming.set(false)">{{ 'action.cancel' | t }}</app-button>
-    <app-button variant="danger" [loading]="busy()" (click)="revoke()">{{ 'account.sessions.revoke' | t }}</app-button>
+    <app-button variant="text" (click)="confirming.set(false)">{{
+      'action.cancel' | t
+    }}</app-button>
+    <app-button variant="danger" [loading]="busy()" (click)="revoke()">{{
+      'account.sessions.revoke' | t
+    }}</app-button>
   </div>
 </app-dialog>

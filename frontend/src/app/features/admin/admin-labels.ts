@@ -82,5 +82,7 @@ export function optionsOf<T extends string>(
  * Returns:
  *   The translation key for the value.
  */
-export const labelKey = <T extends string>(keys: Record<T, TranslationKey>, value: string): TranslationKey =>
-  keys[value as T];
+export const labelKey = <T extends string>(
+  keys: Record<T, TranslationKey>,
+  value: string,
+): TranslationKey => keys[value as T];

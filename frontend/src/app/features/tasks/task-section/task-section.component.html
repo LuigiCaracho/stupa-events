@@ -1,0 +1,24 @@
+<app-card class="tsec" [heading]="heading() | t" [headingLevel]="2">
+  <app-badge card-header>{{ count() }}</app-badge>
+  <ul class="tsec__list rowgroup">
+    @for (card of cards(); track card.id) {
+      <li>
+        @let d = due(card);
+        <app-list-item [title]="card.title" [sub]="sub(card)" [link]="['/dossiers', card.id]">
+          @if (showDeadline()) {
+            <app-status-text status [kind]="d.kind">{{ d.text }}</app-status-text>
+          } @else if (showState()) {
+            <app-status-text status [kind]="state(card).kind">{{
+              state(card).key | t
+            }}</app-status-text>
+          }
+          @if (row(); as tpl) {
+            <span trail class="tsec__trail">
+              <ng-container *ngTemplateOutlet="tpl; context: { $implicit: card }" />
+            </span>
+          }
+        </app-list-item>
+      </li>
+    }
+  </ul>
+</app-card>

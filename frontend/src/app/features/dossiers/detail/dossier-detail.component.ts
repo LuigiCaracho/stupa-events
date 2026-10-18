@@ -1,54 +1,59 @@
 /**
- * I07 (light): dossier head and overview (`/dossiers/:id`). State, core data with edit form,
- * "Fehlt noch" guard list of the next transition, poster upload, and the dialogs I13 and I15.
- * The server decides every action; `allowedTransitions` and the permission checks only shape the UI.
+ * I07: the dossier page (`/dossiers/:id`): head with the state buttons, overview with "Fehlt noch", the form with its
+ * locks and autosave, the poster block, the tab "Verlauf" and the dialogs I13 to I15, the conflict dialog and the
+ * leave question. The server decides every action; `allowedTransitions`, `allowedActions` and `editableFields` only shape the UI.
  */
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   ElementRef,
   computed,
+  effect,
   inject,
   input,
   linkedSignal,
   signal,
+  untracked,
 } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import type { ProblemReason } from '@core/api/models';
 import { problemOf } from '@core/api/problem';
+import type { PendingChanges } from '@core/auth/pending-changes.guard';
 import { AuthService } from '@core/auth/auth.service';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
-import { FieldGroupComponent, FieldRowComponent } from '@shared/ui/field-group/field-group.component';
-import { GuardListComponent } from '@shared/ui/guard-list/guard-list.component';
 import { ImageThumbComponent } from '@shared/ui/image-thumb/image-thumb.component';
 import { NoteComponent } from '@shared/ui/note/note.component';
-import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
-import { PosterUploadComponent, type PosterSubmission } from '@shared/ui/poster-upload/poster-upload.component';
+import {
+  PosterUploadComponent,
+  type PosterSubmission,
+} from '@shared/ui/poster-upload/poster-upload.component';
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
 import { StatusTextComponent } from '@shared/ui/status-text/status-text.component';
-import { type EventState, eventStateStatus } from '@shared/status-kind.util';
-import { ButtonComponent, ToastService } from '@stupa-makers/ui-kit';
-import { of } from 'rxjs';
+import { ButtonComponent, TabsComponent, ToastService, type TabItem } from '@stupa-makers/ui-kit';
+import { forkJoin, of, type Observable } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { formatEventTime } from '../api/event-time';
-import type { EventDto, EventPatch, TransitionId } from '../api/event.models';
+import type { RevisionOut } from '../api/action.models';
+import type { EventDto, EventFields, TransitionId } from '../api/event.models';
 import { EventsApi } from '../api/events-api.service';
 import { problemMessage } from '../api/problem-message';
-import { TRANSITION_LABEL } from '../api/transition-label';
-import { ImageExceptionDialogComponent } from '../exception/image-exception-dialog.component';
-import { TransitionDialogComponent } from '../transition/transition-dialog.component';
-import { EventFormComponent } from './event-form.component';
+import { PRIMARY_TRANSITION } from '../api/transitions';
+import { DraftAutosave } from '../autosave/draft-autosave';
+import { AutosaveIndicatorComponent } from '../autosave/autosave-indicator.component';
+import { EventFormComponent } from '../form/event-form.component';
+import { type HeadCommand, DossierHeadComponent } from '../head/dossier-head.component';
+import { DossierHistoryComponent } from '../history/dossier-history.component';
+import { DossierOverviewComponent } from '../overview/dossier-overview.component';
+import {
+  DetailDialogsComponent,
+  type DialogState,
+  type LeaveChoice,
+} from './detail-dialogs.component';
+import { focusField } from './focus-field';
 
-const NEXT: Partial<Record<EventState, TransitionId>> = {
-  idea: 'T01',
-  planning: 'T02',
-  in_review: 'T04',
-  approved: 'T05',
-};
-const EDITABLE: readonly EventState[] = ['idea', 'planning'];
-const POSTER_STATES: readonly EventState[] = ['idea', 'planning', 'in_review'];
-const EXCEPTION_STATES: readonly EventState[] = ['idea', 'planning', 'in_review', 'approved'];
+const POSTER_STATES: readonly string[] = ['idea', 'planning', 'in_review'];
+const SAVE_BEFORE_TRANSITION: readonly string[] = ['idea', 'planning'];
 
 @Component({
   selector: 'app-dossier-detail',
@@ -56,24 +61,28 @@ const EXCEPTION_STATES: readonly EventState[] = ['idea', 'planning', 'in_review'
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     TranslatePipe,
+    AutosaveIndicatorComponent,
     ButtonComponent,
+    DetailDialogsComponent,
+    DossierHeadComponent,
+    DossierHistoryComponent,
+    DossierOverviewComponent,
     EventFormComponent,
-    FieldGroupComponent,
-    FieldRowComponent,
-    GuardListComponent,
-    ImageExceptionDialogComponent,
     ImageThumbComponent,
     NoteComponent,
-    PageHeaderComponent,
     PosterUploadComponent,
     SkeletonComponent,
     StatusTextComponent,
-    TransitionDialogComponent,
+    TabsComponent,
   ],
+  host: {
+    '(window:online)': 'autosave.flush()',
+    '(window:beforeunload)': 'warnUnload($event)',
+  },
   templateUrl: './dossier-detail.component.html',
   styleUrl: './dossier-detail.component.scss',
 })
-export class DossierDetailComponent {
+export class DossierDetailComponent implements PendingChanges {
   private readonly api = inject(EventsApi);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
@@ -81,41 +90,44 @@ export class DossierDetailComponent {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   readonly id = input.required<string>();
-  protected readonly label = TRANSITION_LABEL;
 
   protected readonly loaded = rxResource({
     params: () => this.id(),
     stream: ({ params }) => this.api.get(params),
   });
-  protected readonly loadError = computed(() => {
-    if (!this.loaded.error()) return '';
-    const problem = problemOf(this.loaded.error());
-    return problem.status === 403 || problem.status === 404
-      ? this.i18n.translate('detail.loadFailed')
-      : problemMessage(this.i18n, problem);
-  });
-  protected reload(): void {
-    this.loaded.reload();
-  }
-
-  protected readonly event = linkedSignal<EventDto | null>(() => (this.loaded.hasValue() ? this.loaded.value() : null));
-
-  protected readonly categories = rxResource({
-    stream: () => this.api.categories().pipe(catchError(() => of([]))),
+  protected readonly event = linkedSignal<EventDto | null>(() =>
+    this.loaded.hasValue() ? this.loaded.value() : null,
+  );
+  protected readonly lookups = rxResource({
+    stream: () =>
+      forkJoin({
+        categories: this.api.categories().pipe(catchError(() => of([]))),
+        venues: this.api.venues().pipe(catchError(() => of([]))),
+      }),
   });
 
-  protected readonly editing = signal(false);
+  protected readonly dialog = signal<DialogState>(null);
+  protected readonly tab = signal<'overview' | 'history'>('overview');
   protected readonly posterOpen = signal(false);
-  protected readonly transitionOpen = signal<TransitionId | null>(null);
-  protected readonly exceptionOpen = signal(false);
   protected readonly busy = signal(false);
+  protected readonly draft = signal<EventFields | null>(null);
+  protected readonly restoredAt = signal<Date | null>(null);
+
+  protected readonly autosave = new DraftAutosave({
+    api: this.api,
+    event: this.event,
+    sub: () => this.auth.userId(),
+    onApplied: (updated) => this.event.set(updated),
+    onConflict: (current) => this.openConflict(current),
+    onOffline: () => this.toast.show(this.i18n.translate('autosave.offlineToast'), 'warning', 8000),
+    onError: (err) => this.toast.error(problemMessage(this.i18n, problemOf(err))),
+  });
 
   protected readonly next = computed<TransitionId | null>(() => {
     const e = this.event();
-    const t = e ? (NEXT[e.state] ?? null) : null;
+    const t = e ? PRIMARY_TRANSITION[e.state] : undefined;
     return e && t && e.allowedTransitions.includes(t) ? t : null;
   });
-
   protected readonly guards = rxResource({
     params: () => {
       const e = this.event();
@@ -125,55 +137,143 @@ export class DossierDetailComponent {
     stream: ({ params }) => this.api.guards(params.id, params.transition),
   });
 
-  protected readonly canEdit = computed(() => EDITABLE.includes(this.event()?.state ?? 'live'));
-  protected readonly canPoster = computed(() => POSTER_STATES.includes(this.event()?.state ?? 'live'));
-  protected readonly canException = computed(() => {
+  protected readonly actions = computed<string[]>(() => {
     const e = this.event();
-    return !!e && !e.imageException && EXCEPTION_STATES.includes(e.state) && this.auth.can('event.image_exception');
+    if (!e) return [];
+    return (
+      e.allowedActions ??
+      (this.auth.can('event.image_exception') && !e.imageException ? ['image-exception'] : [])
+    );
   });
-  protected readonly showUpload = computed(() => this.canPoster() && (this.posterOpen() || !this.event()?.poster));
+  protected readonly editable = computed(
+    () => (this.event()?.editableFields ?? ['title']).length > 0,
+  );
+  protected readonly canPoster = computed(() =>
+    POSTER_STATES.includes(this.event()?.state ?? 'live'),
+  );
+  protected readonly showUpload = computed(
+    () => this.canPoster() && (this.posterOpen() || !this.event()?.poster),
+  );
+  protected readonly canRevert = computed(() => this.actions().includes('revert-revision'));
 
-  protected status(e: EventDto) {
-    return eventStateStatus(e.state);
+  protected readonly tabs = computed<TabItem[]>(() => [
+    { id: 'overview', label: this.i18n.translate('detail.tabOverview') },
+    { id: 'history', label: this.i18n.translate('detail.tabHistory') },
+  ]);
+
+  protected readonly changes = rxResource({
+    params: () => {
+      const e = this.event();
+      return e?.state === 'live' && this.auth.can('event.edit_critical_live')
+        ? { id: e.id, rev: e.rev, after: Math.max(e.publishedRev ?? 0, e.textReviewedRev ?? 0) }
+        : undefined;
+    },
+    stream: ({ params }) =>
+      this.api
+        .revisions(params.id, 50, 0, { fieldClass: 'text', minRev: params.after })
+        .pipe(catchError(() => of(null))),
+  });
+  protected readonly changedAfter = computed<RevisionOut[]>(() => {
+    const e = this.event();
+    const page = this.changes.hasValue() ? this.changes.value() : null;
+    if (!e || !page) return [];
+    return page.items.filter((r) => r.actor.sub !== this.auth.userId());
+  });
+
+  constructor() {
+    effect(() => {
+      const e = this.loaded.hasValue() ? this.loaded.value() : null;
+      if (e) untracked(() => this.begin(e));
+    });
+    inject(DestroyRef).onDestroy(() => this.autosave.destroy());
   }
 
-  protected when(e: EventDto): string {
-    return `${formatEventTime(e.startsAt, e.tzid)} – ${formatEventTime(e.endsAt, e.tzid)}`;
+  private begin(e: EventDto): void {
+    this.autosave.reset();
+    this.draft.set(null);
+    this.restoredAt.set(null);
+    this.autosave.restore(e).subscribe((r) => {
+      if (r.kind === 'restored') {
+        this.draft.set(r.draft.fields);
+        this.restoredAt.set(new Date(r.draft.updatedAt));
+      } else if (r.kind === 'stale') {
+        this.openConflict(e, r.draft.fields, r.draft.baseRev);
+      }
+    });
   }
 
-  protected posterSrc(e: EventDto): string {
-    return this.api.posterUrl(e.id, 'thumb400');
+  protected reload(): void {
+    this.loaded.reload();
+  }
+
+  protected command(c: HeadCommand): void {
+    if (c.kind === 'transition')
+      return this.saveFirst(() => this.dialog.set({ kind: 'transition', id: c.id }));
+    switch (c.name) {
+      case 'cancel':
+        return this.dialog.set({ kind: 'cancel' });
+      case 'reinstate':
+        return this.dialog.set({ kind: 'reinstate' });
+      case 'exception':
+        return this.dialog.set({ kind: 'exception' });
+      case 'assign':
+        return this.dialog.set({ kind: 'assign' });
+      case 'confirm-flyer':
+        return this.confirmFlyer();
+    }
   }
 
   protected fix(reason: ProblemReason): void {
-    this.transitionOpen.set(null);
-    if (reason.fixAction === 'upload_poster') {
+    this.dialog.set(null);
+    const action = reason.fixAction;
+    if (action === 'upload_poster' || action === 'fill_rights') {
       this.posterOpen.set(true);
-      setTimeout(() => this.host.nativeElement.querySelector('#poster-heading')?.scrollIntoView?.());
-    } else if (reason.fixAction) {
-      this.editing.set(true);
+      setTimeout(() =>
+        this.host.nativeElement.querySelector('#poster-heading')?.scrollIntoView?.(),
+      );
+    } else if (action === 'confirm_flyer') {
+      this.confirmFlyer();
+    } else if (action) {
+      this.tab.set('overview');
+      setTimeout(() => focusField(this.host.nativeElement, action, reason.field));
     }
   }
 
   protected applied(updated: EventDto): void {
     this.event.set(updated);
-    this.transitionOpen.set(null);
-    this.exceptionOpen.set(false);
+    this.dialog.set(null);
   }
 
-  protected save(patch: EventPatch): void {
-    const e = this.event();
-    if (!e || this.busy()) return;
+  protected refresh(): void {
+    this.dialog.set(null);
+    this.api
+      .get(this.id())
+      .subscribe({ next: (e) => this.event.set(e), error: () => this.loaded.reload() });
+  }
+
+  protected formChanged(fields: EventFields): void {
+    this.autosave.change(fields);
+  }
+
+  protected save(): void {
+    if (this.busy()) return;
     this.busy.set(true);
-    this.api.patch(e.id, patch).subscribe({
+    this.autosave.save().subscribe({
       next: (updated) => {
         this.busy.set(false);
-        this.editing.set(false);
+        this.draft.set(null);
+        this.restoredAt.set(null);
         this.toast.success(this.i18n.translate('detail.saved'));
         this.event.set(updated);
       },
       error: (err: unknown) => this.failed(err),
     });
+  }
+
+  protected discardDraft(): void {
+    this.autosave.discard();
+    this.draft.set(null);
+    this.restoredAt.set(null);
   }
 
   protected upload(sub: PosterSubmission): void {
@@ -185,21 +285,156 @@ export class DossierDetailComponent {
         this.busy.set(false);
         this.posterOpen.set(false);
         this.toast.success(this.i18n.translate('detail.posterUploaded'));
-        this.loaded.reload();
+        this.refresh();
       },
       error: (err: unknown) => this.failed(err),
     });
   }
 
-  protected reloadStale(): void {
-    this.transitionOpen.set(null);
-    this.loaded.reload();
+  private confirmFlyer(): void {
+    const e = this.event();
+    if (!e) return;
+    this.act(this.api.action(e.id, 'confirm-flyer', {}, e.rev), 'detail.flyerConfirmed');
+  }
+
+  protected revertTo(rev: number): void {
+    this.dialog.set({ kind: 'revert', rev });
+  }
+
+  protected acknowledge(): void {
+    const e = this.event();
+    if (e) this.act(this.api.action(e.id, 'acknowledge-changes', {}, e.rev), 'tasks.acknowledged');
+  }
+
+  protected revertBaseline(): void {
+    const e = this.event();
+    if (e)
+      this.dialog.set({
+        kind: 'revert',
+        rev: Math.max(e.publishedRev ?? 0, e.textReviewedRev ?? 0),
+      });
+  }
+
+  private act(
+    call: Observable<EventDto>,
+    done: 'detail.flyerConfirmed' | 'tasks.acknowledged',
+  ): void {
+    call.subscribe({
+      next: (updated) => {
+        this.event.set(updated);
+        this.toast.success(this.i18n.translate(done));
+      },
+      error: (err: unknown) => this.failed(err),
+    });
+  }
+
+  private saveFirst(next: () => void): void {
+    if (!this.autosave.dirty() || !SAVE_BEFORE_TRANSITION.includes(this.event()?.state ?? ''))
+      return next();
+    this.autosave.save().subscribe({
+      next: (updated) => {
+        this.draft.set(null);
+        this.event.set(updated);
+        next();
+      },
+      error: (err: unknown) => this.failed(err),
+    });
+  }
+
+  private openConflict(current: EventDto | null, mine?: EventFields, baseRev?: number): void {
+    const e = this.event();
+    const fields = mine ?? this.autosave.fields();
+    const base = baseRev ?? e?.rev;
+    this.toast.error(this.i18n.translate('conflict.toast'));
+    forkJoin({
+      current: current ? of(current) : this.api.get(this.id()),
+      base:
+        base === undefined
+          ? of(null)
+          : this.api.revision(this.id(), base).pipe(catchError(() => of(null))),
+    }).subscribe(({ current: now, base: rev }) =>
+      this.dialog.set({
+        kind: 'conflict',
+        current: now,
+        mine: fields,
+        base: rev?.snapshot ?? null,
+      }),
+    );
+  }
+
+  protected keepMine(fields: EventFields): void {
+    const state = this.dialog();
+    if (state?.kind !== 'conflict') return;
+    this.busy.set(true);
+    this.api.patch(state.current.id, state.current.rev, fields).subscribe({
+      next: (updated) => {
+        this.busy.set(false);
+        this.autosave.discard();
+        this.draft.set(null);
+        this.dialog.set(null);
+        this.event.set(updated);
+      },
+      error: (err: unknown) => this.failed(err),
+    });
+  }
+
+  protected takeTheirs(): void {
+    const state = this.dialog();
+    this.autosave.discard();
+    this.draft.set(null);
+    this.dialog.set(null);
+    if (state?.kind === 'conflict') this.event.set(state.current);
   }
 
   private failed(err: unknown): void {
     this.busy.set(false);
     const problem = problemOf(err);
+    if (problem.code === 'conflict') return;
     this.toast.error(problemMessage(this.i18n, problem));
-    if (problem.status === 409) this.loaded.reload();
+    if (problem.status === 409) this.refresh();
+  }
+
+  protected warnUnload(event: BeforeUnloadEvent): void {
+    if (!this.autosave.unsent()) return;
+    event.preventDefault();
+    event.returnValue = '';
+  }
+
+  canLeave(): boolean | Promise<boolean> {
+    if (!this.autosave.unsent()) return true;
+    return new Promise<boolean>((resolve) => this.dialog.set({ kind: 'leave', resolve }));
+  }
+
+  protected leaveChoice(choice: LeaveChoice): void {
+    const state = this.dialog();
+    if (state?.kind !== 'leave') return;
+    if (choice === 'save') {
+      this.autosave.save().subscribe({
+        next: () => this.finishLeave(state, true),
+        error: (err: unknown) => {
+          this.failed(err);
+          this.finishLeave(state, false);
+        },
+      });
+      return;
+    }
+    if (choice === 'discard') this.autosave.discard();
+    this.finishLeave(state, choice === 'discard');
+  }
+
+  private finishLeave(state: { resolve: (go: boolean) => void }, go: boolean): void {
+    this.dialog.set(null);
+    state.resolve(go);
+  }
+
+  protected posterSrc(e: EventDto): string {
+    return this.api.posterUrl(e.id, 'thumb400');
+  }
+
+  protected restoredText(): string {
+    const at = this.restoredAt();
+    return this.i18n.translate('autosave.restored', {
+      time: at ? at.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : '',
+    });
   }
 }

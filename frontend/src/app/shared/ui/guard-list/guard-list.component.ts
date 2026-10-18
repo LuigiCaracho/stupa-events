@@ -9,7 +9,7 @@ import { TranslatePipe } from '@core/i18n/translate.pipe';
 import type { TranslationKey } from '@core/i18n/translations';
 import { ButtonComponent } from '@stupa-makers/ui-kit';
 import { StatusTextComponent } from '../status-text/status-text.component';
-import { reasonText } from './reason-text';
+import { HANDLED_FIXES, reasonText } from './reason-text';
 
 @Component({
   selector: 'app-guard-list',
@@ -38,6 +38,8 @@ export class GuardListComponent {
   }
 
   protected fixKey(reason: ProblemReason): TranslationKey | null {
-    return reason.fixAction ? (`fix.${reason.fixAction}` as TranslationKey) : null;
+    return reason.fixAction && HANDLED_FIXES.has(reason.fixAction)
+      ? (`fix.${reason.fixAction}` as TranslationKey)
+      : null;
   }
 }

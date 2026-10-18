@@ -45,7 +45,8 @@ interface MappingValue {
 
 const BLANK: MappingValue = { oidcGroup: '', role: '', organizationId: '' };
 const ALL_ROLES: readonly MappingRole[] = [...GLOBAL_ROLES, ...ORGANIZATION_ROLES];
-const isOrgRole = (role: MappingRole | ''): boolean => role !== '' && ORGANIZATION_ROLES.includes(role);
+const isOrgRole = (role: MappingRole | ''): boolean =>
+  role !== '' && ORGANIZATION_ROLES.includes(role);
 
 const DRAFT: GroupMapping = {
   id: NEW_ROW,
@@ -93,14 +94,25 @@ export class MappingsComponent extends TaxonomyTable<GroupMapping, MappingValue>
   protected readonly deleting = signal<GroupMapping | null>(null);
   protected readonly working = signal(false);
   protected readonly roleKeys = ROLE_KEYS;
-  protected readonly isExpanded = (row: unknown): boolean => this.expanded() === (row as GroupMapping).id;
+  protected readonly isExpanded = (row: unknown): boolean =>
+    this.expanded() === (row as GroupMapping).id;
 
   protected readonly columns: ColumnDef[] = [
-    { key: 'oidcGroup', label: this.i18n.translate('admin.col.group'), width: '18rem', card: 'title' },
+    {
+      key: 'oidcGroup',
+      label: this.i18n.translate('admin.col.group'),
+      width: '18rem',
+      card: 'title',
+    },
     { key: 'role', label: this.i18n.translate('admin.col.role'), width: '14rem' },
     { key: 'organizationId', label: this.i18n.translate('admin.col.organization'), width: '16rem' },
     { key: 'principalCount', label: this.i18n.translate('admin.col.people'), width: '7rem' },
-    { key: 'actions', label: this.i18n.translate('admin.col.actions'), sticky: 'end', card: 'actions' },
+    {
+      key: 'actions',
+      label: this.i18n.translate('admin.col.actions'),
+      sticky: 'end',
+      card: 'actions',
+    },
   ];
 
   protected readonly roleOptions: SelectFieldOption[] = ALL_ROLES.map((role) => ({
@@ -110,7 +122,9 @@ export class MappingsComponent extends TaxonomyTable<GroupMapping, MappingValue>
   protected readonly orgOptions = computed<SelectFieldOption[]>(() =>
     (this.orgs.hasValue() ? this.orgs.value() : []).map((o) => ({ value: o.id, label: o.name })),
   );
-  protected readonly rows = computed(() => (this.isNew() ? [DRAFT, ...this.loaded()] : this.loaded()));
+  protected readonly rows = computed(() =>
+    this.isNew() ? [DRAFT, ...this.loaded()] : this.loaded(),
+  );
 
   protected globalRole(): boolean {
     const role = this.form.controls.role.value;
@@ -127,7 +141,9 @@ export class MappingsComponent extends TaxonomyTable<GroupMapping, MappingValue>
     this.api.createDefaults().subscribe({
       next: (created) => {
         this.working.set(false);
-        this.toastService.success(this.i18n.translate('admin.defaultsCreated', { n: created.length }));
+        this.toastService.success(
+          this.i18n.translate('admin.defaultsCreated', { n: created.length }),
+        );
         this.list.reload();
       },
       error: (err: unknown) => {
@@ -170,7 +186,8 @@ export class MappingsComponent extends TaxonomyTable<GroupMapping, MappingValue>
 
   protected override validate(v: MappingValue): Record<string, string> {
     const errors: Record<string, string> = {};
-    if (this.isNew() && !v.oidcGroup.trim()) errors['oidcGroup'] = this.i18n.translate('admin.err.groupRequired');
+    if (this.isNew() && !v.oidcGroup.trim())
+      errors['oidcGroup'] = this.i18n.translate('admin.err.groupRequired');
     if (!v.role) errors['role'] = this.i18n.translate('admin.err.roleRequired');
     else if (isOrgRole(v.role) && !v.organizationId) {
       errors['organizationId'] = this.i18n.translate('admin.err.organizationRequired');

@@ -32,7 +32,9 @@ export abstract class TaxonomyTable<Row extends { id: string }, Value extends ob
   protected readonly saving = signal(false);
   protected readonly errors = signal<Record<string, string>>({});
   protected readonly isNew = computed(() => this.editingId() === NEW_ROW);
-  protected readonly loaded = computed<Row[]>(() => (this.list.hasValue() ? this.list.value() : []));
+  protected readonly loaded = computed<Row[]>(() =>
+    this.list.hasValue() ? this.list.value() : [],
+  );
 
   protected readonly labelKey = labelKey;
   protected readonly rowKey = (row: unknown): string => (row as { id: string }).id;
@@ -67,7 +69,8 @@ export abstract class TaxonomyTable<Row extends { id: string }, Value extends ob
   protected validate(value: Value): Record<string, string> {
     const fields = value as Record<string, unknown>;
     const errors: Record<string, string> = {};
-    if (!String(fields['name'] ?? '').trim()) errors['name'] = this.i18n.translate('admin.err.nameRequired');
+    if (!String(fields['name'] ?? '').trim())
+      errors['name'] = this.i18n.translate('admin.err.nameRequired');
     if (this.isNew() && !SLUG_PATTERN.test(String(fields['slug'] ?? ''))) {
       errors['slug'] = this.i18n.translate('admin.err.slugInvalid');
     }

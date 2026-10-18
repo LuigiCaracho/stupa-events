@@ -14,6 +14,17 @@ const BY_CODE: Record<string, TranslationKey> = {
   unsupported_media_type: 'problem.unsupportedMedia',
   rate_limited: 'problem.rateLimited',
   service_unavailable: 'problem.unavailable',
+  reason_required: 'problem.reasonRequired',
+  proposal_quota_exceeded: 'problem.proposalQuota',
+  publish_at_in_past: 'problem.publishAtPast',
+  publish_after_end: 'problem.publishAfterEnd',
+  four_eyes: 'problem.fourEyes',
+  revert_poster_replaced: 'problem.revertPosterReplaced',
+  organization_already_set: 'problem.orgAlreadySet',
+  unknown_venue: 'problem.unknownVenue',
+  precondition_required: 'problem.preconditionRequired',
+  start_in_past: 'problem.startInPast',
+  validation_error: 'problem.validation',
 };
 
 /**

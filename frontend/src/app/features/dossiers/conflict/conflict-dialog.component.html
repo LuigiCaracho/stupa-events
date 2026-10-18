@@ -1,0 +1,58 @@
+<app-dialog
+  [open]="true"
+  size="lg"
+  [title]="'conflict.title' | t"
+  [subtitle]="current().title"
+  [closeLabel]="'action.close' | t"
+  (closed)="closed.emit()"
+>
+  <div class="cf">
+    <app-note kind="warn">{{ 'conflict.note' | t }}</app-note>
+    @if (hasBase()) {
+      <section aria-labelledby="cf-diff">
+        <h3 class="sec" id="cf-diff">{{ 'conflict.theirChanges' | t }}</h3>
+        <app-config-diff [diff]="diff()" />
+      </section>
+    }
+    <section aria-labelledby="cf-fields">
+      <h3 class="sec" id="cf-fields">{{ 'conflict.yourChanges' | t }}</h3>
+      <div class="cf__head" aria-hidden="true">
+        <span></span>
+        <span>{{ 'conflict.base' | t }}</span>
+        <span>{{ 'conflict.mine' | t }}</span>
+        <span>{{ 'conflict.theirs' | t }}</span>
+      </div>
+      <ul class="cf__rows">
+        @for (row of rows(); track row.field) {
+          <li class="cf__row">
+            <span class="cf__label">{{ label(row) }}</span>
+            <span class="cf__cell" [attr.data-label]="'conflict.base' | t">{{
+              hasBase() ? show(row, row.base) : '–'
+            }}</span>
+            <span class="cf__cell" [attr.data-label]="'conflict.mine' | t">{{
+              show(row, row.mine)
+            }}</span>
+            <span class="cf__cell" [attr.data-label]="'conflict.theirs' | t">{{
+              show(row, row.theirs)
+            }}</span>
+            @if (row.contested) {
+              <app-segmented
+                class="cf__choice"
+                [ariaLabel]="label(row)"
+                [options]="options()"
+                [value]="choice(row)"
+                (valueChange)="choose(row, $event)"
+              />
+            }
+          </li>
+        }
+      </ul>
+    </section>
+  </div>
+  <div dialog-footer class="cf__footer">
+    <app-button variant="text" (click)="reload.emit()">{{ 'conflict.reload' | t }}</app-button>
+    <app-button variant="fill" [loading]="busy()" (click)="apply()">{{
+      'conflict.apply' | t
+    }}</app-button>
+  </div>
+</app-dialog>

@@ -2,23 +2,28 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  min-width: 0;
 }
 
-.dd__actions {
+.dd__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.dd__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.dd__formHead {
   display: flex;
   flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
   gap: var(--space-2);
-}
-
-.dd__meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1) var(--space-4);
-  margin: 0;
-}
-
-.dd__edit {
-  align-self: flex-start;
 }
 
 .dd__poster {

@@ -119,9 +119,7 @@ export class StickyBarComponent {
     const scrolled = scroller ? scroller.scrollTop > 0 : window.scrollY > 0;
     // In a scrolling box the bar sticks below the top padding of the box.
     const inset = scroller ? parseFloat(getComputedStyle(scroller).paddingTop) || 0 : 0;
-    const edge = scroller
-      ? scroller.getBoundingClientRect().top + scroller.clientTop + inset
-      : 0;
+    const edge = scroller ? scroller.getBoundingClientRect().top + scroller.clientTop + inset : 0;
     this.stuck.set(scrolled && rect.height > 0 && rect.top <= edge + top + slack);
     // A hidden bar (height 0) keeps nothing clear.
     // The scroll padding counts from the edge of the scroll port, so it includes the top

@@ -36,6 +36,9 @@ export interface Problem {
   traceId?: string;
   errors?: ProblemFieldError[];
   reasons?: ProblemReason[];
+  /** 409 `conflict`: the current version of the dossier (an `EventDto`, typed by the feature). */
+  current?: unknown;
+  currentRev?: number;
 }
 
 /** One field-level validation error of a 409/422 answer. */
@@ -50,5 +53,23 @@ export interface ProblemReason {
   field: string | null;
   severity: 'blocker' | 'warning';
   messageKey: string;
-  fixAction: 'fill_field' | 'change_date' | 'upload_poster' | null;
+  fixAction: FixAction | null;
 }
+
+/** The one-click fixes of a reason (M3 contract 2.3); an unknown value shows no button. */
+export type FixAction =
+  | 'fill_field'
+  | 'change_date'
+  | 'upload_poster'
+  | 'pick_venue'
+  | 'fill_rights'
+  | 'review_duplicate'
+  | 'mark_cancellation'
+  | 'open_comment'
+  | 'confirm_flyer'
+  | 'confirm_location'
+  | 'fill_facts'
+  | 'open_checklist'
+  | 'confirm_time'
+  | 'set_end'
+  | 'make_offer';

@@ -1,50 +1,79 @@
-<app-page-header [title]="'dossiers.title' | t" [meta]="meta()">
-  <app-button actions variant="fill" (click)="openNew()">{{ 'dossiers.new' | t }}</app-button>
-</app-page-header>
-
-<div class="dl__filters" role="search">
-  <app-input
-    class="dl__search"
-    type="search"
-    [ariaLabel]="'dossiers.search' | t"
-    [placeholder]="'dossiers.search' | t"
-    [ngModel]="search()"
-    (ngModelChange)="onSearch($event)"
-  />
-  <app-select
-    class="dl__state"
-    [ariaLabel]="'dossiers.filterState' | t"
-    [placeholder]="'dossiers.allStates' | t"
-    [options]="stateOptions()"
-    [(value)]="state"
-  />
-</div>
-
-@if (events.error()) {
-  <app-note kind="error" role="alert">{{ 'dossiers.loadFailed' | t }}</app-note>
-} @else if (events.isLoading() && !events.hasValue()) {
-  <app-skeleton variant="items" [count]="5" />
-} @else if (rows().length === 0) {
-  <app-empty-state plain [heading]="(filtered() ? 'dossiers.empty' : 'dossiers.emptyNone') | t">
-    @if (filtered()) {
-      <app-button variant="tonal" (click)="reset()">{{ 'dossiers.resetFilters' | t }}</app-button>
+<app-list-detail [detailOpen]="selectedId() !== null" (back)="closeDetail()">
+  <section list class="ld-pane" aria-labelledby="dl-title">
+    <app-page-header
+      [pane]="true"
+      titleId="dl-title"
+      [titleTag]="selectedId() ? 'p' : 'h1'"
+      [title]="'dossiers.title' | t"
+      [meta]="meta()"
+    >
+      <ng-container ngProjectAs="[actions]">
+        <app-button variant="tonal" size="sm" (click)="openNew()">{{
+          'dossiers.new' | t
+        }}</app-button>
+      </ng-container>
+    </app-page-header>
+    <app-sticky-bar class="ld-pane__filters">
+      <app-pipeline-filters
+        [filters]="state.filters()"
+        [showView]="true"
+        (changed)="state.set($event)"
+      />
+    </app-sticky-bar>
+    @if (events.error() && !events.hasValue()) {
+      <app-note kind="error" role="alert">{{ 'dossiers.loadFailed' | t }}</app-note>
+    } @else if (!events.hasValue()) {
+      <app-skeleton variant="items" [count]="5" />
+    } @else if (rows().length === 0) {
+      <app-empty-state plain [heading]="(filtered() ? 'dossiers.empty' : 'dossiers.emptyNone') | t">
+        @if (filtered()) {
+          <app-button variant="tonal" (click)="reset()">{{
+            'dossiers.resetFilters' | t
+          }}</app-button>
+        } @else {
+          <app-button variant="fill" (click)="openNew()">{{ 'dossiers.new' | t }}</app-button>
+        }
+      </app-empty-state>
     } @else {
-      <app-button variant="fill" (click)="openNew()">{{ 'dossiers.new' | t }}</app-button>
+      <ul class="dl__list rowgroup">
+        @for (card of rows(); track card.id) {
+          <li>
+            <app-list-item
+              [title]="card.title"
+              [sub]="sub(card)"
+              [link]="['/dossiers', card.id]"
+              linkQueryParamsHandling="preserve"
+              [selected]="card.id === selectedId()"
+            >
+              <span lead class="dl__when num">{{ when(card) }}</span>
+              <app-status-text status [kind]="status(card).kind">{{
+                status(card).key | t
+              }}</app-status-text>
+              @if (card.blockerCount > 0) {
+                <span trail class="dl__blockers">{{
+                  'dossiers.blockers' | t: { count: card.blockerCount }
+                }}</span>
+              }
+            </app-list-item>
+          </li>
+        }
+      </ul>
+      @if (more()) {
+        <app-button class="dl__more" variant="text" (click)="showMore()">{{
+          'dossiers.more' | t
+        }}</app-button>
+      }
     }
-  </app-empty-state>
-} @else {
-  <ul class="dl__list rowgroup">
-    @for (event of rows(); track event.id) {
-      <li>
-        <app-list-item [title]="event.title" [sub]="sub(event)" [link]="['/dossiers', event.id]">
-          <span lead class="dl__when num">{{ when(event) }}</span>
-          <app-status-text status [kind]="status(event).kind">{{ status(event).key | t }}</app-status-text>
-        </app-list-item>
-      </li>
+  </section>
+  <div detail>
+    @if (selectedId() !== null) {
+      <router-outlet />
+    } @else {
+      <app-empty-state plain [heading]="'dossiers.pick' | t" />
     }
-  </ul>
-}
+  </div>
+</app-list-detail>
 
 @if (newOpen) {
-  <app-new-event-dialog (closed)="closeNew()" (created)="opened($event)" />
+  <app-new-event-dialog (closed)="closeNew()" (created)="created($event.id)" />
 }

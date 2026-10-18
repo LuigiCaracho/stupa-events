@@ -83,7 +83,12 @@ export class CategoriesComponent extends TaxonomyTable<AdminCategory, CategoryVa
     { key: 'colorToken', label: this.i18n.translate('admin.col.color'), width: '10rem' },
     { key: 'requiredProfile', label: this.i18n.translate('admin.col.profile'), width: '10rem' },
     { key: 'active', label: this.i18n.translate('admin.col.active'), width: '7rem' },
-    { key: 'actions', label: this.i18n.translate('admin.col.actions'), sticky: 'end', card: 'actions' },
+    {
+      key: 'actions',
+      label: this.i18n.translate('admin.col.actions'),
+      sticky: 'end',
+      card: 'actions',
+    },
   ];
 
   protected readonly kindOptions = optionsOf(this.i18n, CATEGORY_KINDS, KIND_KEYS);

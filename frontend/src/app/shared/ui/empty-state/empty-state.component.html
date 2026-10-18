@@ -16,7 +16,11 @@
             </div>
           }
           @case ('chat') {
-            <div class="es__ghost es__ghost--chat" [class.es__ghost--mine]="odd" [style.width.%]="g.title + 10">
+            <div
+              class="es__ghost es__ghost--chat"
+              [class.es__ghost--mine]="odd"
+              [style.width.%]="g.title + 10"
+            >
               <span class="es__ghostBar" [style.width.%]="85"></span>
               <span class="es__ghostBar es__ghostBar--sub" [style.width.%]="g.sub + 20"></span>
             </div>
@@ -32,7 +36,10 @@
               <span class="es__ghostBar" [style.width.%]="g.title + 20"></span>
               <span class="es__ghostBar es__ghostBar--sub" [style.width.%]="g.sub + 30"></span>
               <span class="es__ghostBar es__ghostBar--sub" [style.width.%]="g.sub + 20"></span>
-              <span class="es__ghostBar es__ghostBar--sub es__ghostBar--end" [style.width.%]="60"></span>
+              <span
+                class="es__ghostBar es__ghostBar--sub es__ghostBar--end"
+                [style.width.%]="60"
+              ></span>
             </div>
           }
           @default {

@@ -11,6 +11,11 @@ import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.componen
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe, EmptyStateComponent],
-  template: `<app-empty-state plain level="1" [heading]="'placeholder.heading' | t" [body]="'placeholder.body' | t" />`,
+  template: `<app-empty-state
+    plain
+    level="1"
+    [heading]="'placeholder.heading' | t"
+    [body]="'placeholder.body' | t"
+  />`,
 })
 export class PlaceholderComponent {}

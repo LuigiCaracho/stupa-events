@@ -16,7 +16,7 @@ export const homeRedirectGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
-  return auth.ensureLoaded().pipe(
-    map((principal) => (principal ? router.createUrlTree(['/aufgaben']) : true)),
-  );
+  return auth
+    .ensureLoaded()
+    .pipe(map((principal) => (principal ? router.createUrlTree(['/aufgaben']) : true)));
 };

@@ -4,13 +4,7 @@ import { I18nService } from './i18n.service';
 
 /** Format presets for the localized date output. */
 export type LocalDateFormat =
-  | 'short'
-  | 'medium'
-  | 'mediumDate'
-  | 'long'
-  | 'time'
-  | 'weekdayDate'
-  | 'weekdayShort';
+  'short' | 'medium' | 'mediumDate' | 'long' | 'time' | 'weekdayDate' | 'weekdayShort';
 
 /** "Di., 13.10.2026": the date with a short weekday, as the meeting pages show it. */
 const WEEKDAY_DATE: Intl.DateTimeFormatOptions = {

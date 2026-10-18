@@ -1,0 +1,30 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.pp__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.pp__fab {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .pp__new {
+    display: none;
+  }
+
+  .pp__fab {
+    display: block;
+    position: fixed;
+    right: var(--space-4);
+    bottom: calc(var(--bottom-bar-height) + env(safe-area-inset-bottom) + var(--space-4));
+    z-index: var(--z-sticky);
+  }
+}

@@ -1,0 +1,65 @@
+:host {
+  display: block;
+}
+
+.dh {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.dh__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.dh__title {
+  flex: 1 1 14rem;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--fs-h1);
+  line-height: var(--lh-h1);
+  overflow-wrap: anywhere;
+}
+
+.dh__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.dh__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+}
+
+.dh__steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-text-muted);
+  font-size: var(--fs-small);
+}
+
+.dh__step:not(:last-child)::after {
+  content: '›';
+  margin-left: var(--space-3);
+  color: var(--color-text-subtle);
+}
+
+.dh__step--done {
+  color: var(--color-text-muted);
+}
+
+.dh__step--current {
+  color: var(--color-accent-text);
+  font-weight: var(--fw-semibold);
+}

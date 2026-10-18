@@ -1,0 +1,16 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.dtf {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--space-3);
+}
+
+@media (max-width: 479px) {
+  .dtf {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

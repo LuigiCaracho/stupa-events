@@ -120,7 +120,12 @@ export class VenuesComponent extends TaxonomyTable<AdminVenue, VenueValue> {
     { key: 'isPrivate', label: this.i18n.translate('admin.col.private'), width: '7rem' },
     { key: 'coordinates', label: this.i18n.translate('admin.col.coordinates'), width: '14rem' },
     { key: 'active', label: this.i18n.translate('admin.col.active'), width: '7rem' },
-    { key: 'actions', label: this.i18n.translate('admin.col.actions'), sticky: 'end', card: 'actions' },
+    {
+      key: 'actions',
+      label: this.i18n.translate('admin.col.actions'),
+      sticky: 'end',
+      card: 'actions',
+    },
   ];
 
   protected readonly precisionOptions = optionsOf(this.i18n, PUBLIC_PRECISIONS, PRECISION_KEYS);
@@ -165,6 +170,8 @@ export class VenuesComponent extends TaxonomyTable<AdminVenue, VenueValue> {
       isPrivate: v.isPrivate,
       active: v.active,
     };
-    return id === null ? this.api.createVenue({ ...body, slug: v.slug }) : this.api.updateVenue(id, body);
+    return id === null
+      ? this.api.createVenue({ ...body, slug: v.slug })
+      : this.api.updateVenue(id, body);
   }
 }

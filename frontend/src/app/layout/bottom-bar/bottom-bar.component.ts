@@ -6,9 +6,8 @@ import { IconComponent } from '@stupa-makers/ui-kit';
 import { BOTTOM_BAR_KEYS, NavService, type NavItem } from '../nav.service';
 
 /**
- * The phone navigation (viewport <= 768px): Aufgaben, Dossiers and Konto. Later
- * milestones add entries and a "Mehr" sheet (`shared/ui/side-sheet`) once more than four
- * areas exist.
+ * The phone navigation (viewport <= 768px): Aufgaben, Pipeline, Dossiers, Verwaltung (with a
+ * permission) and Konto. A "Mehr" sheet (`shared/ui/side-sheet`) comes once more areas exist.
  *
  * The shell shows the bar only under the phone media query (`MEDIA.phone`).
  */

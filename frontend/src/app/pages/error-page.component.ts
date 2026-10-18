@@ -11,7 +11,13 @@ import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.componen
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [TranslatePipe, EmptyStateComponent, RouterLink],
   template: `
-    <app-empty-state plain level="1" [heading]="heading() | t" [body]="body() | t" [code]="code()" />
+    <app-empty-state
+      plain
+      level="1"
+      [heading]="heading() | t"
+      [body]="body() | t"
+      [code]="code()"
+    />
     <a routerLink="/">{{ 'common.back' | t }}</a>
   `,
 })

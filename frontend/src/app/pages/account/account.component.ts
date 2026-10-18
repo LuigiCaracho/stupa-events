@@ -13,7 +13,13 @@ import { ButtonComponent, CardComponent } from '@stupa-makers/ui-kit';
   selector: 'app-account',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslatePipe, ButtonComponent, CardComponent, PageHeaderComponent, SessionSectionComponent],
+  imports: [
+    TranslatePipe,
+    ButtonComponent,
+    CardComponent,
+    PageHeaderComponent,
+    SessionSectionComponent,
+  ],
   templateUrl: './account.component.html',
   styleUrl: './account.component.scss',
 })

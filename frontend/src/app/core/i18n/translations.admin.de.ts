@@ -17,7 +17,8 @@ export const adminDe = {
   'admin.yes': 'ja',
   'admin.no': 'nein',
   'admin.categories.note': 'Kategorien werden nicht gelöscht, nur deaktiviert.',
-  'admin.venues.note': 'Orte werden nicht gelöscht, nur deaktiviert. Viele Bestandsorte haben noch keine Adresse.',
+  'admin.venues.note':
+    'Orte werden nicht gelöscht, nur deaktiviert. Viele Bestandsorte haben noch keine Adresse.',
   'admin.noParent': 'Keine (oberste Ebene)',
   'admin.noColor': 'Keine Farbe',
   'admin.noCategory': 'Keine Kategorie',
@@ -101,12 +102,15 @@ export const adminDe = {
   'admin.err.approverRequiresTrusted': 'Approver nur in vertrauten Organisationen.',
   'admin.err.implicitRole': 'Die Rolle member gilt für alle Angemeldeten.',
   'admin.err.unknownOrganization': 'Organisation nicht gefunden.',
-  'admin.err.lastAdminMapping': 'Die letzte Admin-Zuordnung bleibt, solange keine Bootstrap-Admins gesetzt sind.',
+  'admin.err.lastAdminMapping':
+    'Die letzte Admin-Zuordnung bleibt, solange keine Bootstrap-Admins gesetzt sind.',
   'admin.mappings.note': 'Gruppen kommen aus Authentik. Mitglieder werden nur dort gepflegt.',
   'admin.mappings.add': 'Zuordnung hinzufügen',
-  'admin.mappings.empty': 'Noch keine Zuordnungen. Ohne Zuordnung sehen alle nur öffentliche Inhalte und eigene Vorschläge.',
+  'admin.mappings.empty':
+    'Noch keine Zuordnungen. Ohne Zuordnung sehen alle nur öffentliche Inhalte und eigene Vorschläge.',
   'admin.mappings.deleteTitle': 'Zuordnung löschen?',
-  'admin.mappings.deleteBody': 'Die Gruppe gibt danach keine Rolle mehr. Die Gruppe selbst bleibt in Authentik bestehen.',
+  'admin.mappings.deleteBody':
+    'Die Gruppe gibt danach keine Rolle mehr. Die Gruppe selbst bleibt in Authentik bestehen.',
   'admin.defaults': 'Standardzuordnungen anlegen',
   'admin.defaultsCreated': '{n} neue Zuordnungen angelegt',
   'admin.preview.toggle': 'Wer bekommt was',
@@ -114,13 +118,16 @@ export const adminDe = {
   'admin.preview.more': '{shown} von {total} Personen angezeigt.',
   'admin.preview.empty': 'Noch niemand aus dieser Gruppe hat sich angemeldet.',
   'admin.revoke': 'Sitzungen widerrufen',
-  'admin.revoke.body': 'Diese Person muss sich neu anmelden. Rechte ändern sich nur über Authentik.',
+  'admin.revoke.body':
+    'Diese Person muss sich neu anmelden. Rechte ändern sich nur über Authentik.',
   'admin.sessionsRevoked': '{n} Sitzungen beendet.',
   'account.groups': 'Gruppen',
   'account.noGroups': 'Keine Gruppen.',
   'account.sessions.heading': 'Sitzungen',
-  'account.sessions.hint': 'Beendet die Anmeldung auf allen anderen Geräten. Dieses Gerät bleibt angemeldet.',
+  'account.sessions.hint':
+    'Beendet die Anmeldung auf allen anderen Geräten. Dieses Gerät bleibt angemeldet.',
   'account.sessions.revoke': 'Andere Sitzungen widerrufen',
-  'account.sessions.confirm': 'Alle anderen Sitzungen werden beendet. Dort musst du dich neu anmelden.',
+  'account.sessions.confirm':
+    'Alle anderen Sitzungen werden beendet. Dort musst du dich neu anmelden.',
   'account.sessions.done': '{n} Sitzungen beendet.',
 } as const;

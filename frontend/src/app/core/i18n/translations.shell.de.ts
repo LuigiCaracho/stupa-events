@@ -25,7 +25,8 @@ export const shellDe = {
   'notFound.heading': 'Seite nicht gefunden',
   'notFound.body': 'Diese Seite gibt es nicht oder du hast keinen Zugriff.',
   'home.heading': 'Veranstaltungen der Hochschule Reutlingen',
-  'home.body': 'Melde dich an, um Events zu planen, zur Freigabe einzureichen und zu veröffentlichen.',
+  'home.body':
+    'Melde dich an, um Events zu planen, zur Freigabe einzureichen und zu veröffentlichen.',
   'account.title': 'Konto',
   'account.name': 'Name',
   'account.email': 'E-Mail',

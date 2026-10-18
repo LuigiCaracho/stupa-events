@@ -1,14 +1,14 @@
 /** Copied from STUPA-Workflow@93c33d6 frontend/src/app/layout/nav.service.ts (rewritten) */
 /**
- * Navigation model of the signed-in frame. Rewritten from the workflow tool: the workflow entries are gone, M1 has Aufgaben,
- * Dossiers and Konto. The filter is UX only; route guards and the server stay authoritative.
+ * Navigation model of the signed-in frame. Rewritten from the workflow tool: the workflow entries are gone, M3 has Aufgaben,
+ * Pipeline, Dossiers, Verwaltung and Konto. The filter is UX only; route guards and the server stay authoritative.
  */
 import { Injectable, computed, inject } from '@angular/core';
 import { AuthService } from '@core/auth/auth.service';
 import type { TranslationKey } from '@core/i18n/translations';
 import type { IconName } from '@stupa-makers/ui-kit';
 
-export type NavKey = 'tasks' | 'dossiers' | 'admin' | 'account';
+export type NavKey = 'tasks' | 'pipeline' | 'dossiers' | 'admin' | 'account';
 
 /** One entry of the navigation rail and of the phone bar. */
 export interface NavItem {
@@ -23,8 +23,30 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: readonly NavItem[] = [
-  { key: 'tasks', path: '/aufgaben', labelKey: 'nav.tasks', icon: 'tasks', permissions: [], place: 'main' },
-  { key: 'dossiers', path: '/dossiers', labelKey: 'nav.dossiers', icon: 'kanban', permissions: [], place: 'main' },
+  {
+    key: 'tasks',
+    path: '/aufgaben',
+    labelKey: 'nav.tasks',
+    icon: 'tasks',
+    permissions: [],
+    place: 'main',
+  },
+  {
+    key: 'pipeline',
+    path: '/pipeline',
+    labelKey: 'nav.pipeline',
+    icon: 'kanban',
+    permissions: [],
+    place: 'main',
+  },
+  {
+    key: 'dossiers',
+    path: '/dossiers',
+    labelKey: 'nav.dossiers',
+    icon: 'list',
+    permissions: [],
+    place: 'main',
+  },
   {
     key: 'admin',
     path: '/verwaltung',
@@ -33,11 +55,24 @@ export const NAV_ITEMS: readonly NavItem[] = [
     permissions: ['taxonomy.manage', 'venue.manage', 'admin.mappings'],
     place: 'main',
   },
-  { key: 'account', path: '/konto', labelKey: 'nav.account', icon: 'user', permissions: [], place: 'end' },
+  {
+    key: 'account',
+    path: '/konto',
+    labelKey: 'nav.account',
+    icon: 'user',
+    permissions: [],
+    place: 'end',
+  },
 ];
 
-/** The entries of the phone bar, in bar order. Four at most, so all fit. */
-export const BOTTOM_BAR_KEYS: readonly NavKey[] = ['tasks', 'dossiers', 'admin', 'account'];
+/** The entries of the phone bar, in bar order. Verwaltung shows only with a permission, so five at most. */
+export const BOTTOM_BAR_KEYS: readonly NavKey[] = [
+  'tasks',
+  'pipeline',
+  'dossiers',
+  'admin',
+  'account',
+];
 
 @Injectable({ providedIn: 'root' })
 export class NavService {

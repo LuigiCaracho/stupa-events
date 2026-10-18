@@ -1,10 +1,19 @@
 /**
- * I05: dialog "Neues Event". Creates a dossier in state `idea` (T00) with title, organization,
- * start and optional end; the organization list is limited to the principal's own organizations.
+ * I05: dialog "Neues Event" or "Vorschlag". Creates a dossier in state `idea` (T00) with title, organization,
+ * start and optional end (the server adds two hours). A person without an organization of their own makes a proposal:
+ * the organization field is fixed and locked, the editorial staff assigns one later; five open proposals at most.
  */
-import { ChangeDetectionStrategy, Component, computed, effect, inject, output, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  output,
+  signal,
+} from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { problemOf } from '@core/api/problem';
 import { AuthService } from '@core/auth/auth.service';
 import { I18nService } from '@core/i18n/i18n.service';
@@ -27,7 +36,6 @@ import { categoryOptions as treeOptions } from '../api/category-options';
 import { problemMessage } from '../api/problem-message';
 
 const TZID = 'Europe/Berlin';
-const DEFAULT_LENGTH_MS = 2 * 60 * 60 * 1000;
 
 @Component({
   selector: 'app-new-event-dialog',
@@ -66,9 +74,14 @@ export class NewEventDialogComponent {
       }),
   });
 
+  protected readonly proposalOrg = new FormControl({
+    value: this.i18n.translate('new.proposalOrg'),
+    disabled: true,
+  });
+
   protected readonly form = inject(FormBuilder).nonNullable.group({
     title: ['', [Validators.required, Validators.maxLength(200)]],
-    organizationId: ['', [Validators.required]],
+    organizationId: [''],
     primaryCategoryId: [''],
     venueText: [''],
     startDate: ['', [Validators.required]],
@@ -85,6 +98,11 @@ export class NewEventDialogComponent {
       .map((o) => ({ value: o.id, label: o.name }));
   });
 
+  /** No organization to choose from: the dossier is a proposal. */
+  protected readonly proposal = computed(
+    () => !this.lookups.isLoading() && this.orgOptions().length === 0,
+  );
+
   protected readonly categoryOptions = computed<SelectFieldOption[]>(() =>
     treeOptions(this.lookups.hasValue() ? this.lookups.value().categories : []),
   );
@@ -99,6 +117,8 @@ export class NewEventDialogComponent {
   }
 
   protected invalid(name: 'title' | 'organizationId' | 'startDate' | 'startTime'): boolean {
+    if (name === 'organizationId')
+      return this.attempted() && !this.proposal() && !this.form.controls[name].value;
     return this.attempted() && this.form.controls[name].invalid;
   }
 
@@ -107,28 +127,30 @@ export class NewEventDialogComponent {
     return zonedToIso(startDate, startTime, TZID);
   }
 
-  private endIso(): string {
+  private endIso(): string | undefined {
     const { endDate, endTime } = this.form.getRawValue();
-    if (!endDate || !endTime) return new Date(Date.parse(this.startIso()) + DEFAULT_LENGTH_MS).toISOString().replace('.000Z', 'Z');
-    return zonedToIso(endDate, endTime, TZID);
+    return endDate && endTime ? zonedToIso(endDate, endTime, TZID) : undefined;
   }
 
   protected endBeforeStart(): boolean {
     const { startDate, startTime } = this.form.getRawValue();
-    return !!startDate && !!startTime && Date.parse(this.endIso()) < Date.parse(this.startIso());
+    const end = this.endIso();
+    return !!startDate && !!startTime && !!end && Date.parse(end) < Date.parse(this.startIso());
   }
 
   protected submit(): void {
     this.attempted.set(true);
-    if (this.form.invalid || this.endBeforeStart() || this.busy()) return;
     const v = this.form.getRawValue();
+    if (this.form.invalid || this.endBeforeStart() || this.busy()) return;
+    if (!this.proposal() && !v.organizationId) return;
+    const endsAt = this.endIso();
     const body: EventCreate = {
       title: v.title.trim(),
       startsAt: this.startIso(),
-      endsAt: this.endIso(),
+      ...(endsAt && { endsAt }),
       tzid: TZID,
       allDay: false,
-      organizationId: v.organizationId,
+      ...(!this.proposal() && { organizationId: v.organizationId }),
       ...(v.venueText.trim() && { venueText: v.venueText.trim() }),
       ...(v.primaryCategoryId && { primaryCategoryId: v.primaryCategoryId }),
     };
@@ -136,12 +158,19 @@ export class NewEventDialogComponent {
     this.api.create(body).subscribe({
       next: (event) => {
         this.busy.set(false);
-        this.toast.success(this.i18n.translate('new.created'));
+        this.toast.success(
+          this.i18n.translate(this.proposal() ? 'new.createdProposal' : 'new.created'),
+        );
         this.created.emit(event);
       },
       error: (err: unknown) => {
         this.busy.set(false);
-        this.toast.error(problemMessage(this.i18n, problemOf(err)));
+        const problem = problemOf(err);
+        this.toast.error(
+          problem.status === 404 && !this.proposal()
+            ? this.i18n.translate('new.errOrgScope')
+            : problemMessage(this.i18n, problem),
+        );
       },
     });
   }

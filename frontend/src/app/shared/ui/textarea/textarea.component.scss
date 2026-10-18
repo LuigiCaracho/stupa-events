@@ -1,0 +1,53 @@
+@use 'field' as f;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.fld {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.fld__box {
+  @include f.box;
+  align-items: stretch;
+}
+
+.fld__box--labelled {
+  @include f.box-labelled;
+}
+
+.fld__box--invalid {
+  @include f.box-invalid;
+}
+
+.fld__box--disabled {
+  @include f.box-disabled;
+}
+
+.fld__label {
+  @include f.label;
+}
+
+.fld__box:focus-within .fld__label {
+  @include f.label-focus;
+}
+
+.field__control {
+  @include f.control;
+  @include f.control-labelled;
+
+  & {
+    resize: vertical;
+    min-height: 6rem;
+    height: auto;
+  }
+}
+
+.fld__msg {
+  @include f.message;
+}

@@ -8,7 +8,13 @@
     <dt>{{ 'account.roles' | t }}</dt>
     <dd>{{ auth.roles().length ? auth.roles().join(', ') : ('account.noRoles' | t) }}</dd>
     <dt>{{ 'account.groups' | t }}</dt>
-    <dd>{{ auth.principal()?.groups?.length ? auth.principal()?.groups?.join(', ') : ('account.noGroups' | t) }}</dd>
+    <dd>
+      {{
+        auth.principal()?.groups?.length
+          ? auth.principal()?.groups?.join(', ')
+          : ('account.noGroups' | t)
+      }}
+    </dd>
     <dt>{{ 'account.organizations' | t }}</dt>
     <dd>
       @for (org of auth.organizations(); track org.slug) {

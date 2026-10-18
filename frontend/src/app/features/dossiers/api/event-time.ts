@@ -22,7 +22,14 @@ function zoneParts(ms: number, tz: string): Record<string, string> {
 
 function offsetMs(ms: number, tz: string): number {
   const p = zoneParts(ms, tz);
-  const asUtc = Date.UTC(+p['year'], +p['month'] - 1, +p['day'], +p['hour'], +p['minute'], +p['second']);
+  const asUtc = Date.UTC(
+    +p['year'],
+    +p['month'] - 1,
+    +p['day'],
+    +p['hour'],
+    +p['minute'],
+    +p['second'],
+  );
   return asUtc - Math.floor(ms / 1000) * 1000;
 }
 
@@ -61,5 +68,24 @@ export function formatEventTime(iso: string, tz: string): string {
     hour: '2-digit',
     minute: '2-digit',
     hourCycle: 'h23',
+  }).format(Date.parse(iso));
+}
+
+/** "Do., 5. Nov." in the zone of the event, for cards and rows. */
+export function formatEventDay(iso: string, tz: string): string {
+  return new Intl.DateTimeFormat('de-DE', {
+    timeZone: tz,
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  }).format(Date.parse(iso));
+}
+
+/** "01.11." for the "geplant ab" line of a card. */
+export function formatShortDate(iso: string, tz: string): string {
+  return new Intl.DateTimeFormat('de-DE', {
+    timeZone: tz,
+    day: '2-digit',
+    month: '2-digit',
   }).format(Date.parse(iso));
 }

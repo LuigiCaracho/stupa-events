@@ -18,7 +18,9 @@ export const ADMIN_TABS: readonly AdminTab[] = [
   { id: 'zuordnungen', labelKey: 'admin.tab.mappings', permission: 'admin.mappings' },
 ];
 
-export const ADMIN_PERMISSIONS: readonly string[] = [...new Set(ADMIN_TABS.map((t) => t.permission))];
+export const ADMIN_PERMISSIONS: readonly string[] = [
+  ...new Set(ADMIN_TABS.map((t) => t.permission)),
+];
 
 /** Redirects `/verwaltung` to the first tab the principal may use, or to `/forbidden`. */
 export const adminLandingGuard: CanActivateFn = () => {

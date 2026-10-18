@@ -21,20 +21,24 @@ export default [
         path: 'orte',
         data: { title: 'admin.tab.venues' },
         canActivate: [permissionGuard('venue.manage')],
-        loadComponent: () => import('./taxonomy/venues/venues.component').then((m) => m.VenuesComponent),
+        loadComponent: () =>
+          import('./taxonomy/venues/venues.component').then((m) => m.VenuesComponent),
       },
       {
         path: 'organisationen',
         data: { title: 'admin.tab.organizations' },
         canActivate: [permissionGuard('taxonomy.manage')],
         loadComponent: () =>
-          import('./taxonomy/organizations/organizations.component').then((m) => m.OrganizationsComponent),
+          import('./taxonomy/organizations/organizations.component').then(
+            (m) => m.OrganizationsComponent,
+          ),
       },
       {
         path: 'zuordnungen',
         data: { title: 'admin.tab.mappings' },
         canActivate: [permissionGuard('admin.mappings')],
-        loadComponent: () => import('./mappings/mappings.component').then((m) => m.MappingsComponent),
+        loadComponent: () =>
+          import('./mappings/mappings.component').then((m) => m.MappingsComponent),
       },
       { path: 'taxonomie', redirectTo: 'kategorien' },
       { path: 'gruppen', redirectTo: 'zuordnungen' },

@@ -1,0 +1,11 @@
+.ao {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.ao__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}

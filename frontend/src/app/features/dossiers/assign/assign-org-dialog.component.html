@@ -1,0 +1,25 @@
+<app-dialog
+  [open]="true"
+  [title]="'assign.title' | t"
+  [subtitle]="event().title"
+  [closeLabel]="'action.close' | t"
+  (closed)="closed.emit()"
+>
+  <div class="ao">
+    <app-select
+      [label]="'assign.org' | t"
+      [placeholder]="'new.orgPlaceholder' | t"
+      [clearable]="false"
+      [required]="true"
+      [options]="options()"
+      [error]="attempted() && !orgId() ? ('new.errOrg' | t) : ''"
+      [(value)]="orgId"
+    />
+  </div>
+  <div dialog-footer class="ao__footer">
+    <app-button variant="text" (click)="closed.emit()">{{ 'action.cancel' | t }}</app-button>
+    <app-button variant="fill" [loading]="busy()" (click)="submit()">{{
+      'assign.submit' | t
+    }}</app-button>
+  </div>
+</app-dialog>

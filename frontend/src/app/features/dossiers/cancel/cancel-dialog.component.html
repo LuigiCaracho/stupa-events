@@ -1,0 +1,68 @@
+<app-dialog
+  [open]="true"
+  [title]="'cancel.title' | t"
+  [subtitle]="event().title"
+  [closeLabel]="'action.close' | t"
+  (closed)="closed.emit()"
+>
+  <div class="cd">
+    <app-segmented
+      [ariaLabel]="'cancel.modeLabel' | t"
+      [options]="modeOptions()"
+      [value]="mode()"
+      (valueChange)="mode.set($any($event))"
+    />
+    <app-input
+      [label]="'cancel.reason' | t"
+      [hint]="'cancel.reasonHint' | t"
+      [required]="true"
+      [error]="
+        attempted() && error() === 'reason'
+          ? ('cancel.errReason' | t)
+          : error() === 'reasonLong'
+            ? ('transition.noteTooLong' | t)
+            : ''
+      "
+      [ngModel]="reason()"
+      (ngModelChange)="reason.set($event)"
+    />
+    <app-select
+      [label]="'cancel.publicReason' | t"
+      [clearable]="false"
+      [options]="codeOptions()"
+      [value]="code()"
+      (valueChange)="code.set($any($event))"
+    />
+    @if (mayWriteText()) {
+      <app-input
+        [label]="'cancel.publicText' | t"
+        [hint]="'cancel.publicTextHint' | t: { max: textMax }"
+        [error]="error() === 'publicText' ? ('cancel.errPublicText' | t: { max: textMax }) : ''"
+        [ngModel]="publicText()"
+        (ngModelChange)="publicText.set($event)"
+      />
+    }
+    @if (mode() === 'postpone') {
+      @if (mayMove()) {
+        <app-datetime-field
+          [dateLabel]="'cancel.newDate' | t"
+          [timeLabel]="'cancel.newTime' | t"
+          [hint]="'cancel.newDateHint' | t"
+          [error]="error() === 'newDate' ? ('cancel.errNewDate' | t) : ''"
+          [(date)]="newDate"
+          [(time)]="newTime"
+        />
+      } @else {
+        <p class="cd__muted">{{ 'cancel.newDateFollows' | t }}</p>
+      }
+    }
+    <app-note>{{ 'cancel.preview' | t: { status: preview() } }}</app-note>
+    <p class="cd__muted">{{ 'cancel.subscribers' | t }}</p>
+  </div>
+  <div dialog-footer class="cd__footer">
+    <app-button variant="text" (click)="closed.emit()">{{ 'action.cancel' | t }}</app-button>
+    <app-button variant="danger" [loading]="busy()" (click)="submit()">
+      {{ (mode() === 'cancel' ? 'cancel.submitCancel' : 'cancel.submitPostpone') | t }}
+    </app-button>
+  </div>
+</app-dialog>

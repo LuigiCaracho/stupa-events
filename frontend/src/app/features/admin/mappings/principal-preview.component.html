@@ -6,14 +6,20 @@
   <p class="pp__muted">{{ 'admin.preview.empty' | t }}</p>
 } @else if (people.hasValue()) {
   <table class="pp__table">
-    <caption class="pp__caption">{{ 'admin.preview.title' | t }}</caption>
+    <caption class="pp__caption">
+      {{
+        'admin.preview.title' | t
+      }}
+    </caption>
     <thead>
       <tr>
         <th scope="col">{{ 'admin.col.name' | t }}</th>
         <th scope="col">{{ 'admin.col.email' | t }}</th>
         <th scope="col">{{ 'admin.col.lastLogin' | t }}</th>
         <th scope="col">{{ 'admin.col.sessions' | t }}</th>
-        <th scope="col"><span class="pp__sr">{{ 'admin.col.actions' | t }}</span></th>
+        <th scope="col">
+          <span class="pp__sr">{{ 'admin.col.actions' | t }}</span>
+        </th>
       </tr>
     </thead>
     <tbody>
@@ -24,14 +30,21 @@
           <td>{{ person.lastLogin | ldate: 'medium' }}</td>
           <td>{{ person.sessionCount }}</td>
           <td class="pp__end">
-            <app-button variant="danger" size="sm" (click)="target.set(person)">{{ 'admin.revoke' | t }}</app-button>
+            <app-button variant="danger" size="sm" (click)="target.set(person)">{{
+              'admin.revoke' | t
+            }}</app-button>
           </td>
         </tr>
       }
     </tbody>
   </table>
   @if (people.value().total > people.value().items.length) {
-    <p class="pp__muted">{{ 'admin.preview.more' | t: { shown: people.value().items.length, total: people.value().total } }}</p>
+    <p class="pp__muted">
+      {{
+        'admin.preview.more'
+          | t: { shown: people.value().items.length, total: people.value().total }
+      }}
+    </p>
   }
 }
 
@@ -45,6 +58,8 @@
   <p>{{ 'admin.revoke.body' | t }}</p>
   <div dialog-footer class="pp__footer">
     <app-button variant="text" (click)="target.set(null)">{{ 'action.cancel' | t }}</app-button>
-    <app-button variant="danger" [loading]="busy()" (click)="confirm()">{{ 'admin.revoke' | t }}</app-button>
+    <app-button variant="danger" [loading]="busy()" (click)="confirm()">{{
+      'admin.revoke' | t
+    }}</app-button>
   </div>
 </app-dialog>

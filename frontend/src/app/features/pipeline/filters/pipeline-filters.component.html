@@ -1,0 +1,55 @@
+<div class="pf" role="search" [attr.aria-label]="'filters.label' | t">
+  <app-search-pill
+    class="pf__search"
+    [clearable]="true"
+    [placeholder]="'filters.search' | t"
+    [value]="filters().q"
+    (valueChange)="set('q', $event)"
+  />
+  <div class="pf__chips">
+    <app-filter-select
+      [label]="'filters.org' | t"
+      [options]="orgOptions()"
+      [active]="!!filters().organization"
+      [value]="filters().organization"
+      (valueChange)="set('organization', $event)"
+    />
+    <app-filter-select
+      [label]="'filters.category' | t"
+      [options]="categoryOptions()"
+      [active]="!!filters().category"
+      [value]="filters().category"
+      (valueChange)="set('category', $event)"
+    />
+    <app-filter-select
+      [label]="'filters.period' | t"
+      [options]="rangeOptions()"
+      [active]="!!filters().range"
+      [value]="filters().range"
+      (valueChange)="set('range', $any($event))"
+    />
+    <button
+      type="button"
+      class="chip"
+      [class.on]="filters().mine"
+      [attr.aria-pressed]="filters().mine"
+      (click)="set('mine', !filters().mine)"
+    >
+      {{ 'filters.mine' | t }}
+    </button>
+    @if (count() > 0) {
+      <app-button variant="text" size="sm" (click)="reset()">{{
+        'dossiers.resetFilters' | t
+      }}</app-button>
+    }
+  </div>
+  @if (showView()) {
+    <app-segmented
+      class="pf__view"
+      [ariaLabel]="'filters.viewLabel' | t"
+      [options]="viewOptions()"
+      [value]="filters().view"
+      (valueChange)="setView($event)"
+    />
+  }
+</div>

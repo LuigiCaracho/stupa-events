@@ -21,7 +21,9 @@ export type CategoryRow = AdminCategory & { depth: number };
  */
 export function categoryRows(categories: readonly AdminCategory[]): CategoryRow[] {
   const ids = new Set(categories.map((c) => c.id));
-  const children = byParent(categories, (c) => (c.parentId && ids.has(c.parentId) ? c.parentId : ''));
+  const children = byParent(categories, (c) =>
+    c.parentId && ids.has(c.parentId) ? c.parentId : '',
+  );
   const walk = (parent: string, depth: number): CategoryRow[] =>
     (children.get(parent) ?? []).flatMap((c) => [{ ...c, depth }, ...walk(c.id, depth + 1)]);
   return walk('', 0);
@@ -39,6 +41,9 @@ export function categoryRows(categories: readonly AdminCategory[]): CategoryRow[
  */
 export function descendantIds(categories: readonly AdminCategory[], rootId: string): Set<string> {
   const children = byParent(categories, (c) => c.parentId ?? '');
-  const collect = (id: string): string[] => [id, ...(children.get(id) ?? []).flatMap((c) => collect(c.id))];
+  const collect = (id: string): string[] => [
+    id,
+    ...(children.get(id) ?? []).flatMap((c) => collect(c.id)),
+  ];
   return new Set(collect(rootId));
 }

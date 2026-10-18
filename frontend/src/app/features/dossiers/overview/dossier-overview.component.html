@@ -1,0 +1,46 @@
+@if (changeLine()) {
+  <app-note kind="warn" class="do__changes">
+    <span>{{ changeLine() }}</span>
+    <span class="do__changeActions">
+      <app-button variant="tonal" size="sm" [disabled]="busy()" (click)="revert.emit()">{{
+        'tasks.revert' | t
+      }}</app-button>
+      <app-button variant="text" size="sm" [disabled]="busy()" (click)="acknowledge.emit()">{{
+        'tasks.acknowledge' | t
+      }}</app-button>
+    </span>
+  </app-note>
+}
+@if (lockKey(); as key) {
+  <app-note>{{ key | t }}</app-note>
+}
+@if (event().imageException; as ex) {
+  <app-note>{{ 'detail.exceptionGranted' | t: { reason: ex.reason } }}</app-note>
+}
+@if (guards(); as g) {
+  <app-guard-list
+    class="do__guards"
+    headingId="dossier-guards"
+    [reasons]="g.reasons"
+    (fix)="fix.emit($event)"
+  />
+} @else if (guardsLoading()) {
+  <app-skeleton variant="lines" />
+}
+@if (readOnly()) {
+  <app-field-group class="do__fields">
+    <app-field-row [label]="'detail.when' | t" [value]="when()" />
+    <app-field-row
+      [label]="'detail.venue' | t"
+      [value]="event().venue?.name ?? event().venueText ?? ('detail.none' | t)"
+    />
+    <app-field-row
+      [label]="'detail.category' | t"
+      [value]="event().primaryCategory?.name ?? ('detail.none' | t)"
+    />
+    <app-field-row
+      [label]="'detail.summary' | t"
+      [value]="event().summary ?? ('detail.none' | t)"
+    />
+  </app-field-group>
+}

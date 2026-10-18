@@ -6,12 +6,17 @@
     <ul class="gl__list rowgroup">
       @for (reason of sorted(); track $index) {
         <li class="gl__row" [attr.data-code]="reason.code">
-          <app-status-text class="gl__sev" [kind]="reason.severity === 'blocker' ? 'error' : 'warn'">
+          <app-status-text
+            class="gl__sev"
+            [kind]="reason.severity === 'blocker' ? 'error' : 'warn'"
+          >
             {{ (reason.severity === 'blocker' ? 'guards.blocker' : 'guards.warning') | t }}
           </app-status-text>
           <span class="gl__text">{{ text(reason) }}</span>
           @if (fixKey(reason); as key) {
-            <app-button variant="tonal" size="sm" (click)="fix.emit(reason)">{{ key | t }}</app-button>
+            <app-button variant="tonal" size="sm" (click)="fix.emit(reason)">{{
+              key | t
+            }}</app-button>
           }
         </li>
       }

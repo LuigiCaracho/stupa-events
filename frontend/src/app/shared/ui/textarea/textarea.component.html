@@ -1,0 +1,27 @@
+<div class="fld">
+  <div
+    class="fld__box fld__box--labelled"
+    [class.fld__box--invalid]="!!error()"
+    [class.fld__box--disabled]="disabled()"
+  >
+    <label class="fld__label" [for]="id()">{{ label() }}</label>
+    <textarea
+      class="field__control"
+      [id]="id()"
+      [rows]="rows()"
+      [value]="value()"
+      [disabled]="disabled()"
+      [attr.aria-invalid]="error() ? 'true' : null"
+      [attr.aria-describedby]="describedBy()"
+      [attr.required]="required() ? '' : null"
+      (input)="onInput($event)"
+      (blur)="onTouched()"
+    ></textarea>
+  </div>
+  @if (hint() && !error()) {
+    <p class="fld__msg text-muted" [id]="id() + '-hint'">{{ hint() }}</p>
+  }
+  @if (error()) {
+    <p class="fld__msg text-danger" [id]="id() + '-error'" role="alert">{{ error() }}</p>
+  }
+</div>

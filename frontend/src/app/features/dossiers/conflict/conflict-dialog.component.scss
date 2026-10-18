@@ -1,0 +1,73 @@
+.cf {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.cf__head,
+.cf__row {
+  display: grid;
+  grid-template-columns: minmax(6rem, 1fr) repeat(3, minmax(0, 2fr));
+  gap: var(--space-3);
+}
+
+.cf__head {
+  padding: 0 var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--fs-small);
+  font-weight: var(--fw-semibold);
+}
+
+.cf__rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cf__row {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-3);
+}
+
+.cf__label {
+  font-weight: var(--fw-semibold);
+}
+
+.cf__cell {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.cf__choice {
+  grid-column: 2 / -1;
+}
+
+.cf__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+@media (max-width: 599px) {
+  .cf__head {
+    display: none;
+  }
+
+  .cf__row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-1);
+  }
+
+  .cf__cell::before {
+    content: attr(data-label) ': ';
+    color: var(--color-text-muted);
+  }
+
+  .cf__choice {
+    grid-column: auto;
+  }
+}

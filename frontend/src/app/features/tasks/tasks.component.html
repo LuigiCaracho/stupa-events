@@ -1,44 +1,92 @@
 <app-page-header [title]="'tasks.title' | t">
-  <app-button actions class="ts__new" variant="fill" (click)="openNew()">{{ 'dossiers.new' | t }}</app-button>
+  <app-button actions class="ts__new" variant="fill" (click)="openNew()">{{
+    'dossiers.new' | t
+  }}</app-button>
 </app-page-header>
 
-@if (events.error()) {
+@if (tasks.error() && !tasks.hasValue()) {
   <app-note kind="error" role="alert">{{ 'tasks.loadFailed' | t }}</app-note>
-} @else if (events.isLoading() && !events.hasValue()) {
+} @else if (!value()) {
   <app-skeleton variant="items" [count]="4" />
-} @else if (awaiting().length === 0 && mine().length === 0) {
+} @else if (empty()) {
   <app-empty-state plain [heading]="'tasks.empty' | t" [body]="'tasks.emptyHint' | t">
     <app-button variant="fill" (click)="openNew()">{{ 'dossiers.new' | t }}</app-button>
   </app-empty-state>
 } @else {
-  @if (awaiting().length > 0) {
-    <app-card class="ts__card" [heading]="'tasks.awaiting' | t" [headingLevel]="2">
-      <app-badge card-header>{{ awaiting().length }}</app-badge>
-      <ul class="ts__list rowgroup">
-        @for (event of awaiting(); track event.id) {
-          <li>
-            <app-list-item [title]="event.title" [sub]="sub(event)" [link]="['/dossiers', event.id]">
-              <app-status-text status [kind]="status(event).kind">{{ status(event).key | t }}</app-status-text>
-            </app-list-item>
-          </li>
+  @let v = value()!;
+  @if (v.awaitingReview.length > 0) {
+    <app-task-section
+      heading="tasks.awaiting"
+      [count]="v.counts.awaitingReview"
+      [cards]="v.awaitingReview"
+      [showDeadline]="true"
+    >
+      <ng-template #row let-card>
+        @if (card.fourEyesBlocked) {
+          <span class="ts__hint">{{ 'tasks.fourEyes' | t }}</span>
         }
-      </ul>
-    </app-card>
+      </ng-template>
+    </app-task-section>
   }
-  @if (mine().length > 0) {
-    <app-card class="ts__card" [heading]="'tasks.mine' | t" [headingLevel]="2">
-      <app-badge card-header>{{ mine().length }}</app-badge>
-      <ul class="ts__list rowgroup">
-        @for (event of mine(); track event.id) {
-          <li>
-            <app-list-item [title]="event.title" [sub]="sub(event)" [link]="['/dossiers', event.id]">
-              <app-status-text status [kind]="status(event).kind">{{ status(event).key | t }}</app-status-text>
-            </app-list-item>
-          </li>
-        }
-      </ul>
-    </app-card>
+  @if (v.returned.length > 0) {
+    <app-task-section heading="tasks.returned" [count]="v.counts.returned" [cards]="v.returned">
+      <ng-template #row let-card>
+        <span class="ts__hint">{{ returnedLine(card) }}</span>
+      </ng-template>
+    </app-task-section>
   }
+  @if (v.due.length > 0) {
+    <app-task-section
+      heading="tasks.due"
+      [count]="v.counts.due"
+      [cards]="v.due"
+      [showDeadline]="true"
+    />
+  }
+  @if (v.mine.length > 0) {
+    <app-task-section
+      heading="tasks.mine"
+      [count]="v.counts.mine"
+      [cards]="mineSorted()"
+      [showState]="true"
+    />
+  }
+  @if (v.followupOpen.length > 0) {
+    <app-task-section
+      heading="tasks.followup"
+      [count]="v.counts.followupOpen"
+      [cards]="v.followupOpen"
+    />
+  }
+  @if (v.changedAfterPublish.length > 0) {
+    <app-task-section
+      heading="tasks.changed"
+      [count]="v.counts.changedAfterPublish"
+      [cards]="v.changedAfterPublish"
+    >
+      <ng-template #row let-card>
+        <app-button variant="tonal" size="sm" (click)="reverting.set(card)">{{
+          'tasks.revert' | t
+        }}</app-button>
+        <app-button variant="text" size="sm" [loading]="busy()" (click)="acknowledge(card)">{{
+          'tasks.acknowledge' | t
+        }}</app-button>
+      </ng-template>
+    </app-task-section>
+  }
+}
+
+@if (reverting(); as card) {
+  <app-reason-dialog
+    heading="tasks.revertTitle"
+    [subtitle]="card.title"
+    label="tasks.revertNote"
+    confirm="tasks.revert"
+    [required]="false"
+    [busy]="busy()"
+    (submitted)="revert($event)"
+    (closed)="reverting.set(null)"
+  />
 }
 
 <app-button

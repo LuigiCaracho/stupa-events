@@ -13,7 +13,9 @@ import { ButtonComponent } from '@stupa-makers/ui-kit';
     <section class="home">
       <h1>{{ 'home.heading' | t }}</h1>
       <p>{{ 'home.body' | t }}</p>
-      <app-button variant="fill" size="lg" (click)="auth.login()">{{ 'login.button' | t }}</app-button>
+      <app-button variant="fill" size="lg" (click)="auth.login()">{{
+        'login.button' | t
+      }}</app-button>
     </section>
   `,
   styles: `

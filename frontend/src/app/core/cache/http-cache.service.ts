@@ -57,9 +57,7 @@ export class HttpCacheService {
     for (const key of [...this.entries.keys()]) {
       const [keyPath] = key.split('?');
       const related =
-        keyPath === path ||
-        keyPath.startsWith(`${path}/`) ||
-        path.startsWith(`${keyPath}/`);
+        keyPath === path || keyPath.startsWith(`${path}/`) || path.startsWith(`${keyPath}/`);
       if (related) this.entries.delete(key);
     }
   }

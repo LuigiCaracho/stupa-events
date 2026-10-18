@@ -1,6 +1,8 @@
 <!-- Copied from STUPA-Workflow@93c33d6 frontend/src/app/shared/ui/sheet-bar/sheet-bar.component.html -->
 @if (slotKicker()) {
-  <div class="sheet-bar__kicker sheet-bar__kicker--slot"><ng-content select="[appSheetBarKicker]" /></div>
+  <div class="sheet-bar__kicker sheet-bar__kicker--slot">
+    <ng-content select="[appSheetBarKicker]" />
+  </div>
 } @else if (kickerId(); as id) {
   <h2 class="sheet-bar__kicker ell" [id]="id" [title]="kicker() ?? ''">{{ kicker() }}</h2>
 } @else {

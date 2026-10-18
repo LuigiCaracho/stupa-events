@@ -21,7 +21,11 @@ import {
 } from '@stupa-makers/ui-kit';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { KIND_KEYS, optionsOf } from '../../admin-labels';
-import { type AdminOrganization, ORGANIZATION_KINDS, type OrganizationKind } from '../../api/admin.models';
+import {
+  type AdminOrganization,
+  ORGANIZATION_KINDS,
+  type OrganizationKind,
+} from '../../api/admin.models';
 import { TaxonomyApi } from '../../api/taxonomy-api.service';
 import { TaxonomyTable } from '../taxonomy-table';
 
@@ -118,20 +122,35 @@ export class OrganizationsComponent extends TaxonomyTable<AdminOrganization, Org
     { key: 'instagram', label: this.i18n.translate('admin.col.instagram'), width: '14rem' },
     { key: 'trusted', label: this.i18n.translate('admin.col.trusted'), width: '9rem' },
     { key: 'active', label: this.i18n.translate('admin.col.active'), width: '7rem' },
-    { key: 'actions', label: this.i18n.translate('admin.col.actions'), sticky: 'end', card: 'actions' },
+    {
+      key: 'actions',
+      label: this.i18n.translate('admin.col.actions'),
+      sticky: 'end',
+      card: 'actions',
+    },
   ];
 
   protected readonly kindOptions = optionsOf(this.i18n, ORGANIZATION_KINDS, KIND_KEYS);
   protected readonly kindKeys = KIND_KEYS;
 
   protected readonly categoryOptions = computed<SelectFieldOption[]>(() =>
-    (this.categories.hasValue() ? this.categories.value() : []).map((c) => ({ value: c.id, label: c.name })),
+    (this.categories.hasValue() ? this.categories.value() : []).map((c) => ({
+      value: c.id,
+      label: c.name,
+    })),
   );
   protected readonly categoryName = computed(
-    () => new Map((this.categories.hasValue() ? this.categories.value() : []).map((c) => [c.id, c.name] as const)),
+    () =>
+      new Map(
+        (this.categories.hasValue() ? this.categories.value() : []).map(
+          (c) => [c.id, c.name] as const,
+        ),
+      ),
   );
 
-  protected readonly rows = computed(() => (this.isNew() ? [DRAFT, ...this.loaded()] : this.loaded()));
+  protected readonly rows = computed(() =>
+    this.isNew() ? [DRAFT, ...this.loaded()] : this.loaded(),
+  );
 
   protected override startNew(): void {
     super.startNew();
@@ -193,6 +212,8 @@ export class OrganizationsComponent extends TaxonomyTable<AdminOrganization, Org
       active: v.active,
       ...(this.canTrust() && { trusted: v.trusted }),
     };
-    return id === null ? this.api.createOrganization({ ...body, slug: v.slug }) : this.api.updateOrganization(id, body);
+    return id === null
+      ? this.api.createOrganization({ ...body, slug: v.slug })
+      : this.api.updateOrganization(id, body);
   }
 }

@@ -1,0 +1,112 @@
+<p class="sr-only" aria-live="polite" role="status">{{ announcement() }}</p>
+<p class="sr-only" aria-live="assertive" role="alert">{{ refusal() }}</p>
+<p class="sr-only" [id]="'bv-hint'">{{ 'board.hint' | t }}</p>
+
+@if (phone()) {
+  <div class="bv bv--phone">
+    <app-tabs
+      class="bv__tabs"
+      idPrefix="bv"
+      [ariaLabel]="'board.label' | t"
+      [tabs]="tabs()"
+      [active]="phoneKey()"
+      (activeChange)="selectColumn($event)"
+    />
+    <div
+      #pager
+      class="bv__pager"
+      (scroll)="onPagerScroll()"
+      (scrollend)="onPagerRest()"
+      (pointerdown)="onPagerTouch()"
+    >
+      @for (col of columns(); track col.key) {
+        <div
+          class="bv__page"
+          role="tabpanel"
+          [id]="'bv-panel-' + col.key"
+          [attr.aria-labelledby]="'bv-tab-' + col.key"
+        >
+          <ul class="bv__cards" [attr.aria-label]="name(col.key)">
+            @for (card of col.items; track card.id) {
+              <li class="bv__item bv__item--phone" appLongPress (appLongPress)="menu.emit(card)">
+                <ng-container *ngTemplateOutlet="cardTpl(); context: ctx(card, col.key)" />
+                <button
+                  type="button"
+                  class="bv__menu"
+                  [attr.aria-label]="'board.cardMenu' | t: { title: card.title }"
+                  (click)="menu.emit(card)"
+                >
+                  <span aria-hidden="true">⋮</span>
+                </button>
+              </li>
+            } @empty {
+              <li class="bv__empty">{{ 'board.columnEmpty' | t }}</li>
+            }
+          </ul>
+          @if (col.truncated) {
+            <p class="bv__more">
+              {{ 'board.truncated' | t: { shown: col.items.length, total: col.total } }}
+            </p>
+          }
+        </div>
+      }
+    </div>
+  </div>
+} @else {
+  @for (e of epochs(); track e) {
+    <div class="bv" cdkDropListGroup>
+      @for (col of columns(); track col.key; let ci = $index) {
+        <section
+          class="bv__col"
+          [attr.data-col]="col.key"
+          [class.bv__col--deny]="denied(col.key)"
+          [class.bv__col--target]="isTarget(col.key)"
+          [attr.aria-labelledby]="'bv-col-' + col.key"
+        >
+          <header class="bv__head">
+            <h2 class="bv__name" [id]="'bv-col-' + col.key">
+              {{ name(col.key) }}
+              <span class="bv__count num">{{ col.total }}</span>
+            </h2>
+            @if (denied(col.key)) {
+              <span class="bv__deny">{{ 'board.notPossible' | t }}</span>
+            }
+          </header>
+          <ul
+            class="bv__cards"
+            cdkDropList
+            [cdkDropListData]="col.key"
+            [cdkDropListSortingDisabled]="true"
+            [cdkDropListEnterPredicate]="dropAllowed"
+            [attr.aria-label]="name(col.key)"
+            (cdkDropListDropped)="dropped($event)"
+          >
+            @for (card of col.items; track card.id) {
+              <li
+                class="bv__item"
+                cdkDrag
+                cdkDragPreviewClass="bv__preview"
+                [cdkDragStartDelay]="dragDelay"
+                [cdkDragData]="card"
+                (cdkDragStarted)="dragStarted(card, col.key)"
+                (cdkDragMoved)="dragMoved($event)"
+                (cdkDragEnded)="dragEnded()"
+                (keydown)="onKey($event, card, ci)"
+                (keyup)="onKeyUp($event)"
+              >
+                <ng-container *ngTemplateOutlet="cardTpl(); context: ctx(card, col.key)" />
+              </li>
+            } @empty {
+              <li class="bv__empty">{{ 'board.columnEmpty' | t }}</li>
+            }
+          </ul>
+          @if (col.truncated) {
+            <p class="bv__more">
+              {{ 'board.truncated' | t: { shown: col.items.length, total: col.total } }}
+            </p>
+          }
+        </section>
+      }
+    </div>
+  }
+}
