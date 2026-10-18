@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Compose smoke test (PLAN 12.4): /api/health answers 200 and every nginx location carries the
-# Content-Security-Policy. Probes a running stack, starts nothing.
+# Compose smoke test (PLAN 12.4): /api/health answers 200, every nginx location carries the
+# Content-Security-Policy, and each of the five security headers appears exactly once per path
+# (the API sets them too, nginx hides its copy). Probes a running stack, starts nothing.
 # Usage: deploy/smoke.sh [base-url]   (default http://127.0.0.1:8081)
 set -euo pipefail
 
@@ -25,12 +26,22 @@ paths=(
 status="$(curl -s -o /dev/null -w '%{http_code}' "${base}/api/health")"
 [[ "${status}" == 200 ]] || { echo "/api/health: ${status}" >&2; exit 1; }
 
+security_headers=(content-security-policy permissions-policy referrer-policy x-content-type-options x-frame-options)
+
 failed=0
 for path in "${paths[@]}"; do
-  if ! curl -s -o /dev/null -D - "${base}${path}" | grep -qi '^content-security-policy:.*default-src'; then
+  headers="$(curl -s -o /dev/null -D - "${base}${path}")"
+  if ! grep -qi '^content-security-policy:.*default-src' <<<"${headers}"; then
     echo "no CSP on ${path}" >&2
     failed=1
   fi
+  for name in "${security_headers[@]}"; do
+    count="$(grep -ci "^${name}:" <<<"${headers}" || true)"
+    if [[ "${count}" != 1 ]]; then
+      echo "${name} appears ${count} times on ${path}" >&2
+      failed=1
+    fi
+  done
 done
 [[ "${failed}" == 0 ]] && echo "smoke ok (${#paths[@]} locations)"
 exit "${failed}"

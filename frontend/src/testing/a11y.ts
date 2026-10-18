@@ -11,7 +11,8 @@
  * `styles/contrast.spec.ts` checks the contrasts against the CD tokens instead, with a
  * deterministic result.
  */
-import { axe, type AxeResults, type JestAxeConfigureOptions } from 'jest-axe';
+import type { AxeResults } from 'axe-core';
+import { axe, type JestAxeConfigureOptions } from 'jest-axe';
 
 export const A11Y_RULES: JestAxeConfigureOptions = {
   rules: {
@@ -34,8 +35,6 @@ export function runAxe(
   extraRules?: JestAxeConfigureOptions,
 ): Promise<AxeResults> {
   return axe(target as Element, {
-    ...A11Y_RULES,
-    ...extraRules,
-    rules: { ...A11Y_RULES.rules, ...extraRules?.rules },
+    rules: Object.assign({}, A11Y_RULES.rules, extraRules?.rules),
   });
 }

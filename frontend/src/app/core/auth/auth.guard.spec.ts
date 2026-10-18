@@ -15,6 +15,7 @@ import { isObservable, type Observable } from 'rxjs';
 import { authGuard } from './auth.guard';
 import { ToastService } from '@stupa-makers/ui-kit';
 import type { Principal } from '../api/models';
+import { FSI_MEMBERSHIP } from '../../../testing/event-fixtures';
 import {
   createLocationMock,
   provideLocationMock,
@@ -28,7 +29,7 @@ const MEMBER: Principal = {
   roles: ['organizer'],
   permissions: ['event.read'],
   groups: ['events-fsi-organizer'],
-  organizations: [{ slug: 'fsi', role: 'organizer' }],
+  organizations: [FSI_MEMBERSHIP],
 };
 
 describe('authGuard', () => {

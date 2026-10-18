@@ -498,7 +498,7 @@ describe('SelectFieldComponent', () => {
     });
 
     it('shows the popover in the top layer and scrolls the active row into view', async () => {
-      const proto = HTMLElement.prototype as HTMLElement & {
+      const proto = HTMLElement.prototype as unknown as {
         showPopover?: () => void;
         scrollIntoView?: (arg?: ScrollIntoViewOptions) => void;
       };

@@ -8,6 +8,7 @@ import {
 import { AuthService, loginReturnTo } from './auth.service';
 import { IS_INSTALLED_APP } from '../browser/installed-app.token';
 import type { Principal } from '../api/models';
+import { FSI_MEMBERSHIP } from '../../../testing/event-fixtures';
 import {
   createLocationMock,
   provideLocationMock,
@@ -21,7 +22,7 @@ const PRINCIPAL: Principal = {
   roles: ['organizer'],
   permissions: ['event.create'],
   groups: ['events-fsi-organizer'],
-  organizations: [{ slug: 'fsi', role: 'organizer' }],
+  organizations: [FSI_MEMBERSHIP],
 };
 
 describe('AuthService', () => {
@@ -170,7 +171,7 @@ describe('AuthService', () => {
     auth.ensureLoaded().subscribe();
     http.expectOne('/api/auth/me').flush(PRINCIPAL);
     expect(auth.userId()).toBe('1');
-    expect(auth.organizations()).toEqual([{ slug: 'fsi', role: 'organizer' }]);
+    expect(auth.organizations()).toEqual([FSI_MEMBERSHIP]);
     expect(auth.isAdmin()).toBe(false);
   });
 

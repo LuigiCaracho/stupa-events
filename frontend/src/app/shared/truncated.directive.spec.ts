@@ -46,7 +46,7 @@ describe('TruncatedDirective', () => {
   });
 
   it('measures again when the box changes its size', async () => {
-    let notify: (() => void) | null = null;
+    let notify = null as (() => void) | null;
     const disconnect = jest.fn();
     const original = (globalThis as { ResizeObserver?: unknown }).ResizeObserver;
     (globalThis as { ResizeObserver?: unknown }).ResizeObserver = class {
