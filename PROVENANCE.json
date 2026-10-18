@@ -95,6 +95,11 @@
       "mode": "U"
     },
     {
+      "path": "backend/app/modules/admin/membership_sync.py",
+      "source": "backend/app/modules/admin/membership_sync.py",
+      "mode": "U"
+    },
+    {
       "path": "backend/app/modules/audit/actions.py",
       "source": "backend/app/modules/audit/actions.py",
       "mode": "U"

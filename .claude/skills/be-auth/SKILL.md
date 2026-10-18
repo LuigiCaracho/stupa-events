@@ -1,6 +1,6 @@
 ---
 name: be-auth
-description: Backend identity and access for STUPA Events. OIDC login with PKCE against Authentik or the Keycloak dev IdP, server-side sessions, group-to-role mapping (parse_group, group_mapping), Principal.has, org_ids_for, require_* gates, /auth/me and CSRF. Use when working on login, callback, logout, sessions, roles, permissions, scope filtering or the 404 rule.
+description: Backend identity and access for STUPA Events. OIDC login with PKCE against Authentik or the Keycloak dev IdP, server-side sessions, group-to-role mapping (group_mapping only, effective_grants), membership_sync, session revoke, Principal.has, org_ids_for, require_* gates, /auth/me and CSRF. Use when working on login, callback, logout, sessions, roles, permissions, scope filtering or the 404 rule.
 ---
 
 <!-- Copied from STUPA-Workflow@93c33d6 .claude/skills/be-auth/SKILL.md (adapted). -->
@@ -17,12 +17,14 @@ magic-link and OAuth-AS parts.
 | `auth/oidc.py` | discovery (`{issuer}/.well-known/openid-configuration`), PKCE, code exchange, ID-token check |
 | `auth/sessions.py` | opaque `sid` in a signed HttpOnly cookie; the row in `auth_session` is the truth |
 | `auth/session_renewal.py` | refresh against the IdP every `SESSION_REVALIDATE_HOURS` (4), grace 24 h |
-| `auth/rbac.py` | `resolve_principal`: `group_mapping` first, then `parse_group`; approvers of untrusted orgs drop to organizer |
+| `auth/rbac.py` | `effective_grants(db, groups)` reads `group_mapping` only; `resolve_principal` uses it; approvers of untrusted orgs drop to organizer |
+| `admin/membership_sync.py` | writes `membership` (a projection, never read for decisions) after login, revalidation, mapping and trust changes |
+| `admin/mappings*.py` | `validate_mapping` (pure), `MappingService`, `/api/admin/group-mappings` incl. `defaults` |
 | `auth/principal.py` | `Principal.has(perm, org_id=...)`, `org_slugs_with`, `bind_org_ids` (leaf module, no `app.deps` import) |
-| `auth/router.py` | `GET /api/auth/login`, `GET /api/auth/callback`, `POST /api/auth/logout`, `GET /api/auth/me` |
-| `shared/permissions.py` | role catalog `ROLE_PERMISSIONS`, `parse_group`, `grants_from_groups`, `permissions_of` |
+| `auth/router.py` | `GET /api/auth/login`, `GET /api/auth/callback`, `POST /api/auth/logout`, `GET /api/auth/me`, `POST /api/auth/sessions/revoke` |
+| `shared/permissions.py` | role catalog `ROLE_PERMISSIONS`, `permissions_of`; `parse_group`, `default_mappings` only generate the proposal of `…/defaults` |
 | `app/deps.py` | `get_current_principal`, gates `require_principal`, `require_any_scope`, `require_any_permission` |
-| `orgs/scope.py` | `bind` (slug to id, one query per request), `org_ids_for`, `readable_org_ids` |
+| `orgs/scope.py` | `bind` (the resolver binds the ids already), `org_refs` (rows for `/auth/me`), `org_ids_for`, `readable_org_ids` |
 | `app/middleware.py` | `CsrfMiddleware` (double submit `XSRF-TOKEN` / `X-XSRF-TOKEN`, skips `/api/public/`) |
 
 ## Data model
@@ -30,17 +32,26 @@ magic-link and OAuth-AS parts.
 `principal(id, sub, email, display_name, oidc_groups, last_login, active, bootstrap_admin)` and
 `auth_session(sid, principal_id, expires_at, refresh_token, id_token, revalidated_at)` from `0001_baseline`;
 `group_mapping(oidc_group UNIQUE, role, organization_id NULL)` and `organization(slug, trusted, ...)` from
-`0002_events_core`. Users are referenced as OIDC `sub` text in event columns (`created_by`, `submitted_by`,
+`0002_events_core`; `membership(principal_id, organization_id, role)` and `venue` from `0003_roles_taxonomy`. Users are referenced as OIDC `sub` text in event columns (`created_by`, `submitted_by`,
 `approved_by`, audit `actor_id`), not as FK.
 
 ## API
 
-`GET /api/auth/me` returns `{sub, email, displayName, roles[], permissions[], groups[], organizations[{slug, role}]}`;
-401 `unauthorized` without a session. `organizations` comes from `parse_group` alone, without DB.
+`GET /api/auth/me` returns `{sub, email, displayName, roles[], permissions[], groups[], organizations[{slug, role,
+organizationId, name, short, trusted}]}`; 401 `unauthorized` without a session. The organizations come from one query
+(`org_refs`), `role` is the effective role (an approver of an untrusted org shows as `organizer`).
+`POST /api/auth/sessions/revoke` ends all other sessions of the caller; the admin ends all sessions of a person with
+`POST /api/admin/principals/{id}/sessions/revoke` (`admin.sessions.revoke`).
 
-Group grammar: `^events-(?P<org>[a-z0-9][a-z0-9-]*)-(?P<role>viewer|submitter|organizer|approver)$`, global
-`events-editor` (role `editor`), later `events-admin`, `events-stupa`. Names starting `events-system:` and
-anything else are dropped. The org always comes from the group name, never from the body or a query.
+Meaning of a group lives in `group_mapping` only (M2, D1). `POST /api/admin/group-mappings/defaults` creates the
+proposal: `events-admin|editor|stupa` and `events-<org>-viewer|submitter|organizer` (`-approver` only for trusted
+orgs). Names starting `events-system:` are dropped from the claim and refused by the API. The org always comes from
+the mapping row, never from the body or a query.
+
+Revalidation (4 h, grace 24 h): a refreshed ID token with an empty `groups` array withdraws all groups, a token
+without the claim keeps the cache. **Keycloak omits the claim for a user without any group**, so a user who loses
+their only group keeps access until the admin revokes the sessions. Real users always sit in `events-users`
+(PLAN 5.6), and the dev realm puts every test user there.
 
 ## Gotchas
 
@@ -55,12 +66,14 @@ anything else are dropped. The org always comes from the group name, never from 
   Containers use `host.docker.internal` plus the `/etc/hosts` line.
 - Keycloak sets `AUTH_SESSION_ID` with `Secure` even on http; browsers send it to localhost, scripted clients
   (httpx) do not. `backend/scripts/m1_acceptance.py` clears the flag before posting the login form.
-- Only `stupa` is `trusted` in M1, so `events-fsi-approver` acts as organizer.
-- Admin bypass (M2) never skips the hard guards `image_required` and `four_eyes`.
-- The realm users (`editor`, `organizer-fsi`, `submitter-fsi`, `organizer-makers`, password `password`) and the
-  client secret are throwaways; never reuse them in a real IdP.
+- Only `stupa` is `trusted`, so `events-fsi-approver` acts as organizer (the seed maps it on purpose; the API refuses such a row).
+- The admin bypass never skips the hard guards `image_required` and `four_eyes`.
+- The realm users (`editor`, `admin`, `stupa`, `organizer-fsi`, `approver-stupa`, `approver-fsi`, `viewer-fsi`,
+  `submitter-fsi`, `submitter-ekhg`, `organizer-makers`, `member`, password `password`) and the client secret are
+  throwaways; never reuse them in a real IdP. `scripts/keycloak_admin.py` syncs a running Keycloak with the realm file.
+- A test that needs a role writes a `group_mapping` row (`Api.add_user` in the harness); a group name alone grants nothing.
 
-**Tests:** `tests/unit/auth/*`, `tests/unit/test_route_authz_inventory.py` (every route has a gate or sits in the
+**Tests:** `tests/unit/auth/*`, `tests/unit/admin/*`, `tests/integration/admin/*`, `tests/unit/test_route_authz_inventory.py` (every route has a gate or sits in the
 public allowlist), `tests/integration/test_auth_db.py`, `test_rbac_db.py`, `tests/integration/events/test_rbac_matrix.py`.
 
 **Siblings:** `be-events` (scope in queries), `be-pipeline` (who may fire what), `deploy` (IdP wiring).

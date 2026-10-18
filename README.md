@@ -45,9 +45,14 @@ The worker is needed for posters: without ClamAV scan and WebP derivatives no do
 The roles in `deploy/db/roles.sql` are created on the first Postgres start; after migrations run
 `psql -U postgres -d events -f /db/roles.sql` once more for stage 2 (the grants that need the tables).
 
-Test users (password `password`, local Keycloak only): `editor` (events-editor), `organizer-fsi`
-(events-fsi-organizer), `submitter-fsi` (events-fsi-submitter), `organizer-makers`
-(events-makers-organizer). Instead of Keycloak you can use Luis' Authentik, see
+Run `python -m scripts.seed_dev` once after the migrations: it maps the realm groups in `group_mapping`
+(a group name grants nothing without a row) and loads the reference data and three dossiers.
+
+Test users (password `password`, local Keycloak only), all in `events-users`: `admin` (events-admin), `editor`
+(events-editor), `stupa` (events-stupa), `approver-stupa` (events-stupa-approver, trusted), `approver-fsi`
+(events-fsi-approver, acts as organizer), `organizer-fsi`, `submitter-fsi`, `viewer-fsi`, `organizer-makers`,
+`submitter-ekhg` (partner account) and `member` (no role group). A running Keycloak gets the new users with
+`python -m scripts.m2_acceptance` (it syncs the realm file first). Instead of Keycloak you can use Luis' Authentik, see
 [`docs/authentik/README.md`](docs/authentik/README.md).
 
 ## Tests

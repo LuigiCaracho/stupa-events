@@ -14,7 +14,7 @@ events appear in the public feed `GET /api/public/feed/events` (schema 2) for th
 It is a second, fully separate stack beside the Workflow tool (STUPA-Workflow). Files copied from there
 carry `Copied from STUPA-Workflow@93c33d6 <path>` and an entry in `PROVENANCE.json`. The binding
 specification lives outside the repo (`stupa-events-plan/PLAN.md`); the contract of the current
-milestone is `docs/M1-KONTRAKT.md`.
+milestone is `docs/M2-KONTRAKT.md` (on top of `docs/M1-KONTRAKT.md`, which still holds).
 
 **Stack:** Python 3.13, FastAPI, Pydantic v2 (camelCase, `extra=forbid`), SQLAlchemy 2 async,
 Alembic, arq worker. Angular 20 (standalone, OnPush, signals, strict TS, separate `.html`/`.scss`),

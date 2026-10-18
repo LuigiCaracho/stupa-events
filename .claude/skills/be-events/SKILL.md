@@ -19,7 +19,9 @@ approved events with a poster to the public website.
 | `events/access.py` | `load_visible` (404 outside scope), `visible_events_query`, `snapshot_of` for the guards |
 | `events/revisions.py`, `presenter.py` | `event_revision` snapshots, ORM to `EventOut` incl. `allowedTransitions` |
 | `orgs/scope.py`, `orgs/router.py` | slug-to-id binding, `org_ids_for`; `GET /api/organizations?creatable=true` |
-| `taxonomy/reference.py`, `seeding.py`, `router.py` | organizations and categories as Python data (not YAML: the image has no `seeds/`); `GET /api/categories` |
+| `taxonomy/reference.py`, `reference_m2.py`, `venue_reference.py`, `seeding.py` | organizations, categories and the 44 venues as Python data (not YAML: the image has no `seeds/`); `reference_m2` holds the M2 renames |
+| `taxonomy/router.py` | `GET /api/categories` (`?tree=true`), `GET /api/venues` (a private venue shows no address) |
+| `admin/*_router.py` | `/api/admin/organizations|categories|venues` (no DELETE, `active=false` hides), see `docs/M2-KONTRAKT.md` |
 | `dossier/posters.py`, `router.py` | upload: MIME sniff, Pillow re-encode, private bucket, `pending`, supersede |
 | `worker/scan.py`, `dossier/derive.py`, `media/derivatives.py` | ClamAV scan, then `derive_poster` writes `derivatives/<sha16>-<variant>.webp` |
 | `publicapi/{db,router,service,schemas}.py` | own engine on `PUBLIC_DATABASE_URL`, feed and media, `PublicEventOut` only |
@@ -38,7 +40,7 @@ approved events with a poster to the public website.
   alt_text, credit, rights_basis, derivatives JSONB, supersedes_id, retired_at, ...)`; `event_id` has no FK in the ORM.
 - `organization(slug, name, short, trusted, ...)`, `category(slug, name, kind format|fachschaft|partner, ...)`.
 - `public_event_v`: rows in `live|followup|archived` with a clean poster and derivatives or a valid exception;
-  allowlist columns incl. `organization_slug` (feed filter `org`), `hero_sha`, `hero_derivatives`, `hero_alt`,
+  allowlist columns incl. `organization_slug` (feed filter `org`, also `organization.slug` in the feed object), `hero_sha`, `hero_derivatives`, `hero_alt`,
   `hero_credit`. Owned by `events_migrator`, no `security_invoker`.
 
 ## API

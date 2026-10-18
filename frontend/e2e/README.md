@@ -4,6 +4,11 @@
 editor approves and publishes, the event shows in `/api/public/feed/events`, and an approval without poster
 returns 422 `image_required`.
 
+`m2.spec.ts` is the M2 acceptance run: editor adds a category (no mapping tab), admin adds and removes a group
+mapping and is refused a reserved `events-system:` group, organizer-fsi gets not found for a foreign dossier, and
+"Andere Sitzungen widerrufen" ends only the other session.
+It needs the M2 dev users (`admin`, from `deploy/keycloak/stupa-events-realm.json`) in the running Keycloak.
+
 Needs the compose stack with the Keycloak overlay and `127.0.0.1 host.docker.internal` in `/etc/hosts`
 (see `docs/M1-KONTRAKT.md` sections 1 and 8). The tests open `http://localhost:8081` (the registered
 redirect URI); override with `E2E_BASE_URL`. Run `npx playwright test` in `frontend/`.
