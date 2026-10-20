@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.db import get_sessionmaker
 from app.modules.events import drafts
 from app.modules.events.models import Event, EventStatusEvent
+from app.modules.notifications.service import dispatch_mails
 from app.modules.pipeline.actions import run_actions
 from app.modules.pipeline.advance import ENDED_GRACE, FOLLOWUP_GRACE, AdvanceRow, due_transition
 from app.modules.pipeline.service import PipelineService
@@ -118,6 +119,7 @@ async def advance_one(
             return "blocked"
         await session.commit()
     await run_actions(pool, fired.actions, fired.committed)
+    await dispatch_mails(pool, fired.mails)
     return _SYSTEM_TRANSITIONS[transition]
 
 

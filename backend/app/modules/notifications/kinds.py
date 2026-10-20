@@ -1,20 +1,54 @@
-"""Catalog of configurable notification kinds.
+"""Catalog of notification kinds (contract M4, 5.7).
 
-A *kind* groups mails that belong together. The notification settings of the account
-offer exactly these keys. System mails that carry a function (login, data protection)
-stay out of the catalog, so a user cannot switch them off. An unknown kind is never
-filtered, so a send fails open.
+A kind groups the notifications that belong together. The account settings offer exactly
+these keys. `changes_requested` is essential: the user cannot switch it off. A kind with
+`mail = False` only fills the in-app inbox.
 
-Copied from STUPA-Workflow@93c33d6 backend/app/modules/notifications/kinds.py (reduced to M1)
+Copied from STUPA-Workflow@93c33d6 backend/app/modules/notifications/kinds.py (rewritten for M4)
 """
 
 from __future__ import annotations
 
-NOTIFICATION_KINDS: tuple[str, ...] = (
-    # A dossier changed state or was approved, rejected or withdrawn.
-    "status_update",
-    # A dossier reached a state where the own role can act.
-    "task",
-    # A new comment on a dossier that concerns the user.
-    "comment",
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True, slots=True)
+class Kind:
+    """One notification kind and its channels."""
+
+    key: str
+    mail: bool
+    essential: bool = False
+
+
+KINDS: tuple[Kind, ...] = (
+    Kind("review_requested", mail=True),
+    Kind("changes_requested", mail=True, essential=True),
+    Kind("comment_added", mail=True),
+    Kind("comment_resolved", mail=False),
+    Kind("transition_done", mail=False),
+    Kind("task_assigned", mail=True),
+    Kind("checklist_due", mail=True),
 )
+
+NOTIFICATION_KINDS: tuple[str, ...] = tuple(k.key for k in KINDS)
+_BY_KEY: dict[str, Kind] = {k.key: k for k in KINDS}
+
+
+def kind_of(key: str) -> Kind:
+    """Return the kind with this key.
+
+    Raises:
+        KeyError: The key names no kind.
+    """
+    return _BY_KEY[key]
+
+
+def is_known(key: str) -> bool:
+    """Tell whether the key names a kind."""
+    return key in _BY_KEY
+
+
+def is_essential(key: str) -> bool:
+    """Tell whether the user cannot switch the kind off."""
+    return _BY_KEY[key].essential

@@ -4,7 +4,7 @@
 `MailMessage.idempotency_key`, so duplicate enqueues of the same mail collapse
 into one job. `DirectMailQueue` sends inline for tests and dev without Redis.
 
-Copied from STUPA-Workflow@93c33d6 backend/app/modules/notifications/queue.py
+Copied from STUPA-Workflow@93c33d6 backend/app/modules/notifications/queue.py (adds NullMailQueue)
 """
 
 from __future__ import annotations
@@ -71,3 +71,10 @@ class DirectMailQueue:
             while len(self._seen) > self.max_seen:
                 self._seen.popitem(last=False)
         await self.sender.send(msg)
+
+
+class NullMailQueue:
+    """Drops every mail and logs a warning without the address (Redis is missing)."""
+
+    async def enqueue(self, msg: MailMessage) -> None:
+        logger.warning("mail dropped, no queue (key=%s)", msg.idempotency_key)

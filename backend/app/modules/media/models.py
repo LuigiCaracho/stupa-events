@@ -16,8 +16,18 @@ Copied from STUPA-Workflow@93c33d6 backend/app/modules/media/models.py (adds POS
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
-from sqlalchemy import BigInteger, CheckConstraint, Integer, Text, Uuid
+from sqlalchemy import (
+    BigInteger,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Integer,
+    PrimaryKeyConstraint,
+    Text,
+    Uuid,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base, CreatedAtMixin
@@ -56,3 +66,26 @@ class MarkdownImage(CreatedAtMixin, Base):
     size: Mapped[int] = mapped_column(BigInteger, nullable=False)
     width: Mapped[int] = mapped_column(Integer, nullable=False)
     height: Mapped[int] = mapped_column(Integer, nullable=False)
+    gc_marked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class MediaRef(Base):
+    """A reference from an owner (dossier, document, comment, draft) to a Markdown image.
+
+    Rows are never removed while the owner lives, because append-only revisions still
+    show the image. The garbage collector sweeps only images without any row.
+    """
+
+    __tablename__ = "media_ref"
+    __table_args__ = (
+        PrimaryKeyConstraint("image_id", "owner_type", "owner_id", name="pk_media_ref"),
+        CheckConstraint(
+            "owner_type IN ('event', 'document', 'comment', 'draft')", name="owner_type"
+        ),
+    )
+
+    image_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("markdown_image.id", ondelete="CASCADE"), nullable=False
+    )
+    owner_type: Mapped[str] = mapped_column(Text, nullable=False)
+    owner_id: Mapped[uuid.UUID] = mapped_column(Uuid, nullable=False)

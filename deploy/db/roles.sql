@@ -42,7 +42,7 @@ ALTER DEFAULT PRIVILEGES FOR ROLE events_migrator IN SCHEMA public
 DO $$
 DECLARE t text;
 BEGIN
-  FOREACH t IN ARRAY ARRAY['audit_entry', 'event_revision', 'event_status_event'] LOOP
+  FOREACH t IN ARRAY ARRAY['audit_entry', 'event_revision', 'event_status_event', 'document_revision'] LOOP
     IF to_regclass('public.' || t) IS NOT NULL THEN
       EXECUTE format('REVOKE UPDATE, DELETE, TRUNCATE ON TABLE %I FROM events_app', t);
       EXECUTE format('GRANT INSERT, SELECT ON TABLE %I TO events_app', t);
@@ -54,7 +54,7 @@ END $$;
 DO $$
 DECLARE t text;
 BEGIN
-  FOREACH t IN ARRAY ARRAY['auth_session', 'audit_verification', 'role_assignment', 'group_mapping', 'membership', 'editor_draft'] LOOP
+  FOREACH t IN ARRAY ARRAY['auth_session', 'audit_verification', 'role_assignment', 'group_mapping', 'membership', 'editor_draft', 'checklist_item', 'notification', 'markdown_image', 'media_ref'] LOOP
     IF to_regclass('public.' || t) IS NOT NULL THEN
       EXECUTE format('GRANT DELETE ON TABLE %I TO events_app', t);
     END IF;
