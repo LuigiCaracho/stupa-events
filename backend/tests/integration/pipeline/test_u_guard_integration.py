@@ -47,7 +47,8 @@ async def test_u_guard_08_the_poster_of_a_live_event_stays(api: Api) -> None:
     await api.fire("editor", eid, "T04")
     await api.fire("editor", eid, "T05")
     replace = await api.upload_poster("editor", eid, altText="Anderes")
-    assert replace.status_code == 409 and replace.json()["code"] == "field_locked"
+    assert replace.status_code == 201
+    assert (await api.get("editor", eid))["poster"]["id"] == up.json()["id"]
     with pytest.raises(DBAPIError) as caught:
         await api.sql("UPDATE event SET hero_attachment_id = NULL WHERE id = :i", i=eid)
     assert getattr(caught.value.orig, "sqlstate", None) == "23514"
@@ -71,8 +72,13 @@ async def test_u_guard_13_two_concurrent_approvals_one_wins(api: Api) -> None:
 async def test_a_depicted_person_needs_a_consent_note(api: Api) -> None:
     event = await api.to_state("planning")
     eid = event["id"]
-    up = await api.upload_poster("organizer-fsi", eid, personsDepicted="true")
+    missing = await api.upload_poster("organizer-fsi", eid, personsDepicted="true")
+    assert missing.status_code == 422 and missing.json()["code"] == "consent_missing"
+    up = await api.upload_poster(
+        "organizer-fsi", eid, personsDepicted="true", consentNote="Einwilligung liegt vor"
+    )
     assert up.status_code == 201 and up.json()["personsDepicted"] is True
+    await api.sql("UPDATE attachment SET consent_note = NULL WHERE id = :i", i=up.json()["id"])
     await api.process_poster(up.json()["id"])
     await api.fire("organizer-fsi", eid, "T02")
     refused = await api.fire("editor", eid, "T04")

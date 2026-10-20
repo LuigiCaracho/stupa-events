@@ -39,8 +39,8 @@ def make_principal(*groups: str, sub: str = "sub-1", admin: bool = False) -> Pri
     )
 
 
-def png_bytes(width: int = 64, height: int = 48, color: str = "#3366cc") -> bytes:
-    """Return a small valid PNG."""
+def png_bytes(width: int = 1280, height: int = 720, color: str = "#3366cc") -> bytes:
+    """Return a valid PNG, poster-sized by default (long edge 1280 px)."""
     from PIL import Image
 
     buffer = io.BytesIO()

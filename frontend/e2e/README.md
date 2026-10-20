@@ -14,6 +14,11 @@ It needs the M2 dev users (`admin`, from `deploy/keycloak/stupa-events-realm.jso
 with the edit conflict, a proposal of a `member`, and axe in light and dark (`support/axe.ts`, `@axe-core/playwright`
 4.13.0). Run it against the compose `web` container (production build) for the axe gate.
 
+`m4.spec.ts` is the M4 acceptance run: a question on the poster blocks the approval in the guard list until it is resolved, the
+checklist with its template, a mail template with live preview and the sentence for an unknown placeholder, a foreign
+organization (`organizer-makers`) getting 404 on the quotes and tabs of an FSI dossier, and axe on the new tabs.
+It needs the M4 backend (migration `0005`) in the running stack.
+
 Needs the compose stack with the Keycloak overlay and `127.0.0.1 host.docker.internal` in `/etc/hosts`
 (see `docs/M1-KONTRAKT.md` sections 1 and 8). The tests open `http://localhost:8081` (the registered
 redirect URI); override with `E2E_BASE_URL`. Run `npx playwright test` in `frontend/`.

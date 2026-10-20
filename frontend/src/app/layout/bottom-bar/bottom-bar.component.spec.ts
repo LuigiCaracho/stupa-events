@@ -32,7 +32,7 @@ describe('BottomBarComponent', () => {
     await setup();
     const bar = screen.getByRole('navigation', { name: 'Hauptnavigation' });
     const labels = Array.from(bar.querySelectorAll('.bb__label')).map((l) => l.textContent?.trim());
-    expect(labels).toEqual(['Aufgaben', 'Pipeline', 'Dossiers', 'Konto']);
+    expect(labels).toEqual(['Aufgaben', 'Pipeline', 'Dossiers', 'Konto', 'Meldungen']);
     expect(within(bar).getByRole('link', { name: 'Aufgaben' })).toHaveAttribute(
       'href',
       '/aufgaben',

@@ -33,6 +33,8 @@ from app.modules.auth import rbac
 from app.modules.auth.models import Principal as PrincipalRow
 from app.modules.dossier.deps import attachment_storage, public_storage, scan_queue
 from app.modules.dossier.derive import derive_poster
+from app.modules.dossier.previews import build_preview
+from app.modules.dossier.promote import promote_poster
 from app.modules.files.scanner import ScanVerdict
 from app.modules.orgs.models import GroupMapping
 from app.modules.publicapi.db import get_public_session
@@ -280,10 +282,21 @@ class Api:
             "redis": pool,
         }
         verdict = await scan_attachment(ctx, attachment_id)
-        if verdict == "clean":
-            assert [job[0] for job in pool.jobs] == ["derive_poster"]
+        if verdict == "clean" and [job[0] for job in pool.jobs] == ["derive_poster"]:
             await derive_poster(ctx, attachment_id)
+            await build_preview(ctx, attachment_id)
+            await promote_poster(ctx, attachment_id)
+        elif verdict == "clean":
+            await build_preview(ctx, attachment_id)
         return verdict
+
+    async def add_open_comment(self, event_id: str, body: str = "Bitte prüfen") -> None:
+        """Leave an open root comment, as T03 (changes requested) needs one."""
+        await self.sql(
+            "INSERT INTO comment (event_id, author_sub, body_md) VALUES (:e, 'sub-editor', :b)",
+            e=event_id,
+            b=body,
+        )
 
     async def approved_ready_event(self) -> dict:
         """An event in `in_review` with a clean, derived poster."""

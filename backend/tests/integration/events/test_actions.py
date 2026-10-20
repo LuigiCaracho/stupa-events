@@ -275,6 +275,21 @@ async def test_confirm_flyer_and_the_flyer_guard(api: Api) -> None:
     assert (await api.action("submitter-fsi", foreign["id"], "confirm-flyer")).status_code == 403
 
 
+async def test_confirm_flyer_marks_the_poster_and_works_without_one(api: Api) -> None:
+    bare = await api.to_state("planning")
+    plain = await api.action("organizer-fsi", bare["id"], "confirm-flyer")
+    assert plain.status_code == 200 and plain.json()["flyerCheckedAt"] is not None
+    event = await api.to_state("planning", title="Mit Plakat")
+    poster = (await api.upload_poster("organizer-fsi", event["id"])).json()
+    await api.process_poster(poster["id"])
+    assert (await api.action("organizer-fsi", event["id"], "confirm-flyer")).status_code == 200
+    rows = await api.sql(
+        "SELECT flyer_date_confirmed_at IS NOT NULL, flyer_date_confirmed_by FROM attachment WHERE id = :i",
+        i=poster["id"],
+    )
+    assert rows[0][0] is True and rows[0][1]
+
+
 async def test_acknowledge_changes_needs_live(api: Api) -> None:
     event = await api.to_state("planning")
     refused = await api.action("editor", event["id"], "acknowledge-changes")

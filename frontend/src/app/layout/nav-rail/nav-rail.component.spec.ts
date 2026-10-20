@@ -37,13 +37,14 @@ describe('NavRailComponent', () => {
     );
   });
 
-  it('lists the areas in rail order with Konto at the foot', async () => {
+  it('lists the areas in rail order with the bell and Konto at the foot', async () => {
     const { container } = await setup();
     const labels = Array.from(container.querySelectorAll('.rail__label')).map((l) =>
       l.textContent?.trim(),
     );
-    expect(labels).toEqual(['Aufgaben', 'Pipeline', 'Dossiers', 'Konto']);
-    expect(container.querySelector('.rail__spacer + a')).toHaveTextContent('Konto');
+    expect(labels).toEqual(['Aufgaben', 'Pipeline', 'Dossiers', 'Meldungen', 'Konto']);
+    expect(container.querySelector('.rail__spacer + button')).toHaveTextContent('Meldungen');
+    expect(Array.from(container.querySelectorAll('.rail__item')).at(-1)).toHaveTextContent('Konto');
   });
 
   it('has no axe violations', async () => {

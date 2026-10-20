@@ -115,6 +115,7 @@ async def test_postpone_into_another_year_runs_the_flyer_guard(api: Api) -> None
 async def test_change_notes_and_review_people_stay_internal(api: Api) -> None:
     event = await api.to_state("in_review")
     eid = event["id"]
+    await api.add_open_comment(eid)
     await api.fire("editor", eid, "T03", note="Bitte Ort prüfen")
     await api.fire("organizer-fsi", eid, "T02")
     await api.fire("editor", eid, "T04")

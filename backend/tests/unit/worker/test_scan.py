@@ -20,6 +20,7 @@ class _Maker:
     def __init__(self, row: Any) -> None:
         self.row = row
         self.committed = False
+        self.executed: list[Any] = []
 
     def __call__(self) -> _Maker:
         return self
@@ -32,6 +33,9 @@ class _Maker:
 
     async def get(self, model: Any, key: Any) -> Any:
         return self.row
+
+    async def execute(self, statement: Any) -> None:
+        self.executed.append(statement)
 
     async def commit(self) -> None:
         self.committed = True
@@ -60,9 +64,11 @@ def _attachment(kind: str = "poster") -> Any:
         id=uuid.uuid4(),
         event_id=uuid.uuid4(),
         kind=kind,
+        mime="image/png" if kind in ("poster", "social_post") else "application/pdf",
         storage_key="k",
         scan_status="pending",
         scan_result=None,
+        supersedes_id=None,
     )
 
 
@@ -141,3 +147,27 @@ async def test_transient_errors_retry_then_die(error: Exception, audit: list[Any
     assert await scan.scan_attachment(ctx, str(row.id)) == "dead"
     assert row.scan_status == "error" and ctx["files_sessionmaker"].committed
     assert audit[0]["data"]["status"] == "error"
+
+
+async def test_a_clean_replacement_hides_its_predecessor(audit: list[Any]) -> None:
+    row = _attachment("quote")
+    row.supersedes_id = uuid.uuid4()
+    ctx = _ctx(row, ScanVerdict(clean=True))
+    await scan.scan_attachment(ctx, str(row.id))
+    assert len(ctx["files_sessionmaker"].executed) == 1
+
+
+async def test_an_infected_replacement_leaves_its_predecessor(audit: list[Any]) -> None:
+    row = _attachment("quote")
+    row.supersedes_id = uuid.uuid4()
+    ctx = _ctx(row, ScanVerdict(clean=False, signature="x"))
+    await scan.scan_attachment(ctx, str(row.id))
+    assert ctx["files_sessionmaker"].executed == []
+
+
+async def test_a_replaced_poster_is_not_retired_by_the_scan(audit: list[Any]) -> None:
+    row = _attachment()
+    row.supersedes_id = uuid.uuid4()
+    ctx = _ctx(row, ScanVerdict(clean=True), redis=_Pool())
+    await scan.scan_attachment(ctx, str(row.id))
+    assert ctx["files_sessionmaker"].executed == []

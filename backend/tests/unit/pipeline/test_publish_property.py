@@ -50,6 +50,11 @@ def has_image(snapshot) -> bool:  # noqa: ANN001
     return bool(snapshot.image_exception_reason) or (poster is not None and poster.usable)
 
 
+def has_image_file(snapshot) -> bool:  # noqa: ANN001
+    poster = snapshot.poster
+    return bool(snapshot.image_exception_reason) or (poster is not None and poster.usable_media)
+
+
 class PipelineMachine(RuleBasedStateMachine):
     """A dossier moved by random people and by the worker while its poster changes."""
 
@@ -161,7 +166,7 @@ class PipelineMachine(RuleBasedStateMachine):
         snapshot = replace(self.snapshot, state="approved", approved_by="person", publish_at=NOW)
         human = decide(TRANSITIONS["T05"], snapshot, actor("editor", "e"), NOW)
         system = decide(TRANSITIONS["T05"], snapshot, actor("system"), NOW)
-        image_missing = not has_image(snapshot)
+        image_missing = not has_image_file(snapshot)
         assert ("image_required" in [r.code for r in human.reasons]) is image_missing
         assert ("image_required" in [r.code for r in system.reasons]) is image_missing
 

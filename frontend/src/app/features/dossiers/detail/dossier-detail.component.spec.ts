@@ -9,6 +9,11 @@ import { AuthService } from '@core/auth/auth.service';
 import { runAxe } from '../../../../testing/a11y';
 import { fakeApi, fakeAuth, makeEvent, makeGuards } from '../../../../testing/event-fixtures';
 import type { EventDto } from '../api/event.models';
+import { AttachmentsApi } from '../api/attachments-api.service';
+import { DocumentsApi } from '../api/documents-api.service';
+import { ChecklistApi } from '../api/checklist-api.service';
+import { MailTemplatesApi } from '../api/mail-templates-api.service';
+import { CommentsApi } from '../api/comments-api.service';
 import { EventsApi } from '../api/events-api.service';
 import { AUTOSAVE_MS } from '../autosave/draft-autosave';
 import { DossierDetailComponent } from './dossier-detail.component';
@@ -46,6 +51,37 @@ async function setup(api = fakeApi(), auth = fakeAuth(), fakeTimers = false) {
       provideRouter([]),
       { provide: EventsApi, useValue: api },
       { provide: AuthService, useValue: auth },
+      {
+        provide: AttachmentsApi,
+        useValue: {
+          counts: jest.fn(() =>
+            of({ attachments: 2, howto: 1, openChecklist: 3, mailTemplates: 0, openComments: 4 }),
+          ),
+          list: jest.fn(() => of([])),
+          quotes: jest.fn(() => of(null)),
+        },
+      },
+      {
+        provide: DocumentsApi,
+        useValue: { list: jest.fn(() => of([])), revisions: jest.fn(() => of([])) },
+      },
+      {
+        provide: ChecklistApi,
+        useValue: {
+          get: jest.fn(() =>
+            of({
+              items: [],
+              openRequired: { planning: 0, review: 0, live: 0, followup: 0 },
+              template: null,
+            }),
+          ),
+        },
+      },
+      {
+        provide: MailTemplatesApi,
+        useValue: { list: jest.fn(() => of([])), placeholders: jest.fn(() => of([])) },
+      },
+      { provide: CommentsApi, useValue: { list: jest.fn(() => of([])) } },
     ],
   });
   view.fixture.detectChanges();
@@ -131,6 +167,74 @@ describe('DossierDetailComponent', () => {
       await userEvent.click(await screen.findByRole('button', { name: 'Flyer geprüft' }));
       expect(api.action).toHaveBeenCalledWith('ev-1', 'confirm-flyer', {}, 3);
       expect(toasts()).toContain('Flyer als geprüft markiert.');
+    });
+  });
+
+  describe('knowledge tabs (M4)', () => {
+    it('shows the counters on the tabs', async () => {
+      await setup();
+      expect(screen.getByRole('tab', { name: /Anhänge/ })).toHaveTextContent('2');
+      expect(screen.getByRole('tab', { name: /Checkliste/ })).toHaveTextContent('3');
+      expect(screen.getByRole('tab', { name: /Verlauf/ })).toHaveTextContent('4');
+    });
+
+    it.each([
+      ['Anhänge', 'Anhang hinzufügen'],
+      ['Anleitung', 'Noch keine Anleitung.'],
+      ['Checkliste', 'Vorlage anwenden'],
+      ['Mails', 'Neue Vorlage'],
+    ])('opens the tab %s', async (tab, content) => {
+      await setup();
+      await userEvent.click(screen.getByRole('tab', { name: new RegExp(tab) }));
+      expect(await screen.findByText(content)).toBeInTheDocument();
+    });
+
+    it('sends the fix of an open question to the Verlauf and of an open checklist to the checklist', async () => {
+      const comment = {
+        ...posterBlocker,
+        code: 'open_comment_on_hero',
+        messageKey: 'guards.open_comment_on_hero',
+        fixAction: 'open_comment' as const,
+      };
+      const checklist = {
+        ...posterBlocker,
+        code: 'checklist_open',
+        messageKey: 'guards.checklist_open',
+        fixAction: 'open_checklist' as const,
+      };
+      const api = fakeApi({
+        guards: jest.fn(() => of(makeGuards({ allowed: false, reasons: [comment, checklist] }))),
+      });
+      await setup(api);
+      await userEvent.click(await screen.findByRole('button', { name: 'Checkliste öffnen' }));
+      expect(await screen.findByText('Vorlage anwenden')).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('tab', { name: /Übersicht/ }));
+      await userEvent.click(await screen.findByRole('button', { name: 'Rückfrage öffnen' }));
+      expect(await screen.findByRole('heading', { name: 'Rückfragen' })).toBeInTheDocument();
+    });
+
+    it('offers a question on the poster and the fields in the overview', async () => {
+      await setup();
+      expect(
+        screen.getByRole('heading', { name: 'Rückfrage zu einer Angabe' }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Rückfrage zu Poster' })).toBeInTheDocument();
+    });
+
+    it('says how many due dates a date change recomputed', async () => {
+      const api = fakeApi({
+        patch: jest.fn(() => of(makeEvent({ rev: 4, summary: 'Neu', checklistRecomputed: 2 }))),
+      });
+      await setup(api);
+      await userEvent.type(screen.getByLabelText('Kurztext'), '!');
+      await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+      expect(await screen.findByText('2 Fälligkeiten neu berechnet.')).toBeInTheDocument();
+    });
+
+    it('only shows the budget suggestion; the budget field comes later', async () => {
+      const { page, toasts } = await setup();
+      (page as unknown as { useBudget(c: number): void }).useBudget(123456);
+      expect(toasts()[0]).toContain('1234,56');
     });
   });
 
@@ -447,7 +551,7 @@ describe('DossierDetailComponent', () => {
     it('resets to an older revision from the history tab', async () => {
       const fake = api();
       await setup(fake, can('event.edit_critical_live'));
-      await userEvent.click(screen.getByRole('tab', { name: 'Verlauf' }));
+      await userEvent.click(screen.getByRole('tab', { name: /Verlauf/ }));
       const buttons = await screen.findAllByRole('button', {
         name: 'Auf diesen Stand zurücksetzen',
       });

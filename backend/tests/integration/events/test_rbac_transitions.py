@@ -64,6 +64,8 @@ async def test_every_user_gets_the_status_the_oracle_names(api: Api, tid: str) -
     wrong = []
     for user in [*ORACLE_ROLE, *INVISIBLE]:
         eid = await dossier_in(api, SOURCE_STATE[tid])
+        if tid == "T03":
+            await api.add_open_comment(eid)
         got = (await api.fire(user, eid, tid, note="Test")).status_code
         if user in INVISIBLE:
             want = 404

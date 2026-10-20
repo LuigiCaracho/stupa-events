@@ -22,7 +22,7 @@ async def planning_event(api: Api, user: str = "organizer-fsi") -> str:
 async def test_upload_stores_a_reencoded_pending_poster(api: Api) -> None:
     eid = await planning_event(api)
     big = io.BytesIO()
-    Image.new("RGB", (80, 60), "#cc3333").save(big, "JPEG", exif=Image.Exif())
+    Image.new("RGB", (1300, 800), "#cc3333").save(big, "JPEG", exif=Image.Exif())
     response = await api.upload_poster(
         "organizer-fsi", eid, data=big.getvalue(), name="Plakat Ü.JPG"
     )
@@ -125,7 +125,8 @@ async def test_decompression_bomb_is_refused(api: Api) -> None:
     bomb = io.BytesIO()
     Image.new("1", (30000, 30000)).save(bomb, "PNG")
     assert len(bomb.getvalue()) < 10 * 1024 * 1024
-    assert (await api.upload_poster("organizer-fsi", eid, data=bomb.getvalue())).status_code == 415
+    refused = await api.upload_poster("organizer-fsi", eid, data=bomb.getvalue())
+    assert refused.status_code == 422 and refused.json()["code"] == "image_rejected"
 
 
 @pytest.mark.parametrize(
@@ -169,6 +170,15 @@ async def test_upload_rights_by_state(api: Api) -> None:
 async def test_upload_is_locked_once_approved(api: Api) -> None:
     ready = await api.approved_ready_event()
     await api.fire("editor", ready["id"], "T04")
+    assert (await api.upload_poster("organizer-fsi", ready["id"])).status_code == 403
+    replacement = await api.upload_poster("editor", ready["id"])
+    assert replacement.status_code == 201
+    assert (await api.get("editor", ready["id"]))["poster"]["id"] == ready["poster"]["id"]
+
+
+async def test_upload_is_locked_in_followup(api: Api) -> None:
+    ready = await api.approved_ready_event()
+    await api.sql("UPDATE event SET state = 'followup' WHERE id = :i", i=ready["id"])
     locked = await api.upload_poster("editor", ready["id"])
     assert locked.status_code == 409 and locked.json()["code"] == "field_locked"
 

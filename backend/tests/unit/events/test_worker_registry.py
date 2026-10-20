@@ -1,4 +1,4 @@
-"""The dossier module registers `derive_poster`, the name the scan job enqueues."""
+"""The dossier module registers `derive_poster`, `build_preview` and `promote_poster`."""
 
 from __future__ import annotations
 
@@ -9,7 +9,9 @@ from worker.scan import DERIVE_TASK_NAME
 
 
 def test_the_registered_function_has_the_enqueued_name() -> None:
-    assert [fn.__name__ for fn in WORKER_FUNCTIONS] == [DERIVE_TASK_NAME] == ["derive_poster"]
+    names = [fn.__name__ for fn in WORKER_FUNCTIONS]
+    assert names == ["derive_poster", "build_preview", "promote_poster"]
+    assert names[0] == DERIVE_TASK_NAME
 
 
 def test_the_public_storage_is_built_once_per_worker() -> None:

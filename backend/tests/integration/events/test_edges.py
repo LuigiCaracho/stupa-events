@@ -5,9 +5,10 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import text
 
-from app.modules.dossier import posters
+from app.modules.dossier import rules
 from app.modules.dossier.deps import attachment_storage
 from app.modules.dossier.derive import derive_poster
+from app.modules.files import attachments
 from app.modules.files.storage import StorageError
 from app.modules.media.images import CleanImage
 from app.modules.pipeline import exception as exception_module
@@ -54,13 +55,13 @@ async def test_storage_write_failure_is_503_and_nothing_is_kept(api: Api) -> Non
 async def test_an_oversize_reencode_is_413(api: Api, monkeypatch: pytest.MonkeyPatch) -> None:
     eid = await planning(api)
     huge = CleanImage(data=b"x" * (11 * 1024 * 1024), mime="image/png", width=1, height=1)
-    monkeypatch.setattr(posters, "_clean_bounded", lambda data: huge)
+    monkeypatch.setattr(attachments, "_clean_bounded", lambda data: huge)
     assert (await api.upload_poster("organizer-fsi", eid)).status_code == 413
 
 
 async def test_a_race_on_the_hero_link_is_409(api: Api, monkeypatch: pytest.MonkeyPatch) -> None:
     eid = await planning(api)
-    real = posters.load_visible
+    real = rules.load_visible
 
     async def stale(session, principal, event_id):  # noqa: ANN001, ANN202
         event = await real(session, principal, event_id)
@@ -68,7 +69,7 @@ async def test_a_race_on_the_hero_link_is_409(api: Api, monkeypatch: pytest.Monk
         event.rev -= 1
         return event
 
-    monkeypatch.setattr(posters, "load_visible", stale)
+    monkeypatch.setattr(rules, "load_visible", stale)
     assert (await api.upload_poster("organizer-fsi", eid)).status_code == 409
 
 

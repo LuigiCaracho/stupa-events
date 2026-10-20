@@ -38,6 +38,7 @@ async def test_awaiting_review_marks_the_own_submission(api: Api) -> None:
 
 async def test_returned_dossiers_carry_the_note(api: Api) -> None:
     event = await api.to_state("in_review")
+    await api.add_open_comment(event["id"])
     await api.fire("editor", event["id"], "T03", note="Bitte den Ort nennen")
     organizer = await tasks(api, "organizer-fsi")
     assert ids(organizer["returned"]) == {event["id"]}

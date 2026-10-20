@@ -1,0 +1,1 @@
+Kurzer Text ohne Zeilenumbruch am Ende.

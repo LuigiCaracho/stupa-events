@@ -43,6 +43,11 @@ async function liveRegion(page: Page): Promise<string> {
   return texts.join(' ');
 }
 
+/** The board filtered to the dossier of this run: a column shows only its first cards, the dev DB has many. */
+function boardOf(name: string): string {
+  return `/pipeline?q=${encodeURIComponent(title(name))}`;
+}
+
 function card(page: Page, name: string) {
   return page.getByRole('button', { name: new RegExp(title(name)) }).first();
 }
@@ -89,7 +94,7 @@ test('Board: keyboard drag from idea to planning, back with Escape, no drop into
   const page = await fresh(browser);
   await login(page, 'organizer-fsi');
   ids['board'] = await createDossier(page, title('Board'));
-  await page.goto('/pipeline');
+  await page.goto(boardOf('Board'));
 
   const board = card(page, 'Board');
   await expect(board).toBeVisible();
@@ -103,6 +108,10 @@ test('Board: keyboard drag from idea to planning, back with Escape, no drop into
     .poll(() => liveRegion(page))
     .toContain(`„${title('Board')}“ nach Planung verschoben.`);
   expect((await eventOf(page, ids['board']))['state']).toBe('planning');
+  // The board reloads after the move; lifting the old element would lose focus on the re-render.
+  await expect(
+    page.locator('[data-col="planning"]').getByRole('button', { name: new RegExp(title('Board')) }),
+  ).toBeVisible();
 
   await card(page, 'Board').focus();
   await page.keyboard.press('Space');
@@ -132,7 +141,7 @@ test('Board: keyboard drag from idea to planning, back with Escape, no drop into
 test('Phone: tabs, swipe and the move sheet by long press', async ({ browser }) => {
   const page = await fresh(browser, { width: 390, height: 844 });
   await login(page, 'organizer-fsi');
-  await page.goto('/pipeline');
+  await page.goto(boardOf('Board'));
   await expect(page.getByRole('tab', { name: /Idee/ })).toBeVisible();
   await page.getByRole('tab', { name: /Planung/ }).click();
   await expect(page.getByRole('tab', { name: /Planung/ })).toHaveAttribute('aria-selected', 'true');
@@ -265,7 +274,7 @@ test('Cancellation stays in the feed as cancelled and the editor takes it back',
   expect(JSON.stringify(item)).not.toContain('Referent krank');
   await anonymous.dispose();
 
-  await organizer.goto('/pipeline');
+  await organizer.goto(boardOf('Live'));
   await expect(card(organizer, 'Live')).toContainText('Abgesagt');
   await organizer.context().close();
 

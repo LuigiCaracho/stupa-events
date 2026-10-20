@@ -5,10 +5,10 @@ Run after `pytest --cov` (it reads `.coverage`):
     uv run python -m scripts.coverage_critical
 
 The packages are `auth`, `audit`, `pipeline` (since M3 with `guards/`, `fieldclass`, `advance`,
-the actions) and `publicapi`. A file may sit in `EXEMPT`
-with the reason why it stays below 100 % until a later milestone changes it. `files` and
-`media` follow with M4, which changes them (M2 contract, 10.2). Exit status 1 lists the
-files below the bar.
+the actions) and `publicapi`; since M4 also the single files of `CRITICAL_FILES` (uploads,
+sniffing, comments, checklist, notification fan-out; M4 contract 9). A file may sit in
+`EXEMPT` with the reason why it stays below 100 % until a later milestone changes it. Exit
+status 1 lists the files below the bar.
 """
 
 from __future__ import annotations
@@ -21,6 +21,15 @@ from pathlib import Path
 import coverage
 
 CRITICAL = ("auth", "audit", "pipeline", "publicapi")
+CRITICAL_FILES = frozenset(
+    {
+        "app/modules/files/attachments.py",
+        "app/modules/files/mime.py",
+        "app/modules/dossier/comments.py",
+        "app/modules/dossier/checklist.py",
+        "app/modules/notifications/service.py",
+    }
+)
 EXEMPT: dict[str, str] = {}
 
 
@@ -29,7 +38,8 @@ def shortfalls(report: dict) -> dict[str, str]:
     found: dict[str, str] = {}
     for name, data in sorted(report["files"].items()):
         parts = Path(name).parts
-        if len(parts) < 3 or parts[:2] != ("app", "modules") or parts[2] not in CRITICAL:
+        in_package = len(parts) >= 3 and parts[:2] == ("app", "modules") and parts[2] in CRITICAL
+        if not in_package and name not in CRITICAL_FILES:
             continue
         summary = data["summary"]
         lines, branches = (

@@ -67,9 +67,6 @@ def test_date_in_future_without_end_fails() -> None:
         PosterSnapshot("pending", True, "Alt", "Credit", "own_work"),
         PosterSnapshot("infected", True, "Alt", "Credit", "own_work"),
         PosterSnapshot("clean", False, "Alt", "Credit", "own_work"),
-        PosterSnapshot("clean", True, " ", "Credit", "own_work"),
-        PosterSnapshot("clean", True, "Alt", None, "own_work"),
-        PosterSnapshot("clean", True, "Alt", "Credit", "unknown"),
     ],
 )
 def test_image_required_for_every_unusable_poster(poster: PosterSnapshot | None) -> None:
@@ -77,6 +74,34 @@ def test_image_required_for_every_unusable_poster(poster: PosterSnapshot | None)
     assert [(r.code, r.field, r.fix_action) for r in reasons] == [
         ("image_required", "poster", FixAction.UPLOAD_POSTER)
     ]
+
+
+@pytest.mark.parametrize(
+    ("poster", "fields"),
+    [
+        (PosterSnapshot("clean", True, " ", "Credit", "own_work"), ["altText"]),
+        (PosterSnapshot("clean", True, "Alt", None, "own_work"), ["credit"]),
+        (PosterSnapshot("clean", True, "Alt", "Credit", "unknown"), ["rightsBasis"]),
+        (PosterSnapshot("clean", True, "Alt", "Credit", "own_work", True, " "), ["consentNote"]),
+        (
+            PosterSnapshot("clean", True, None, "", "unknown", True),
+            ["altText", "credit", "rightsBasis", "consentNote"],
+        ),
+    ],
+)
+def test_rights_complete_names_every_open_field(poster: PosterSnapshot, fields: list[str]) -> None:
+    assert guards.image_or_exception(snap(poster=poster), actor("editor"), NOW) == []
+    reasons = guards.rights_complete(snap(poster=poster), actor("editor"), NOW)
+    assert [(r.code, r.field, r.fix_action) for r in reasons] == [
+        ("rights_incomplete", name, FixAction.FILL_RIGHTS) for name in fields
+    ]
+
+
+def test_rights_complete_passes_without_poster_or_with_an_exception() -> None:
+    assert guards.rights_complete(snap(poster=None), actor("editor"), NOW) == []
+    open_poster = PosterSnapshot("clean", True, None, None, "unknown")
+    excepted = snap(poster=open_poster, image_exception_reason="Hochschulveranstaltung")
+    assert guards.rights_complete(excepted, actor("editor"), NOW) == []
 
 
 def test_image_passes_with_poster_or_exception() -> None:

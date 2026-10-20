@@ -281,7 +281,10 @@ async def test_there_is_no_delete_route_for_the_taxonomy() -> None:
     deletes = [path for method, path, _ in _routes() if method == "DELETE"]
     assert sorted(deletes) == [
         "/api/admin/group-mappings/{mapping_id}",
+        "/api/checklist-items/{item_id}",
+        "/api/documents/{document_id}/draft",
         "/api/events/{event_id}/draft",
+        "/api/quotes/{quote_id}",
     ]
 
 

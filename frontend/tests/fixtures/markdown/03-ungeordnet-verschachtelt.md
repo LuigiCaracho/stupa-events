@@ -1,0 +1,8 @@
+- Getränke
+  - Wasser
+    - still
+    - sprudelnd
+  - Saft
+- Snacks
+  - Popcorn
+  - Chips

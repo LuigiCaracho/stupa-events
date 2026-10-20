@@ -30,6 +30,7 @@ async def test_idea_to_archive_with_every_state_change(api: Api) -> None:
     submitted = await api.fire("organizer-fsi", eid, "T02")
     assert submitted.json()["submittedBy"] == "sub-org-fsi"
 
+    await api.add_open_comment(eid)
     returned = await api.fire("editor", eid, "T03", note="Bitte Ort prüfen")
     assert returned.status_code == 200 and returned.json()["state"] == "planning"
     assert returned.json()["submittedBy"] is None and returned.json()["approvedBy"] is None
@@ -126,6 +127,8 @@ async def test_the_mandatory_note_is_a_422_reason_required(api: Api, tid: str) -
     event = await api.to_state(states[tid] if tid != "T10" else "live")
     if tid == "T10":
         await api.sql("UPDATE event SET state = 'archived' WHERE id = :i", i=event["id"])
+    if tid == "T03":
+        await api.add_open_comment(event["id"])
     for body in ({}, {"note": "   "}):
         response = await api.fire("editor", event["id"], tid, **body)
         assert response.status_code == 422 and response.json()["code"] == "reason_required"

@@ -108,8 +108,13 @@ test('editor: approval without poster is refused with image_required', async ({ 
 test('editor: approves and publishes, the event appears in the feed', async ({ browser }) => {
   const page = await fresh(browser);
   await login(page, 'editor');
-  await page.goto('/aufgaben');
-  await page.getByRole('link', { name: TITLE }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Meine Aufgaben' })).toBeVisible();
+  // The task list shows its first 50 entries and the dev DB holds many dossiers in review.
+  await page.goto(`/pipeline?q=${encodeURIComponent(TITLE)}`);
+  await page
+    .getByRole('button', { name: new RegExp(TITLE) })
+    .first()
+    .click();
   await expect(page.getByRole('heading', { level: 1, name: TITLE })).toBeVisible();
   await expect(page.getByText('Alles bereit.')).toBeVisible();
 

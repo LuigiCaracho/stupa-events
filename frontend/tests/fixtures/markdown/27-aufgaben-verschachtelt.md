@@ -1,0 +1,4 @@
+- [ ] Vorbereitung
+  - [x] Raum angefragt
+  - [ ] Technik geklärt
+- [x] Einladung versendet

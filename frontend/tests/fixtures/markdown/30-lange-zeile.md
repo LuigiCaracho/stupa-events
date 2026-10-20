@@ -1,0 +1,1 @@
+Dies ist ein sehr langer Absatz, der bewusst ohne Zeilenumbruch bleibt, damit wir sehen, ob der Export irgendwo umbricht, wenn der Satz deutlich über achtzig Zeichen hinausläuft und trotzdem als eine Zeile erhalten bleiben muss.

@@ -85,9 +85,9 @@ def fire(client: httpx.Client, eid: str, tid: str, status: int = 200, **body: ob
 
 
 def png() -> bytes:
-    """Return a small valid PNG."""
+    """Return a valid PNG above the 1200 px poster minimum (M4 D6)."""
     buffer = io.BytesIO()
-    Image.new("RGB", (640, 480), "#3366cc").save(buffer, "PNG")
+    Image.new("RGB", (1400, 900), "#3366cc").save(buffer, "PNG")
     return buffer.getvalue()
 
 
@@ -288,6 +288,9 @@ def notes(organizer: httpx.Client, editor: httpx.Client) -> None:
     fire(organizer, eid, "T02")
     missing = fire(editor, eid, "T03", 422)
     check(missing["code"] == "reason_required", "h: T03 without a note is reason_required")
+    # Since M4 T03 needs an open question; the dialog writes it first (M4 contract 4.2).
+    question = {"bodyMd": "Bitte Ort prüfen"}
+    expect(editor.post(f"/api/events/{eid}/comments", json=question), 201, "h: question")
     fire(editor, eid, "T03", note="Bitte Ort prüfen")
     fire(organizer, eid, "T02")
     fire(editor, eid, "T04")
