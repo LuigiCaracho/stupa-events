@@ -26,6 +26,7 @@ COPY app ./app
 COPY worker ./worker
 COPY alembic.ini ./
 COPY migrations ./migrations
+COPY seeds ./seeds
 RUN --mount=type=cache,target=/root/.cache/pip pip install --no-deps .
 
 # Do not run as root. The container needs read access to /app only.

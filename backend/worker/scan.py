@@ -4,7 +4,10 @@
 result to `attachment.scan_status` and an audit entry in the same transaction. On a hit
 it deletes the object, clears `storage_key` and keeps the signature in `scan_result`.
 After a clean scan of a poster it enqueues `derive_poster`, which builds the public WebP
-derivatives. A transient storage or scanner error raises `arq.Retry` with a linear
+derivatives. After a clean scan of a replacement (not a poster) the predecessor is hidden,
+so an infected or failed replacement never hides the last good version. `requeue_stale_scans`
+(cron) queues `pending` rows again whose job never ran, for example after a Redis outage.
+A transient storage or scanner error raises `arq.Retry` with a linear
 backoff up to `scan_max_tries`. After the last try the job is dead: the worker logs it, sets
 `scan_status='error'` with an audit entry and never requeues it again.
 Idempotency comes from the job key `scan:<id>`. A second run on an already scanned
@@ -18,10 +21,12 @@ Copied from STUPA-Workflow@93c33d6 backend/worker/scan.py (event attachments, de
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 from typing import Any
 from uuid import UUID
 
 from arq import Retry
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.db import get_sessionmaker
@@ -31,10 +36,14 @@ from app.modules.files.models import Attachment
 from app.modules.files.scanner import ScannerError, ScanVerdict, build_scanner
 from app.modules.files.storage import ObjectStorage, StorageError, build_object_storage
 from app.settings import Settings, load_settings
+from app.shared.timeutil import utcnow
 
 logger = logging.getLogger("app.files")
 
 DERIVE_TASK_NAME = "derive_poster"
+PREVIEW_TASK_NAME = "build_preview"
+STALE_AFTER = timedelta(minutes=10)
+REQUEUE_BATCH = 100
 
 
 async def on_startup(ctx: dict[str, Any]) -> None:
@@ -85,10 +94,48 @@ async def scan_attachment(ctx: dict[str, Any], attachment_id: str) -> str:
             await session.commit()
             return outcome
         await _store_verdict(session, storage, attachment, verdict)
+        if verdict.clean:
+            await _retire_predecessor(session, attachment)
         await session.commit()
     if verdict.clean and attachment.kind == "poster":
         await _enqueue_derive(ctx, aid)
+    elif verdict.clean and attachment.mime.startswith("image/"):
+        await _enqueue_job(ctx, PREVIEW_TASK_NAME, aid)
     return "clean" if verdict.clean else "infected"
+
+
+async def _retire_predecessor(session: AsyncSession, attachment: Attachment) -> None:
+    if attachment.kind == "poster" or attachment.supersedes_id is None:
+        return
+    await session.execute(
+        update(Attachment)
+        .where(Attachment.id == attachment.supersedes_id, Attachment.retired_at.is_(None))
+        .values(retired_at=utcnow())
+    )
+
+
+async def requeue_stale_scans(ctx: dict[str, Any]) -> int:
+    """Queue the scan again for `pending` attachments older than ten minutes."""
+    pool = ctx.get("redis")
+    if pool is None:
+        return 0
+    async with _sessionmaker(ctx)() as session:
+        ids = list(
+            await session.scalars(
+                select(Attachment.id)
+                .where(
+                    Attachment.scan_status == "pending",
+                    Attachment.storage_key.is_not(None),
+                    Attachment.created_at < utcnow() - STALE_AFTER,
+                )
+                .limit(REQUEUE_BATCH)
+            )
+        )
+    for attachment_id in ids:
+        await pool.enqueue_job(
+            "scan_attachment", str(attachment_id), _job_id=f"scan:{attachment_id}"
+        )
+    return len(ids)
 
 
 async def _store_verdict(
@@ -143,13 +190,18 @@ async def _store_error(session: AsyncSession, attachment: Attachment) -> None:
     )
 
 
-async def _enqueue_derive(ctx: dict[str, Any], attachment_id: UUID) -> None:
-    """Hand a clean poster to the derive job (idempotent through the job id)."""
+async def _enqueue_job(ctx: dict[str, Any], task: str, attachment_id: UUID) -> None:
+    """Hand a clean attachment to a follow-up job (idempotent through the job id)."""
     pool = ctx.get("redis")
     if pool is None:
-        logger.warning("derive skipped (attachment=%s) - no redis pool", attachment_id)
+        logger.warning("%s skipped (attachment=%s) - no redis pool", task, attachment_id)
         return
-    await pool.enqueue_job(DERIVE_TASK_NAME, str(attachment_id), _job_id=f"derive:{attachment_id}")
+    await pool.enqueue_job(task, str(attachment_id), _job_id=f"{task}:{attachment_id}")
+
+
+async def _enqueue_derive(ctx: dict[str, Any], attachment_id: UUID) -> None:
+    """Hand a clean poster to the derive job (idempotent through the job id)."""
+    await _enqueue_job(ctx, DERIVE_TASK_NAME, attachment_id)
 
 
 def _retry_or_dead(

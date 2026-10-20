@@ -1,4 +1,4 @@
-"""Attachments: the ``attachment`` table (DDL in migration ``0002_events_core``).
+"""Attachments: the ``attachment`` table (DDL in migrations ``0002`` and ``0005``).
 
 One row holds one uploaded file of an event. The binary object lives in MinIO under
 ``storage_key``, never in the database. ``scan_status`` carries the ClamAV result: the
@@ -17,26 +17,38 @@ Copied from STUPA-Workflow@93c33d6 backend/app/modules/files/models.py (event ow
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import BigInteger, Boolean, CheckConstraint, DateTime, ForeignKey, Index, Text, Uuid
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    CheckConstraint,
+    Date,
+    DateTime,
+    ForeignKey,
+    Index,
+    Text,
+    Uuid,
+    text,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base, CreatedAtMixin, UUIDPkMixin
 
-MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024
+MAX_IMAGE_BYTES = 10 * 1024 * 1024
+MAX_DOCUMENT_BYTES = 25 * 1024 * 1024
 
 ATTACHMENT_KINDS = (
     "poster",
     "social_post",
-    "poster_print",
-    "businessplan",
+    "business_plan",
     "quote",
     "contract",
-    "mail_attachment",
+    "howto_file",
     "other",
 )
+RESTRICTED_KINDS = ("quote", "business_plan", "contract")
 SCAN_STATUSES = ("pending", "clean", "infected", "error")
 RIGHTS_BASES = ("own_work", "permission", "license", "partner_agreement", "unknown")
 VISIBILITIES = ("team", "org", "shared")
@@ -87,9 +99,31 @@ class Attachment(UUIDPkMixin, CreatedAtMixin, Base):
         ForeignKey("attachment.id", ondelete="RESTRICT"), nullable=True
     )
     retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    contains_date: Mapped[bool] = mapped_column(Boolean, server_default="false", default=False)
+    dated_for: Mapped[date | None] = mapped_column(Date, nullable=True)
+    flyer_date_confirmed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    flyer_date_confirmed_by: Mapped[str | None] = mapped_column(Text, nullable=True)
+    preview_key: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     __table_args__ = (
-        CheckConstraint(f"size_bytes <= {MAX_ATTACHMENT_BYTES}", name="size_limit"),
+        CheckConstraint(
+            f"size_bytes <= CASE WHEN mime LIKE 'image/%' THEN {MAX_IMAGE_BYTES} "
+            f"ELSE {MAX_DOCUMENT_BYTES} END",
+            name="size",
+        ),
+        CheckConstraint(
+            f"kind NOT IN ({', '.join(repr(k) for k in RESTRICTED_KINDS)}) "
+            "OR visibility <> 'shared'",
+            name="restricted_not_shared",
+        ),
+        Index(
+            "ix_attachment_event_kind",
+            "event_id",
+            "kind",
+            postgresql_where=text("retired_at IS NULL"),
+        ),
         CheckConstraint(_in("kind", ATTACHMENT_KINDS), name="kind"),
         CheckConstraint(_in("scan_status", SCAN_STATUSES), name="scan_status"),
         CheckConstraint(_in("rights_basis", RIGHTS_BASES), name="rights_basis"),

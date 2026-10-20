@@ -36,3 +36,11 @@ def scan_queue(request: Request) -> ScanQueue | None:
 AttachmentStorage = Annotated[ObjectStorage | None, Depends(attachment_storage)]
 PublicStorage = Annotated[ObjectStorage | None, Depends(public_storage)]
 ScanQueueDep = Annotated[ScanQueue | None, Depends(scan_queue)]
+
+
+def arq_pool(request: Request) -> object | None:
+    """Return the arq pool of the app (`None` without Redis): mails and worker jobs use it."""
+    return getattr(request.app.state, "arq_pool", None)
+
+
+ArqPool = Annotated[object | None, Depends(arq_pool)]

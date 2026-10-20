@@ -84,4 +84,14 @@ async def derive_poster(ctx: dict[str, Any], attachment_id: str) -> str:
             data={"eventId": str(row.event_id), "status": "derived"},
         )
         await session.commit()
+    await _enqueue_followups(ctx, attachment_id)
     return "derived"
+
+
+async def _enqueue_followups(ctx: dict[str, Any], attachment_id: str) -> None:
+    """Hand the derived poster to the preview and promote jobs (idempotent job ids)."""
+    pool = ctx.get("redis")
+    if pool is None:
+        return
+    for task in ("build_preview", "promote_poster"):
+        await pool.enqueue_job(task, attachment_id, _job_id=f"{task}:{attachment_id}")
