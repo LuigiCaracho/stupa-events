@@ -9,15 +9,17 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
+from app.modules.account.router import router as account_router
 from app.modules.admin.mappings_router import router as mappings_router
 from app.modules.admin.principals_router import router as principals_router
 from app.modules.admin.taxonomy_router import ROUTERS as ADMIN_TAXONOMY_ROUTERS
 from app.modules.audit.router import router as audit_router
 from app.modules.auth.router import router as auth_router
-from app.modules.dossier.router import router as dossier_router
+from app.modules.dossier.routers import ROUTERS as DOSSIER_ROUTERS
 from app.modules.events.drafts_router import router as drafts_router
 from app.modules.events.revisions_router import router as revisions_router
 from app.modules.events.router import router as events_router
+from app.modules.notifications.router import router as notifications_router
 from app.modules.orgs.router import router as orgs_router
 from app.modules.pipeline.actions_router import alias_router as image_exception_alias_router
 from app.modules.pipeline.actions_router import router as actions_router
@@ -41,6 +43,8 @@ ROUTERS: tuple[APIRouter, ...] = (
     actions_router,
     image_exception_alias_router,
     tasks_router,
-    dossier_router,
+    notifications_router,
+    account_router,
+    *DOSSIER_ROUTERS,
     public_router,
 )

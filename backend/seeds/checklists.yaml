@@ -1,0 +1,34 @@
+# Checklist templates (M4 contract 2.4). Starting proposal, to be reviewed by Luis (decision D4).
+# Resolution: template of the main category, else of its required_profile, else `generic`.
+generic:
+  name: Allgemeine Veranstaltung
+  profile: generic
+  items:
+    - {key: room-confirmed, text: Raum bestätigt, phase: planning, required: true, offset: -35}
+    - {key: order-poster, text: Plakat bestellen, phase: planning, required: false, offset: -28}
+    - {key: confirm-tech, text: Technik bestätigen, phase: live, required: true, offset: -7}
+    - {key: inform-helpers, text: "Helfer:innen informiert", phase: live, required: false, offset: -3}
+    - {key: settlement, text: Abrechnung, phase: followup, required: true, offset: 7}
+    - {key: thank-helpers, text: "Danke an Helfer:innen", phase: followup, required: false, offset: 3}
+party:
+  name: Party
+  profile: party
+  extends: generic
+  items:
+    - {key: safety-concept, text: Sicherheitskonzept liegt vor, phase: planning, required: true, offset: -28}
+    - {key: youth-protection, text: Jugendschutz und Altersgrenze geklärt, phase: planning, required: true, offset: -28}
+    - {key: security-medics, text: Security und Sanitätsdienst bestätigt, phase: live, required: true, offset: -7}
+meeting:
+  name: Sitzung
+  profile: meeting
+  items:
+    - {key: invitation-agenda, text: Einladung mit Tagesordnung, phase: planning, required: false, offset: -7}
+    - {key: minutes-sent, text: Protokoll verteilt, phase: followup, required: true, offset: 7}
+trip:
+  name: Ausfahrt
+  profile: trip
+  items:
+    - {key: registration-open, text: Anmeldung geöffnet, phase: planning, required: true, offset: -42}
+    - {key: waiver-packing, text: Haftungsausschluss und Packliste, phase: planning, required: true, offset: -28}
+    - {key: final-list, text: Teilnehmerliste final, phase: live, required: true, offset: -3}
+    - {key: settlement, text: Abrechnung, phase: followup, required: true, offset: 7}
