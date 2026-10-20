@@ -1,7 +1,8 @@
-"""Guards on content that later milestones fill: title marks, duplicates, comments, facts.
+"""Guards on content: title marks, duplicates, comments, checklist, facts.
 
-The guard functions are complete; the snapshot carries a neutral value until M4 to M6
-provide the data, and a neutral value always means "satisfied".
+The guard functions are pure. M4 fills comments and checklist counts from the database
+(`dossier.guard_data`); duplicates, locations and facts keep a neutral snapshot value until
+M5 and M6, and a neutral value always means "satisfied".
 """
 
 from __future__ import annotations
@@ -33,7 +34,7 @@ def no_open_duplicate(snapshot: Snapshot, actor: Actor, now: datetime) -> list[R
 
 
 def no_open_comment_on_hero(snapshot: Snapshot, actor: Actor, now: datetime) -> list[Reason]:
-    """Guard `noOpenCommentOnField(hero)`: no open comment on the poster (M4)."""
+    """Guard `noOpenCommentOnField(hero)`: no open comment on the poster or its replacements."""
     if snapshot.open_hero_comments > 0:
         return [blocker("open_comment_on_hero", field="poster", fix=FixAction.OPEN_COMMENT)]
     return []
@@ -54,14 +55,14 @@ def facts_valid(snapshot: Snapshot, actor: Actor, now: datetime) -> list[Reason]
 
 
 def checklist_done(snapshot: Snapshot, actor: Actor, now: datetime) -> list[Reason]:
-    """Guard `checklistDone`: no open required checklist item of the phase (M4)."""
+    """Guard `checklistDone`: no open required checklist item of the phase."""
     if snapshot.open_required_checklist > 0:
         return [blocker("checklist_open", fix=FixAction.OPEN_CHECKLIST)]
     return []
 
 
 def open_comment_required(snapshot: Snapshot, actor: Actor, now: datetime) -> list[Reason]:
-    """Guard `openCommentRequired` of T03; `None` (not tracked before M4) is satisfied."""
+    """Guard `openCommentRequired` of T03: at least one open root comment (`None` passes)."""
     if snapshot.open_comments == 0:
         return [blocker("open_comment_required", fix=FixAction.OPEN_COMMENT)]
     return []

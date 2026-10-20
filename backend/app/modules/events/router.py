@@ -105,6 +105,7 @@ async def patch_event(
     async with with_current(db, principal):
         event, actions, committed = await service.patch(principal, event_id, body, expected)
     out = (await present(db, principal, [event]))[0]
+    out.checklist_recomputed = db.info.pop("checklist_recomputed", None)
     await db.commit()
     set_etag(response, out.rev)
     await run_actions(getattr(request.app.state, "arq_pool", None), actions, committed)

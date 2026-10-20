@@ -1,4 +1,8 @@
-"""The one optimistic UPDATE of a dossier: `WHERE id AND rev [AND state IN ...]`."""
+"""The one optimistic UPDATE of a dossier: `WHERE id AND rev [AND state IN ...]`.
+
+A new start recomputes the due dates of the checklist, and a new description records its
+images in `media_ref`, both in the same transaction.
+"""
 
 from __future__ import annotations
 
@@ -8,8 +12,10 @@ from typing import Any
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.dossier.checklist_due import recompute_due
 from app.modules.events.conflict import VersionConflict
 from app.modules.events.models import Event
+from app.modules.media.ref_sync import add_refs
 
 
 async def update_event(
@@ -44,4 +50,8 @@ async def update_event(
     if updated is None:
         await session.refresh(event)
         raise VersionConflict(event)
+    if "starts_at" in values or "tzid" in values:
+        session.info["checklist_recomputed"] = await recompute_due(session, updated)
+    if "description_md" in values:
+        await add_refs(session, "event", updated.id, updated.description_md)
     return updated

@@ -25,11 +25,13 @@ from app.modules.events import revisions
 from app.modules.events.access import guard_snapshot, load_visible, poster_of
 from app.modules.events.conflict import VersionConflict
 from app.modules.events.models import Event
+from app.modules.notifications.service import PendingMail
 from app.modules.orgs.scope import bind
 from app.modules.pipeline import slugs
 from app.modules.pipeline.actions import Committed
 from app.modules.pipeline.actor import actor_of
 from app.modules.pipeline.decision import Verdict, decide
+from app.modules.pipeline.notices import notice_for
 from app.modules.pipeline.reasons import Reason, blocker, payload, refusal
 from app.modules.pipeline.snapshot import SYSTEM_ACTOR, Actor, Snapshot
 from app.modules.pipeline.transitions import TRANSITIONS, Transition
@@ -64,6 +66,7 @@ class Fired:
     event: Event
     actions: tuple[str, ...]
     committed: Committed
+    mails: tuple[PendingMail, ...] = ()
 
 
 def _sqlstate(exc: DBAPIError) -> str | None:
@@ -174,6 +177,9 @@ class PipelineService:
         values = await self._values(transition, event, actor, publish_at)
         updated = await self._write(event, transition, values)
         await self._record(updated, transition, actor, snapshot, note)
+        mails = await notice_for(
+            self.session, updated, transition.id, actor.sub, open_comments=snapshot.open_comments
+        )
         return Fired(
             updated,
             transition.actions,
@@ -183,6 +189,7 @@ class PipelineService:
                 poster_id=poster.id if poster else None,
                 poster_has_derivatives=bool(poster and poster.derivatives),
             ),
+            mails,
         )
 
     async def _record(

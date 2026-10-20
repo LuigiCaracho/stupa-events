@@ -259,3 +259,4 @@ class EventOut(CamelModel):
     allowed_actions: list[ActionName]
     editable_fields: list[str]
     lock_reason: LockReason | None
+    checklist_recomputed: int | None = None

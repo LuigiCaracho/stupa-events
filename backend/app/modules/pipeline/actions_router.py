@@ -21,6 +21,7 @@ from app.modules.events.schemas import (
     ReinstateIn,
     RevertIn,
 )
+from app.modules.notifications.service import dispatch_mails
 from app.modules.pipeline import actions_service, assign, marks, revert
 from app.modules.pipeline.actions import run_actions
 from app.modules.pipeline.exception import grant_image_exception
@@ -58,9 +59,12 @@ async def _run(
     async with with_current(db, principal):
         fired = await work()
     out = (await present(db, principal, [fired.event]))[0]
+    out.checklist_recomputed = db.info.pop("checklist_recomputed", None)
     await db.commit()
     set_etag(response, out.rev)
-    await run_actions(getattr(request.app.state, "arq_pool", None), fired.actions, fired.committed)
+    pool = getattr(request.app.state, "arq_pool", None)
+    await run_actions(pool, fired.actions, fired.committed)
+    await dispatch_mails(pool, fired.mails)
     return out
 
 

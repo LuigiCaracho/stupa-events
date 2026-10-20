@@ -11,6 +11,7 @@ from app.deps import DbSession, Principal, SettingsDep, require_principal
 from app.modules.events.conflict import parse_if_match, require_if_match, set_etag, with_current
 from app.modules.events.presenter import present
 from app.modules.events.schemas import EventOut, TransitionIn, TransitionName
+from app.modules.notifications.service import dispatch_mails
 from app.modules.pipeline.actions import run_actions
 from app.modules.pipeline.schemas import GuardsOut, reason_out
 from app.modules.pipeline.service import PipelineService
@@ -64,7 +65,9 @@ async def fire_transition(
     out = (await present(db, principal, [fired.event]))[0]
     await db.commit()
     set_etag(response, out.rev)
-    await run_actions(getattr(request.app.state, "arq_pool", None), fired.actions, fired.committed)
+    pool = getattr(request.app.state, "arq_pool", None)
+    await run_actions(pool, fired.actions, fired.committed)
+    await dispatch_mails(pool, fired.mails)
     return out
 
 

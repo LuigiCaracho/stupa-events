@@ -20,6 +20,7 @@ from app.modules.files.models import Attachment
 from app.modules.orgs.scope import bind
 from app.modules.pipeline.actions import Committed
 from app.modules.pipeline.actor import actor_of
+from app.modules.pipeline.notices import notice_for
 from app.modules.pipeline.service import Fired
 from app.modules.pipeline.snapshot import Actor, Snapshot
 from app.shared.errors import FieldError, ForbiddenError, ValidationProblem
@@ -127,6 +128,7 @@ async def finish(
         )
     await revisions.audit(session, updated, actor=actor, action=audit_action, data=audit_data)
     poster = ctx.poster
+    mails = await notice_for(session, updated, status[0], actor) if status else ()
     return Fired(
         updated,
         actions,
@@ -136,6 +138,7 @@ async def finish(
             poster_id=poster.id if poster else None,
             poster_has_derivatives=bool(poster and poster.derivatives),
         ),
+        mails,
     )
 
 

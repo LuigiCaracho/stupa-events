@@ -15,12 +15,12 @@ from sqlalchemy import Select, and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.auth.principal import Principal
+from app.modules.dossier.guard_data import GuardData, load_guard_data
 from app.modules.events.models import Event, EventStatusEvent
 from app.modules.files.models import Attachment
 from app.modules.orgs.scope import readable_org_ids
 from app.modules.pipeline.snapshot import PosterSnapshot, Snapshot
 from app.shared.errors import NotFoundError
-from app.shared.timeutil import DEFAULT_TZID, to_local
 
 
 async def load_visible(session: AsyncSession, principal: Principal, event_id: UUID) -> Event:
@@ -113,51 +113,40 @@ async def guard_snapshot(
     *,
     starts_at: datetime | None = None,
 ) -> Snapshot:
-    """Build the snapshot with everything the guards read, with three small queries.
+    """Build the snapshot with everything the guards read, with a few grouped queries.
 
     `starts_at` is a start that is about to replace the stored one, so the year of the
     poster check follows the new date.
     """
-    conditions = [
-        Attachment.event_id == event.id,
-        Attachment.retired_at.is_(None),
-        Attachment.scan_status != "clean",
-    ]
-    if event.hero_attachment_id is not None:
-        conditions.append(Attachment.id != event.hero_attachment_id)
-    quarantined = await session.scalar(
-        select(func.count()).select_from(Attachment).where(*conditions)
-    )
+    data = (
+        await load_guard_data(
+            session, [event], starts_at={event.id: starts_at} if starts_at else None
+        )
+    )[event.id]
     entered = await session.scalar(
         select(func.max(EventStatusEvent.at)).where(
             EventStatusEvent.event_id == event.id, EventStatusEvent.to_state == "followup"
         )
     )
+    return snapshot_with(event, poster, data, entered)
+
+
+def snapshot_with(
+    event: Event, poster: Attachment | None, data: GuardData, entered_followup_at: datetime | None
+) -> Snapshot:
+    """Build the full guard snapshot from the row, the poster and the M4 guard data."""
     snapshot = snapshot_of(
-        event, poster, quarantined_attachments=quarantined or 0, entered_followup_at=entered
+        event,
+        poster,
+        quarantined_attachments=data.quarantined_attachments,
+        entered_followup_at=entered_followup_at,
+        open_comments=data.open_comments,
+        open_hero_comments=data.open_hero_comments,
+        open_required_checklist=data.open_required_checklist,
     )
-    if snapshot.poster is None or poster is None:
+    if snapshot.poster is None or not data.poster_reused:
         return snapshot
-    reused = await _poster_reused_in_other_year(session, event, poster, starts_at)
-    return replace(snapshot, poster=replace(snapshot.poster, reused_in_other_year=reused))
-
-
-async def _poster_reused_in_other_year(
-    session: AsyncSession, event: Event, poster: Attachment, starts_at: datetime | None
-) -> bool:
-    year = to_local(starts_at or event.starts_at, event.tzid or DEFAULT_TZID).year
-    other = await session.scalar(
-        select(Attachment.id)
-        .join(Event, Event.id == Attachment.event_id)
-        .where(
-            Attachment.sha256 == poster.sha256,
-            Attachment.event_id != event.id,
-            Attachment.retired_at.is_(None),
-            func.extract("year", func.timezone(DEFAULT_TZID, Event.starts_at)) != year,
-        )
-        .limit(1)
-    )
-    return other is not None
+    return replace(snapshot, poster=replace(snapshot.poster, reused_in_other_year=True))
 
 
 async def visible_events_query(session: AsyncSession, principal: Principal) -> Select[Event]:

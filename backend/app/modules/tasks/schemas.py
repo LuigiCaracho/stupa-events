@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
+from uuid import UUID
+
+from pydantic import Field
 
 from app.modules.auth.schemas import CamelModel
 from app.modules.events.card_schemas import EventCard, PersonRef
@@ -30,6 +34,18 @@ class ChangedCard(EventCard):
     changes: list[RevisionOut]
 
 
+class ChecklistTask(CamelModel):
+    """An open checklist item assigned to the caller (`kind = checklist_item`)."""
+
+    kind: Literal["checklist_item"] = "checklist_item"
+    id: UUID
+    event_id: UUID
+    event_title: str
+    text: str
+    phase: str
+    due_at: datetime | None
+
+
 class TaskCounts(CamelModel):
     """The full number behind each list (the lists hold at most 50)."""
 
@@ -39,6 +55,7 @@ class TaskCounts(CamelModel):
     mine: int
     followup_open: int
     changed_after_publish: int
+    checklist_items: int = 0
 
 
 class TasksOut(CamelModel):
@@ -50,4 +67,5 @@ class TasksOut(CamelModel):
     mine: list[EventCard]
     followup_open: list[EventCard]
     changed_after_publish: list[ChangedCard]
+    checklist_items: list[ChecklistTask] = Field(default_factory=list)
     counts: TaskCounts

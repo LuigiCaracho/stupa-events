@@ -10,6 +10,7 @@ from sqlalchemy.orm import aliased
 
 from app.modules.auth.models import Principal as PrincipalRow
 from app.modules.auth.principal import Principal
+from app.modules.dossier.models_checklist import ChecklistItem
 from app.modules.events.access import snapshot_of, visible_events_query
 from app.modules.events.card_schemas import EventCard, PersonRef
 from app.modules.events.cards import present_cards
@@ -21,6 +22,7 @@ from app.modules.pipeline.decision import allowed_transitions
 from app.modules.tasks.schemas import (
     AwaitingCard,
     ChangedCard,
+    ChecklistTask,
     ReturnedCard,
     TaskCounts,
     TasksOut,
@@ -120,6 +122,33 @@ async def _names(session: AsyncSession, subs: set[str]) -> dict[str, str | None]
     return dict(rows.all()) if subs else {}
 
 
+async def _checklist_tasks(session: AsyncSession, principal: Principal) -> list[ChecklistTask]:
+    """Open checklist items assigned to the caller in dossiers the caller reads."""
+    visible = (await visible_events_query(session, principal)).subquery()
+    rows = await session.execute(
+        select(ChecklistItem, visible.c.title)
+        .join(visible, visible.c.id == ChecklistItem.event_id)
+        .where(
+            ChecklistItem.assignee_sub == principal.sub,
+            ChecklistItem.done_at.is_(None),
+            ChecklistItem.waived_reason.is_(None),
+        )
+        .order_by(ChecklistItem.due_at.asc().nulls_last(), ChecklistItem.created_at)
+        .limit(LIST_LIMIT)
+    )
+    return [
+        ChecklistTask(
+            id=item.id,
+            event_id=item.event_id,
+            event_title=title,
+            text=item.text,
+            phase=item.phase,
+            due_at=item.due_at,
+        )
+        for item, title in rows.all()
+    ]
+
+
 async def build_tasks(session: AsyncSession, principal: Principal) -> TasksOut:
     """Compute the task lists of the caller; each list holds at most 50 cards."""
     await bind(session, principal)
@@ -132,6 +161,7 @@ async def build_tasks(session: AsyncSession, principal: Principal) -> TasksOut:
         if _rights(principal, e, "event.submit")
     ]
     changed = await _changed(session, principal)
+    checklist_items = await _checklist_tasks(session, principal)
     names = await _names(session, {s.actor_id for _, s in returned if s.actor_id})
 
     async def cards(events: list[Event]) -> list[EventCard]:
@@ -179,6 +209,7 @@ async def build_tasks(session: AsyncSession, principal: Principal) -> TasksOut:
         mine=await cards(mine),
         followup_open=await cards(followup),
         changed_after_publish=changed_cards,
+        checklist_items=checklist_items,
         counts=TaskCounts(
             awaiting_review=len(awaiting),
             returned=len(returned),
@@ -186,5 +217,6 @@ async def build_tasks(session: AsyncSession, principal: Principal) -> TasksOut:
             mine=len(mine),
             followup_open=len(followup),
             changed_after_publish=len(changed),
+            checklist_items=len(checklist_items),
         ),
     )

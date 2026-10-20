@@ -25,6 +25,7 @@ from app.modules.events.models import EditorDraft, Event
 from app.modules.events.schemas import EventCreate, EventPatch
 from app.modules.events.states import EventState
 from app.modules.events.writer import update_event
+from app.modules.media.ref_sync import add_refs, draft_owner_id, drop_draft_refs
 from app.modules.orgs.models import Organization
 from app.modules.orgs.scope import bind
 from app.modules.pipeline.actions import Committed
@@ -163,6 +164,7 @@ class EventService:
         self.session.add(event)
         await self.session.flush()
         await self.session.refresh(event)
+        await add_refs(self.session, "event", event.id, event.description_md)
         await revisions.append_revision(
             self.session, event, actor=principal.sub, field_class="state"
         )
@@ -283,6 +285,7 @@ class EventService:
                 EditorDraft.principal_sub == sub,
             )
         )
+        await drop_draft_refs(self.session, draft_owner_id(event.id, sub))
 
     @staticmethod
     def changes_of(body: Any) -> dict[str, Any]:

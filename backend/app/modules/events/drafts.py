@@ -23,6 +23,7 @@ from app.modules.events.access import load_visible
 from app.modules.events.models import EditorDraft
 from app.modules.events.schemas import DraftFields
 from app.modules.events.service import EventService
+from app.modules.media.ref_sync import draft_owner_id, drop_draft_refs, replace_draft_refs
 from app.shared.timeutil import utcnow
 
 DRAFT_RETENTION = timedelta(days=14)
@@ -67,6 +68,9 @@ async def put_draft(
         ).returning(EditorDraft)
     )
     assert row is not None
+    await replace_draft_refs(
+        session, draft_owner_id(event.id, principal.sub), fields.description_md
+    )
     return row
 
 
@@ -94,11 +98,19 @@ async def delete_draft(session: AsyncSession, principal: Principal, event_id: UU
             EditorDraft.principal_sub == principal.sub,
         )
     )
+    await drop_draft_refs(session, draft_owner_id(event.id, principal.sub))
 
 
 async def purge_older_than(session: AsyncSession, now: datetime) -> int:
-    """Delete drafts idle for more than 14 days; return the count (no commit)."""
-    result = await session.execute(
-        delete(EditorDraft).where(EditorDraft.updated_at < now - DRAFT_RETENTION)
-    )
+    """Delete drafts idle for more than 14 days; return the count (no commit).
+
+    The image references of the purged drafts go with them.
+    """
+    stale = EditorDraft.updated_at < now - DRAFT_RETENTION
+    owners = (
+        await session.execute(select(EditorDraft.owner_id, EditorDraft.principal_sub).where(stale))
+    ).all()
+    for owner_id, sub in owners:
+        await drop_draft_refs(session, draft_owner_id(owner_id, sub))
+    result = await session.execute(delete(EditorDraft).where(stale))
     return cast(CursorResult[Any], result).rowcount or 0

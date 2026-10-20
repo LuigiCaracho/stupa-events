@@ -33,15 +33,28 @@ class PosterSnapshot:
     reused_in_other_year: bool = False
 
     @property
+    def usable_media(self) -> bool:
+        """Tell if the poster file itself is ready: scanned clean and derived."""
+        return self.scan_status == "clean" and self.has_derivatives
+
+    @property
+    def missing_rights(self) -> tuple[str, ...]:
+        """Name the rights fields still open: alt text, credit, basis, consent note."""
+        missing = []
+        if not (self.alt_text or "").strip():
+            missing.append("altText")
+        if not (self.credit or "").strip():
+            missing.append("credit")
+        if self.rights_basis == "unknown":
+            missing.append("rightsBasis")
+        if not self.consent_ok:
+            missing.append("consentNote")
+        return tuple(missing)
+
+    @property
     def usable(self) -> bool:
-        """Tell if the poster counts as the required image (scanned, derived, rights set)."""
-        return (
-            self.scan_status == "clean"
-            and self.has_derivatives
-            and bool((self.alt_text or "").strip())
-            and bool((self.credit or "").strip())
-            and self.rights_basis != "unknown"
-        )
+        """Mirror of the SQL function `attachment_poster_ok`: file ready and rights set."""
+        return self.usable_media and not self.missing_rights
 
     @property
     def consent_ok(self) -> bool:

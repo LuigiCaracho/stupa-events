@@ -52,10 +52,14 @@ async def confirm_flyer(
         raise ForbiddenError("Only the creator may confirm the flyer of this dossier.")
     if ctx.event.state not in FLYER_STATES:
         raise ConflictError("The action is not defined in this state.", code="invalid_transition")
+    now = utcnow()
+    if ctx.poster is not None:
+        ctx.poster.flyer_date_confirmed_at = now
+        ctx.poster.flyer_date_confirmed_by = principal.sub
     return await finish(
         session,
         ctx,
-        {"flyer_checked_at": utcnow()},
+        {"flyer_checked_at": now},
         audit_action=AuditAction.EVENT_FLYER_CONFIRM,
         field_class="dossier",
     )

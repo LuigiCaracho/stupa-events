@@ -1,4 +1,4 @@
-"""Guards on the poster: image, consent, quarantine and the reused flyer."""
+"""Guards on the poster: image, rights, quarantine and the reused flyer."""
 
 from __future__ import annotations
 
@@ -12,21 +12,28 @@ def image_or_exception(snapshot: Snapshot, actor: Actor, now: datetime) -> list[
     """Guard `imageOrException`: a usable poster or a valid image exception (E41)."""
     if snapshot.image_exception_reason is not None:
         return []
-    if snapshot.poster is not None and snapshot.poster.usable:
+    if snapshot.poster is not None and snapshot.poster.usable_media:
         return []
     return [blocker("image_required", field="poster", fix=FixAction.UPLOAD_POSTER)]
 
 
 def rights_complete(snapshot: Snapshot, actor: Actor, now: datetime) -> list[Reason]:
-    """Guard `rightsComplete`: depicted persons need a consent note when a poster counts."""
+    """Guard `rightsComplete`: alt text, credit, rights basis and consent of a counted poster.
+
+    One reason per open field, each with the `fill_rights` fix. A valid image exception
+    or a missing poster (reported by `imageOrException`) passes.
+    """
     poster = snapshot.poster
-    if snapshot.image_exception_reason is not None or poster is None or poster.consent_ok:
+    if snapshot.image_exception_reason is not None or poster is None:
         return []
-    return [blocker("rights_incomplete", field="poster", fix=FixAction.FILL_RIGHTS)]
+    return [
+        blocker("rights_incomplete", field=name, fix=FixAction.FILL_RIGHTS)
+        for name in poster.missing_rights
+    ]
 
 
 def attachments_scanned(snapshot: Snapshot, actor: Actor, now: datetime) -> list[Reason]:
-    """Guard `attachmentsScanned`: no other visible attachment is unscanned or infected."""
+    """Guard `attachmentsScanned`: no poster, social post or shared file waits for its scan."""
     if snapshot.quarantined_attachments > 0:
         return [blocker("attachment_quarantined", field="attachments")]
     return []

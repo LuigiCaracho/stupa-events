@@ -183,4 +183,4 @@ class EditorDraft(Base):
     fields: Mapped[dict] = mapped_column(JSONB)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    __table_args__ = (CheckConstraint("owner_kind IN ('event')", name="owner_kind"),)
+    __table_args__ = (CheckConstraint("owner_kind IN ('event', 'document')", name="owner_kind"),)
