@@ -1,0 +1,44 @@
+<section class="rp" aria-labelledby="revisions-heading">
+  <h3 class="sec" id="revisions-heading">{{ 'howto.revisions' | t }}</h3>
+  @if (!revisions.hasValue()) {
+    <app-skeleton variant="rows" />
+  } @else {
+    <ol class="rp__list rowgroup">
+      @for (r of revisions.value(); track r.rev) {
+        <li class="rp__row">
+          <span class="num">{{ 'howto.revLabel' | t: { rev: r.rev } }}</span>
+          <span class="rp__muted num">{{ r.at | ldate }}</span>
+          @if (r.changeNote) {
+            <span>{{ r.changeNote }}</span>
+          }
+          <span class="rp__muted num">{{ 'howto.charsDelta' | t: { delta: r.charsDelta } }}</span>
+        </li>
+      }
+    </ol>
+    @if (revisions.value().length > 1) {
+      <div class="rp__pick">
+        <app-select
+          [label]="'howto.from' | t"
+          [options]="options()"
+          [clearable]="false"
+          [(value)]="from"
+        />
+        <app-select
+          [label]="'howto.to' | t"
+          [options]="options()"
+          [clearable]="false"
+          [(value)]="to"
+        />
+        <app-button variant="tonal" [loading]="comparing()" (click)="compare()">{{
+          'howto.compare' | t
+        }}</app-button>
+      </div>
+    }
+    @if (error()) {
+      <app-note kind="error" role="alert">{{ error() }}</app-note>
+    }
+    @if (diff(); as d) {
+      <app-markdown-diff [diff]="d" />
+    }
+  }
+</section>

@@ -3,6 +3,8 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { IconComponent } from '@stupa-makers/ui-kit';
+import { NotificationsStore } from '../../features/notifications/notifications.store';
+import { I18nService } from '@core/i18n/i18n.service';
 import { BOTTOM_BAR_KEYS, NavService, type NavItem } from '../nav.service';
 
 /**
@@ -21,6 +23,11 @@ import { BOTTOM_BAR_KEYS, NavService, type NavItem } from '../nav.service';
 })
 export class BottomBarComponent {
   private readonly nav = inject(NavService);
+  private readonly i18n = inject(I18nService);
+  protected readonly store = inject(NotificationsStore);
+  protected readonly bellLabel = computed(() =>
+    this.i18n.translate('bell.aria', { count: this.store.count() }),
+  );
 
   readonly barItems = computed<NavItem[]>(() => {
     const visible = this.nav.visible();

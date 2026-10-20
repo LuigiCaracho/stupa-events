@@ -1,0 +1,45 @@
+.ct {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.ct__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.ct__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.ct__tpl {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.ct__form {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 28rem;
+}
+
+.ct__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ct__list > li + li {
+  border-top: 1px solid var(--color-border);
+}
+
+.ct__open {
+  margin-left: var(--space-2);
+  color: var(--color-warning);
+  font-weight: var(--fw-medium);
+}

@@ -1,0 +1,47 @@
+<section class="mtab" aria-labelledby="mails-heading">
+  <h2 class="sec" id="mails-heading">{{ 'mail.title' | t }}</h2>
+  <app-note>{{ 'mail.noSend' | t }}</app-note>
+  @if (list.error() && !list.hasValue()) {
+    <app-note kind="error" role="alert">{{ 'mail.loadFailed' | t }}</app-note>
+  } @else if (!list.hasValue()) {
+    <app-skeleton variant="rows" />
+  } @else {
+    <div class="mtab__grid">
+      <nav class="mtab__list" [attr.aria-label]="'mail.listLabel' | t">
+        @for (t of list.value(); track t.id) {
+          <button
+            type="button"
+            class="mtab__item"
+            [attr.aria-current]="selected()?.id === t.id ? 'true' : null"
+            (click)="open(t.id)"
+          >
+            <span>{{ t.title }}</span>
+            <span class="mtab__sub">{{ t.subject }}</span>
+          </button>
+        }
+        @if (canEdit()) {
+          <app-button variant="tonal" (click)="create()">{{ 'mail.new' | t }}</app-button>
+        }
+      </nav>
+      <div class="mtab__detail">
+        @if (selected() || creating()) {
+          <app-mail-template-editor
+            [eventId]="event().id"
+            [template]="selected()"
+            [placeholders]="placeholders.hasValue() ? placeholders.value() : []"
+            [canEdit]="canEdit()"
+            (saved)="saved($event)"
+          />
+        } @else if (list.value().length === 0) {
+          <app-empty-state
+            [heading]="'mail.empty' | t"
+            [body]="'mail.emptyBody' | t"
+            [plain]="true"
+          />
+        } @else {
+          <p class="mtab__sub">{{ 'mail.pick' | t }}</p>
+        }
+      </div>
+    </div>
+  }
+</section>

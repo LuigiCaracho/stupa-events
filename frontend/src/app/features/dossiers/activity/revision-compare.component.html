@@ -1,0 +1,33 @@
+<section class="rc" aria-labelledby="compare-heading">
+  <h3 class="sec" id="compare-heading">{{ 'activity.compare' | t }}</h3>
+  <div class="rc__pick">
+    <app-select
+      [label]="'howto.from' | t"
+      [options]="options()"
+      [clearable]="false"
+      [(value)]="from"
+    />
+    <app-select [label]="'howto.to' | t" [options]="options()" [clearable]="false" [(value)]="to" />
+    <app-button variant="tonal" [loading]="loading()" (click)="compare()">{{
+      'howto.compare' | t
+    }}</app-button>
+  </div>
+  @if (loading()) {
+    <app-skeleton variant="lines" />
+  }
+  @if (error()) {
+    <app-note kind="error" role="alert">{{ error() }}</app-note>
+  }
+  @if (short(); as s) {
+    @if (s.changed.length > 0) {
+      <app-config-diff [diff]="s" />
+    }
+    @for (t of texts(); track t.label) {
+      <h4 class="rc__label">{{ t.label }}</h4>
+      <app-markdown-diff [diff]="t.diff" />
+    }
+    @if (s.changed.length === 0 && texts().length === 0) {
+      <p class="rc__muted">{{ 'activity.noDifference' | t }}</p>
+    }
+  }
+</section>

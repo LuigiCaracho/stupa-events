@@ -125,3 +125,26 @@
     min-height: 52px;
   }
 }
+
+button.rail__item {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.rail__badge {
+  position: absolute;
+  top: -4px;
+  right: 6px;
+  min-width: 1.125rem;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--color-danger);
+  color: var(--color-on-danger);
+  font-size: 0.6875rem;
+  font-weight: var(--fw-semibold);
+  line-height: 1.125rem;
+  text-align: center;
+}

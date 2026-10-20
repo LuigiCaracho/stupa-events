@@ -1,0 +1,85 @@
+<section class="ct" aria-labelledby="checklist-heading">
+  <div class="ct__head">
+    <h2 class="sec" id="checklist-heading">{{ 'checklist.title' | t }}</h2>
+    @if (canEdit()) {
+      <div class="ct__actions">
+        <app-button variant="tonal" [disabled]="busy()" (click)="apply()">{{
+          'checklist.applyTemplate' | t
+        }}</app-button>
+        @if (!adding()) {
+          <app-button variant="text" (click)="adding.set(true)">{{
+            'checklist.add' | t
+          }}</app-button>
+        }
+      </div>
+    }
+  </div>
+
+  @if (list.hasValue() && list.value().template; as tpl) {
+    <p class="ct__tpl">{{ 'checklist.template' | t: { name: tpl.name } }}</p>
+  }
+
+  @if (adding()) {
+    <form class="ct__form" [formGroup]="form" (ngSubmit)="add()" novalidate>
+      <app-input
+        formControlName="text"
+        [label]="'checklist.text' | t"
+        [error]="attempted() && form.controls.text.invalid ? ('checklist.errText' | t) : ''"
+        [required]="true"
+      />
+      <app-select
+        formControlName="phase"
+        [label]="'checklist.phaseLabel' | t"
+        [options]="phaseOptions()"
+        [clearable]="false"
+      />
+      <app-checkbox formControlName="required">{{ 'checklist.requiredLabel' | t }}</app-checkbox>
+      <div class="ct__actions">
+        <app-button type="submit" variant="fill" [loading]="busy()">{{
+          'checklist.addSave' | t
+        }}</app-button>
+        <app-button variant="text" (click)="adding.set(false)">{{
+          'action.cancel' | t
+        }}</app-button>
+      </div>
+    </form>
+  }
+
+  @if (list.error() && !list.hasValue()) {
+    <app-note kind="error" role="alert">{{ 'checklist.loadFailed' | t }}</app-note>
+  } @else if (!list.hasValue()) {
+    <app-skeleton variant="rows" />
+  } @else if (groups().length === 0) {
+    <app-empty-state
+      [heading]="'checklist.empty' | t"
+      [body]="'checklist.emptyBody' | t"
+      [plain]="true"
+    />
+  }
+
+  @for (g of groups(); track g.phase) {
+    <section [attr.aria-labelledby]="'ct-p-' + g.phase">
+      <h3 class="sec" [id]="'ct-p-' + g.phase">
+        {{ phaseLabel(g.phase) }}
+        @if (list.hasValue() && list.value().openRequired[g.phase] > 0) {
+          <span class="ct__open">{{
+            'checklist.openRequired' | t: { count: list.value().openRequired[g.phase] }
+          }}</span>
+        }
+      </h3>
+      <ul class="ct__list">
+        @for (item of g.items; track item.id) {
+          <li>
+            <app-checklist-item
+              [item]="item"
+              [canEdit]="canEdit()"
+              [canTick]="canTick(item)"
+              [assignees]="assignees()"
+              (command)="command(item, $event)"
+            />
+          </li>
+        }
+      </ul>
+    </section>
+  }
+</section>

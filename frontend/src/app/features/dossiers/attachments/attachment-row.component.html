@@ -1,0 +1,49 @@
+<div class="ar">
+  @if (attachment().hasPreview) {
+    <app-image-thumb
+      [src]="previewHref()"
+      [alt]="attachment().altText ?? attachment().displayName"
+    />
+  }
+  <div class="ar__main">
+    <p class="ar__name">
+      @if (downloadable()) {
+        <a [href]="downloadHref()" download>{{ attachment().displayName }}</a>
+      } @else {
+        {{ attachment().displayName }}
+      }
+    </p>
+    <p class="ar__meta">
+      <span>{{ kindLabel() }}</span>
+      <span class="num">{{ size() }} MB</span>
+      <span>{{ visibilityLabel() }}</span>
+      <app-status-text [kind]="scan().kind">{{ scan().key | t }}</app-status-text>
+      @if (openQuestion()) {
+        <button type="button" class="ar__open" (click)="showQuestions.emit()">
+          <app-status-text kind="warn">{{ 'question.open' | t }}</app-status-text>
+        </button>
+      }
+    </p>
+    @if (attachment().altText) {
+      <p class="ar__alt">{{ attachment().altText }}</p>
+    }
+    @if (attachment().personsDepicted && attachment().consentNote) {
+      <p class="ar__alt">
+        {{ 'attachment.consent' | t: { note: attachment().consentNote ?? '' } }}
+      </p>
+    }
+    <app-question-button
+      [eventId]="eventId()"
+      [anchor]="{ attachmentId: attachment().id }"
+      [what]="attachment().displayName"
+      (asked)="asked.emit()"
+    />
+  </div>
+  @if (canEdit()) {
+    <app-row-menu
+      [sections]="sections()"
+      [label]="'attachment.menu' | t"
+      (selected)="pick($event)"
+    />
+  }
+</div>

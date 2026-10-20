@@ -1,0 +1,28 @@
+.rp {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.rp__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rp__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-2) var(--space-3);
+}
+
+.rp__muted {
+  color: var(--color-text-muted);
+}
+
+.rp__pick {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  align-items: end;
+  gap: var(--space-3);
+}

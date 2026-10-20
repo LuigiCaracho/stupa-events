@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { I18nService } from '@core/i18n/i18n.service';
 import type { TranslationKey } from '@core/i18n/translations';
 import { ROLE_KEYS } from '../../features/admin/admin-labels';
+import { NotificationPrefsComponent } from '../../features/account/notification-prefs/notification-prefs.component';
 import { SessionSectionComponent } from '../../features/account/session-section/session-section.component';
 import { AuthService } from '@core/auth/auth.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
@@ -17,6 +18,7 @@ import { ButtonComponent, CardComponent } from '@stupa-makers/ui-kit';
     TranslatePipe,
     ButtonComponent,
     CardComponent,
+    NotificationPrefsComponent,
     PageHeaderComponent,
     SessionSectionComponent,
   ],

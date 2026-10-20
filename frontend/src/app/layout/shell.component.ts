@@ -8,6 +8,7 @@ import { SwUpdatePromptComponent } from '@core/pwa/sw-update-prompt.component';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { MEDIA, ToastComponent } from '@stupa-makers/ui-kit';
 import { BottomBarComponent } from './bottom-bar/bottom-bar.component';
+import { InboxComponent } from '../features/notifications/inbox.component';
 import { LoadBarComponent } from './load-bar/load-bar.component';
 import { mediaQuerySignal } from './media-query';
 import { NavRailComponent } from './nav-rail/nav-rail.component';
@@ -46,6 +47,7 @@ export type ShellFrame = 'rail' | 'public' | 'bare' | 'pending';
     ToastComponent,
     SwUpdatePromptComponent,
     LoadBarComponent,
+    InboxComponent,
     NavRailComponent,
     BottomBarComponent,
     PublicHeaderComponent,

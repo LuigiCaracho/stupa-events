@@ -1,0 +1,37 @@
+<section class="np" aria-labelledby="np-heading">
+  <h2 class="sec" id="np-heading">{{ 'prefs.title' | t }}</h2>
+  @if (loaded.error() && !loaded.hasValue()) {
+    <app-note kind="error" role="alert">{{ 'prefs.loadFailed' | t }}</app-note>
+  } @else if (!loaded.hasValue()) {
+    <app-skeleton variant="rows" />
+  } @else {
+    @for (version of [rollbacks()]; track version) {
+      <ul class="np__list">
+        @for (p of prefs(); track p.kind) {
+          <li class="np__row">
+            <div class="np__kind">
+              <span>{{ label(p.kind) }}</span>
+              @if (p.essential) {
+                <span class="np__always">{{ 'prefs.always' | t }}</span>
+              }
+            </div>
+            <app-switch
+              [checked]="p.inApp"
+              [disabled]="p.essential"
+              (checkedChange)="set(p, 'inApp', $event)"
+              >{{ 'prefs.inApp' | t }}</app-switch
+            >
+            @if (p.mailAvailable) {
+              <app-switch
+                [checked]="p.mail"
+                [disabled]="p.essential"
+                (checkedChange)="set(p, 'mail', $event)"
+                >{{ 'prefs.mail' | t }}</app-switch
+              >
+            }
+          </li>
+        }
+      </ul>
+    }
+  }
+</section>

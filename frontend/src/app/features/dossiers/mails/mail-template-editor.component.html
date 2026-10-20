@@ -1,0 +1,76 @@
+<div class="mt">
+  <app-input
+    [label]="'mail.subject' | t"
+    [ngModel]="subject()"
+    (ngModelChange)="subject.set($event)"
+    [disabled]="!canEdit()"
+  />
+  <app-dossier-markdown-editor
+    [label]="'mail.body' | t"
+    [docKey]="docKey()"
+    [disabled]="!canEdit()"
+    [value]="body()"
+    (valueChange)="setBody($event)"
+  />
+  <section aria-labelledby="mail-placeholders">
+    <h3 class="sec" id="mail-placeholders">{{ 'mail.placeholders' | t }}</h3>
+    <ul class="mt__chips">
+      @for (p of placeholders(); track p.path) {
+        <li>
+          <button
+            type="button"
+            class="mt__chip"
+            [disabled]="!canEdit()"
+            [title]="p.label + ': ' + p.example"
+            (click)="insert(p.path)"
+          >
+            {{ '{{ ' + p.path + ' }}' }}
+          </button>
+        </li>
+      }
+    </ul>
+  </section>
+
+  @if (errors().length > 0) {
+    <app-note kind="error" role="alert">
+      <ul class="mt__errors">
+        @for (e of errors(); track $index) {
+          <li>{{ e }}</li>
+        }
+      </ul>
+    </app-note>
+  }
+
+  <section aria-labelledby="mail-preview">
+    <h3 class="sec" id="mail-preview">{{ 'mail.preview' | t }}</h3>
+    @if (preview(); as p) {
+      <div class="mt__preview" aria-live="polite">
+        <p class="mt__subject">
+          <strong>{{ p.subject }}</strong>
+        </p>
+        <pre class="mt__body">{{ p.body }}</pre>
+      </div>
+      <div class="mt__actions">
+        <app-button variant="tonal" (click)="copy()">{{ 'mail.copy' | t }}</app-button>
+        <app-button variant="tonal" (click)="openMail()">{{ 'mail.open' | t }}</app-button>
+      </div>
+      @if (tooLong()) {
+        <app-note kind="warn" role="status">{{ 'mail.tooLong' | t }}</app-note>
+      }
+    } @else if (errors().length === 0) {
+      <p class="mt__muted">{{ 'mail.previewPending' | t }}</p>
+    }
+  </section>
+
+  @if (canEdit()) {
+    <div class="mt__actions">
+      <app-button
+        variant="fill"
+        [loading]="busy()"
+        [disabled]="!subject().trim()"
+        (click)="save()"
+        >{{ 'mail.save' | t }}</app-button
+      >
+    </div>
+  }
+</div>

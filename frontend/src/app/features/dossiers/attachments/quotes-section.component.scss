@@ -1,0 +1,23 @@
+.qs {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.qs__sum {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.qs__form {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 28rem;
+}
+
+.qs__actions {
+  display: flex;
+  gap: var(--space-2);
+}

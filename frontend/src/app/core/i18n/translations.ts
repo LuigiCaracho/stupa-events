@@ -5,6 +5,7 @@
  * `translations.shell.de.ts`; the feature pages add theirs in `translations.events.de.ts`, the pipeline pages in `translations.pipeline.de.ts`, the admin area in `translations.admin.de.ts`.
  */
 import { adminDe } from './translations.admin.de';
+import { dossierDe } from './translations.dossier.de';
 import { eventsDe } from './translations.events.de';
 import { pipelineDe } from './translations.pipeline.de';
 import { shellDe } from './translations.shell.de';
@@ -15,7 +16,7 @@ export type Locale = 'de';
 export const SUPPORTED_LOCALES: readonly Locale[] = ['de'] as const;
 export const DEFAULT_LOCALE: Locale = 'de';
 
-export const de = { ...shellDe, ...sharedDe, ...eventsDe, ...pipelineDe, ...adminDe } as const;
+export const de = { ...shellDe, ...sharedDe, ...eventsDe, ...pipelineDe, ...dossierDe, ...adminDe } as const;
 
 export type TranslationKey = keyof typeof de;
 

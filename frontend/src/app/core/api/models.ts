@@ -39,6 +39,8 @@ export interface Problem {
   /** 409 `conflict`: the current version of the dossier (an `EventDto`, typed by the feature). */
   current?: unknown;
   currentRev?: number;
+  /** 413 `file_too_large`: the limit that applies to the upload. */
+  limitBytes?: number;
 }
 
 /** One field-level validation error of a 409/422 answer. */

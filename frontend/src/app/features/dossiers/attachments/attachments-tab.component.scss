@@ -1,0 +1,27 @@
+.at {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.at__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.at__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.at__list > li + li {
+  border-top: 1px solid var(--color-border);
+}
+
+.at__older summary {
+  cursor: pointer;
+  color: var(--color-text-muted);
+}

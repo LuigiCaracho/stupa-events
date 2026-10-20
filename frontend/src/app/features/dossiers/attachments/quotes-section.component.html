@@ -1,0 +1,61 @@
+<section class="qs" aria-labelledby="quotes-heading">
+  <h3 class="sec" id="quotes-heading">{{ 'quote.title' | t }}</h3>
+  @for (g of quotes().groups; track g.grp) {
+    <app-quote-table
+      [group]="g"
+      [canEdit]="canEdit()"
+      (select)="select.emit($event)"
+      (remove)="remove.emit($event)"
+    />
+  }
+  @if (hasSum()) {
+    <p class="qs__sum">
+      {{ 'quote.sum' | t }}:
+      <strong class="num">{{ total() }}</strong>
+      @if (quotes().suggestedBudgetCents !== null && canEdit()) {
+        <app-button
+          variant="tonal"
+          size="sm"
+          (click)="budget.emit(quotes().suggestedBudgetCents ?? 0)"
+          >{{ 'quote.useBudget' | t }}</app-button
+        >
+      }
+    </p>
+  }
+  @if (canEdit()) {
+    @if (!open()) {
+      <app-button variant="text" (click)="open.set(true)">{{ 'quote.add' | t }}</app-button>
+    } @else {
+      <form class="qs__form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+        <app-input
+          formControlName="grp"
+          [label]="'quote.group' | t"
+          [hint]="'quote.groupHint' | t"
+          [error]="bad('grp') ? ('quote.errGroup' | t) : ''"
+          [required]="true"
+        />
+        <app-input
+          formControlName="vendor"
+          [label]="'quote.vendor' | t"
+          [error]="bad('vendor') ? ('quote.errVendor' | t) : ''"
+          [required]="true"
+        />
+        <app-currency-input
+          formControlName="amount"
+          [label]="'quote.amount' | t"
+          [error]="bad('amount') ? ('quote.errAmount' | t) : ''"
+          [required]="true"
+        />
+        <app-input formControlName="validUntil" type="date" [label]="'quote.validUntil' | t" />
+        <div class="qs__actions">
+          <app-button type="submit" variant="fill" [loading]="busy()">{{
+            'quote.save' | t
+          }}</app-button>
+          <app-button variant="text" (click)="open.set(false)">{{
+            'action.cancel' | t
+          }}</app-button>
+        </div>
+      </form>
+    }
+  }
+</section>

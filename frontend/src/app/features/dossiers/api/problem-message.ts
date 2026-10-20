@@ -25,6 +25,30 @@ const BY_CODE: Record<string, TranslationKey> = {
   precondition_required: 'problem.preconditionRequired',
   start_in_past: 'problem.startInPast',
   validation_error: 'problem.validation',
+  file_too_large: 'problem.fileTooLarge',
+  archive_bomb: 'problem.activeContent',
+  active_content: 'problem.activeContent',
+  image_rejected: 'problem.imageRejected',
+  image_too_small: 'problem.imageTooSmall',
+  consent_missing: 'problem.consentMissing',
+  visibility_not_allowed: 'problem.visibilityNotAllowed',
+  social_post_needs_image: 'problem.socialPostNeedsImage',
+  anchor_invalid: 'problem.anchorInvalid',
+  template_invalid: 'problem.templateInvalid',
+  subject_newline: 'problem.subjectNewline',
+  diff_too_large: 'problem.diffTooLarge',
+  waiver_reason_required: 'problem.waiverReasonRequired',
+  assignee_not_member: 'problem.assigneeNotMember',
+  kind_essential: 'problem.kindEssential',
+  quarantined: 'problem.quarantined',
+  poster_in_use: 'problem.posterInUse',
+  dossier_closed: 'problem.dossierClosed',
+  already_exists: 'problem.alreadyExists',
+  template_item: 'problem.templateItem',
+  item_waived: 'problem.itemWaived',
+  not_a_root: 'problem.notARoot',
+  quote_expired: 'problem.quoteExpired',
+  attachment_infected: 'problem.attachmentInfected',
 };
 
 /**
@@ -46,6 +70,10 @@ export function problemMessage(i18n: I18nService, problem: Problem): string {
     return i18n.translate('problem.refused', { reasons: text });
   }
   const known = problem.code ? BY_CODE[problem.code] : undefined;
+  if (known === 'problem.fileTooLarge') {
+    const limit = problem.limitBytes ? Math.round(problem.limitBytes / 1_048_576) : 25;
+    return i18n.translate(known, { limit });
+  }
   if (known) return i18n.translate(known);
   return problem.traceId
     ? i18n.translate('problem.generic', { traceId: problem.traceId })

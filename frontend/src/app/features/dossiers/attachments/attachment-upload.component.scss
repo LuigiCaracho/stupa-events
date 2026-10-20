@@ -1,0 +1,20 @@
+.au {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.au__chosen {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.au__error {
+  margin: 0;
+  color: var(--color-danger);
+}
+
+.au__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

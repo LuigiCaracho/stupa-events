@@ -1,0 +1,66 @@
+<table class="qt">
+  <caption class="qt__caption">
+    {{
+      group().grp
+    }}
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">{{ 'quote.vendor' | t }}</th>
+      <th scope="col" class="qt__num">{{ 'quote.amount' | t }}</th>
+      <th scope="col">{{ 'quote.validUntil' | t }}</th>
+      <th scope="col">{{ 'quote.chosen' | t }}</th>
+      @if (canEdit()) {
+        <th scope="col">
+          <span class="qt__sr">{{ 'quote.actions' | t }}</span>
+        </th>
+      }
+    </tr>
+  </thead>
+  <tbody>
+    @for (q of group().quotes; track q.id) {
+      <tr [class.qt__row--selected]="q.selected">
+        <th scope="row" [attr.data-label]="'quote.vendor' | t">
+          {{ q.vendor }}
+          @if (q.id === group().cheapestId) {
+            <app-status-text kind="accent">{{ 'quote.cheapest' | t }}</app-status-text>
+          }
+        </th>
+        <td class="qt__num num" [attr.data-label]="'quote.amount' | t">
+          {{ money(q.amountCents, q.currency) }}
+        </td>
+        <td [attr.data-label]="'quote.validUntil' | t">
+          @if (q.validUntil) {
+            <span class="num">{{ q.validUntil | ldate: 'mediumDate' }}</span>
+          } @else {
+            {{ 'quote.noLimit' | t }}
+          }
+          @if (q.expired) {
+            <app-status-text kind="error">{{ 'quote.expired' | t }}</app-status-text>
+          }
+        </td>
+        <td [attr.data-label]="'quote.chosen' | t">
+          <input
+            type="radio"
+            class="qt__radio"
+            [name]="'quote-' + group().grp"
+            [checked]="q.selected"
+            [disabled]="!canEdit() || q.expired"
+            [attr.aria-label]="'quote.choose' | t: { vendor: q.vendor }"
+            (change)="select.emit(q.id)"
+          />
+          @if (q.selected) {
+            <span>{{ 'quote.selected' | t }}</span>
+          }
+        </td>
+        @if (canEdit()) {
+          <td>
+            <app-button variant="text" size="sm" (click)="remove.emit(q.id)">{{
+              'quote.remove' | t
+            }}</app-button>
+          </td>
+        }
+      </tr>
+    }
+  </tbody>
+</table>

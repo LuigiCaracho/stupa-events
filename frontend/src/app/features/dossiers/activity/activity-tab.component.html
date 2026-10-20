@@ -1,0 +1,69 @@
+<section class="act" aria-labelledby="questions-heading">
+  <h2 class="sec" id="questions-heading">{{ 'activity.questions' | t }}</h2>
+  @if (posterBlocked()) {
+    <app-note kind="warn" role="status">{{ 'guards.open_comment_on_hero' | t }}</app-note>
+  }
+  @if (canComment()) {
+    <app-question-button
+      [eventId]="event().id"
+      [what]="'activity.general' | t"
+      (asked)="refresh()"
+    />
+  }
+  @if (threads().length === 0) {
+    <p class="act__muted">{{ 'activity.noQuestions' | t }}</p>
+  } @else {
+    <app-chat
+      [threads]="open()"
+      [anchorLabel]="anchorLabel"
+      [canWrite]="canComment()"
+      [canResolve]="canResolve"
+      [busy]="busy()"
+      (reply)="reply($event)"
+      (resolve)="resolve($event)"
+      (reopen)="reopen($event)"
+    />
+    @if (done().length > 0) {
+      <details class="act__done">
+        <summary>{{ 'activity.resolvedThreads' | t: { count: done().length } }}</summary>
+        <app-chat
+          [threads]="done()"
+          [anchorLabel]="anchorLabel"
+          [canWrite]="false"
+          [canResolve]="canResolve"
+          [busy]="busy()"
+          (reopen)="reopen($event)"
+        />
+      </details>
+    }
+  }
+</section>
+
+<section class="act" aria-labelledby="timeline-heading">
+  <h2 class="sec" id="timeline-heading">{{ 'activity.timeline' | t }}</h2>
+  @if (revisions.error() && !revisions.hasValue()) {
+    <app-note kind="error" role="alert">{{ 'history.loadFailed' | t }}</app-note>
+  } @else if (!revisions.hasValue()) {
+    <app-skeleton variant="rows" />
+  } @else if (entries().length === 0) {
+    <p class="act__muted">{{ 'activity.empty' | t }}</p>
+  } @else {
+    <app-history [entries]="entries()" />
+  }
+</section>
+
+@if (revisions.hasValue() && revisions.value().items.length > 1) {
+  <app-revision-compare [eventId]="event().id" [revisions]="revisions.value().items" />
+}
+
+@if (canRevert()) {
+  <section class="act" aria-labelledby="revert-heading">
+    <h2 class="sec" id="revert-heading">{{ 'activity.revertSection' | t }}</h2>
+    <app-dossier-history
+      [eventId]="event().id"
+      [rev]="event().rev"
+      [canRevert]="canRevert()"
+      (revert)="revert.emit($event)"
+    />
+  </section>
+}

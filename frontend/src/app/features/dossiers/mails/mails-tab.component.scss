@@ -1,0 +1,44 @@
+.mtab {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.mtab__grid {
+  display: grid;
+  gap: var(--space-4);
+}
+
+@media (min-width: 768px) {
+  .mtab__grid {
+    grid-template-columns: minmax(12rem, 16rem) 1fr;
+    align-items: start;
+  }
+}
+
+.mtab__list {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.mtab__item {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-field);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mtab__item[aria-current='true'] {
+  background: var(--color-selected);
+}
+
+.mtab__sub {
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}

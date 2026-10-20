@@ -1,0 +1,94 @@
+<section class="ht" aria-labelledby="howto-heading">
+  <h2 class="sec" id="howto-heading">{{ 'howto.title' | t }}</h2>
+  @if (!list.hasValue()) {
+    @if (list.error()) {
+      <app-note kind="error" role="alert">{{ 'howto.loadFailed' | t }}</app-note>
+    } @else {
+      <app-skeleton variant="panel" />
+    }
+  } @else if (!doc()) {
+    <app-empty-state [heading]="'howto.empty' | t" [body]="'howto.emptyBody' | t" [plain]="true" />
+    @if (canEdit()) {
+      <app-button variant="tonal" [loading]="saving()" (click)="create()">{{
+        'howto.insertTemplate' | t
+      }}</app-button>
+    }
+  } @else {
+    @let d = doc()!;
+    <p class="ht__verified">
+      @if (d.verifiedAt) {
+        {{
+          'howto.verified'
+            | t: { who: d.verifiedBy ?? '', at: (d.verifiedAt | ldate: 'mediumDate') }
+        }}
+      } @else {
+        {{ 'howto.notVerified' | t }}
+      }
+      <span class="ht__muted num">{{ 'howto.revLabel' | t: { rev: d.rev } }}</span>
+    </p>
+    <app-note>{{ 'howto.privacy' | t }}</app-note>
+    @if (conflict()) {
+      <app-note kind="error" role="alert">
+        <span>{{ 'howto.conflict' | t }}</span>
+        <app-button variant="text" size="sm" (click)="reload()">{{
+          'howto.reload' | t
+        }}</app-button>
+      </app-note>
+    }
+    @if (restored()) {
+      <app-note kind="warn" role="status">
+        <span>{{ 'howto.restored' | t }}</span>
+        <app-button variant="text" size="sm" (click)="discardDraft()">{{
+          'autosave.discard' | t
+        }}</app-button>
+      </app-note>
+    }
+    @if (draft.status() === 'failed') {
+      <app-note kind="error" role="alert">{{ 'editor.saveFailed' | t }}</app-note>
+    }
+    <app-dossier-markdown-editor
+      [label]="'howto.editorLabel' | t"
+      [docKey]="docKey()"
+      [disabled]="!canEdit()"
+      [value]="text()"
+      (valueChange)="edited($event)"
+      (selected)="selection.set($event)"
+    />
+    @if (anchor(); as a) {
+      <app-question-button
+        [eventId]="event().id"
+        [anchor]="a"
+        [what]="'howto.selection' | t"
+        (asked)="changed.emit()"
+      />
+    }
+    @if (canEdit()) {
+      @if (noting()) {
+        <div class="ht__note">
+          <app-textarea
+            name="changeNote"
+            [label]="'howto.changeNote' | t"
+            [hint]="'howto.changeNoteHint' | t"
+            [rows]="2"
+            [(ngModel)]="note"
+          />
+          <div class="ht__actions">
+            <app-button variant="fill" [loading]="saving()" (click)="save()">{{
+              'howto.saveRevision' | t
+            }}</app-button>
+            <app-button variant="text" (click)="noting.set(false)">{{
+              'action.cancel' | t
+            }}</app-button>
+          </div>
+        </div>
+      } @else {
+        <div class="ht__actions">
+          <app-button variant="fill" [disabled]="!dirty()" (click)="noting.set(true)">{{
+            'howto.saveAsRevision' | t
+          }}</app-button>
+        </div>
+      }
+    }
+    <app-revisions-panel [documentId]="d.id" [rev]="d.rev" />
+  }
+</section>

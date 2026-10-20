@@ -1,0 +1,23 @@
+<div class="rich__bar" role="toolbar" [attr.aria-label]="'editor.toolbar' | t">
+  @for (f of formats; track f.format) {
+    <app-button
+      variant="text"
+      size="sm"
+      [disabled]="disabled()"
+      [ariaPressed]="pressed(f.format)"
+      (click)="toggle(f.format)"
+      >{{ f.label | t }}</app-button
+    >
+  }
+  <app-button variant="text" size="sm" [disabled]="disabled()" (click)="editor().pickImage()">{{
+    'editor.image' | t
+  }}</app-button>
+</div>
+<app-markdown-editor
+  [value]="value()"
+  [docKey]="docKey()"
+  [disabled]="disabled()"
+  [placeholder]="placeholder()"
+  [imageUpload]="upload"
+  (valueChange)="valueChange.emit($event)"
+/>

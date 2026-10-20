@@ -1,0 +1,77 @@
+<ul class="chat">
+  @for (thread of threads(); track thread.id) {
+    <li class="chat__thread" [class.chat__thread--done]="!!thread.resolvedAt">
+      <header class="chat__head">
+        <button type="button" class="chat__anchor" (click)="jump.emit(thread)">
+          {{ anchorLabel()(thread) }}
+        </button>
+        @if (thread.resolvedAt) {
+          <app-status-text kind="accent">{{ 'chat.resolved' | t }}</app-status-text>
+        } @else {
+          <app-status-text kind="warn">{{ 'chat.open' | t }}</app-status-text>
+        }
+      </header>
+      <article class="chat__msg">
+        <p class="chat__meta">
+          <strong>{{ thread.authorName }}</strong>
+          <span class="num">{{ thread.createdAt | ldate }}</span>
+        </p>
+        <app-markdown-view [src]="thread.bodyMd" [headingOffset]="5" />
+      </article>
+      @for (r of thread.replies; track r.id) {
+        <article class="chat__msg chat__msg--reply">
+          <p class="chat__meta">
+            <strong>{{ r.authorName }}</strong>
+            <span class="num">{{ r.createdAt | ldate }}</span>
+          </p>
+          <app-markdown-view [src]="r.bodyMd" [headingOffset]="5" />
+        </article>
+      }
+      <div class="chat__actions">
+        @if (canWrite() && replyFor() !== thread.id) {
+          <app-button variant="text" size="sm" (click)="openReply(thread.id)">{{
+            'chat.reply' | t
+          }}</app-button>
+        }
+        @if (canResolve()(thread)) {
+          @if (thread.resolvedAt) {
+            <app-button
+              variant="text"
+              size="sm"
+              [disabled]="busy()"
+              (click)="reopen.emit(thread.id)"
+              >{{ 'chat.reopen' | t }}</app-button
+            >
+          } @else {
+            <app-button
+              variant="tonal"
+              size="sm"
+              [disabled]="busy()"
+              (click)="resolve.emit(thread.id)"
+              >{{ 'chat.resolve' | t }}</app-button
+            >
+          }
+        }
+      </div>
+      @if (replyFor() === thread.id) {
+        <form class="chat__form" (ngSubmit)="send(thread)">
+          <app-textarea
+            name="reply"
+            [id]="'reply-' + thread.id"
+            [label]="'chat.replyLabel' | t"
+            [rows]="3"
+            [(ngModel)]="draft"
+          />
+          <div class="chat__actions">
+            <app-button type="submit" variant="fill" size="sm" [disabled]="busy()">{{
+              'chat.send' | t
+            }}</app-button>
+            <app-button variant="text" size="sm" (click)="replyFor.set(null)">{{
+              'action.cancel' | t
+            }}</app-button>
+          </div>
+        </form>
+      }
+    </li>
+  }
+</ul>

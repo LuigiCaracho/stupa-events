@@ -22,7 +22,17 @@ import { problemOf } from '@core/api/problem';
 import type { PendingChanges } from '@core/auth/pending-changes.guard';
 import { AuthService } from '@core/auth/auth.service';
 import { I18nService } from '@core/i18n/i18n.service';
+import type { TranslationKey } from '@core/i18n/translations';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
+import { ActivityTabComponent } from '../activity/activity-tab.component';
+import { FieldQuestionsComponent } from '../activity/field-questions.component';
+import { AttachmentsApi } from '../api/attachments-api.service';
+import { CommentsApi } from '../api/comments-api.service';
+import { AttachmentsTabComponent } from '../attachments/attachments-tab.component';
+import { ChecklistTabComponent } from '../checklist/checklist-tab.component';
+import { HowtoTabComponent } from '../howto/howto-tab.component';
+import { MailsTabComponent } from '../mails/mails-tab.component';
+import type { CommentThread } from '../model/comment.models';
 import { ImageThumbComponent } from '@shared/ui/image-thumb/image-thumb.component';
 import { NoteComponent } from '@shared/ui/note/note.component';
 import {
@@ -43,7 +53,6 @@ import { DraftAutosave } from '../autosave/draft-autosave';
 import { AutosaveIndicatorComponent } from '../autosave/autosave-indicator.component';
 import { EventFormComponent } from '../form/event-form.component';
 import { type HeadCommand, DossierHeadComponent } from '../head/dossier-head.component';
-import { DossierHistoryComponent } from '../history/dossier-history.component';
 import { DossierOverviewComponent } from '../overview/dossier-overview.component';
 import {
   DetailDialogsComponent,
@@ -51,6 +60,8 @@ import {
   type LeaveChoice,
 } from './detail-dialogs.component';
 import { focusField } from './focus-field';
+
+type DetailTab = 'overview' | 'attachments' | 'howto' | 'checklist' | 'mails' | 'history';
 
 const POSTER_STATES: readonly string[] = ['idea', 'planning', 'in_review'];
 const SAVE_BEFORE_TRANSITION: readonly string[] = ['idea', 'planning'];
@@ -61,11 +72,16 @@ const SAVE_BEFORE_TRANSITION: readonly string[] = ['idea', 'planning'];
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     TranslatePipe,
+    ActivityTabComponent,
+    AttachmentsTabComponent,
     AutosaveIndicatorComponent,
+    ChecklistTabComponent,
+    FieldQuestionsComponent,
+    HowtoTabComponent,
+    MailsTabComponent,
     ButtonComponent,
     DetailDialogsComponent,
     DossierHeadComponent,
-    DossierHistoryComponent,
     DossierOverviewComponent,
     EventFormComponent,
     ImageThumbComponent,
@@ -84,6 +100,8 @@ const SAVE_BEFORE_TRANSITION: readonly string[] = ['idea', 'planning'];
 })
 export class DossierDetailComponent implements PendingChanges {
   private readonly api = inject(EventsApi);
+  private readonly attachmentsApi = inject(AttachmentsApi);
+  private readonly commentsApi = inject(CommentsApi);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(I18nService);
@@ -107,7 +125,9 @@ export class DossierDetailComponent implements PendingChanges {
   });
 
   protected readonly dialog = signal<DialogState>(null);
-  protected readonly tab = signal<'overview' | 'history'>('overview');
+  protected readonly tab = signal<DetailTab>('overview');
+  protected readonly refreshTick = signal(0);
+  protected readonly recomputed = signal(0);
   protected readonly posterOpen = signal(false);
   protected readonly busy = signal(false);
   protected readonly draft = signal<EventFields | null>(null);
@@ -156,10 +176,41 @@ export class DossierDetailComponent implements PendingChanges {
   );
   protected readonly canRevert = computed(() => this.actions().includes('revert-revision'));
 
-  protected readonly tabs = computed<TabItem[]>(() => [
-    { id: 'overview', label: this.i18n.translate('detail.tabOverview') },
-    { id: 'history', label: this.i18n.translate('detail.tabHistory') },
-  ]);
+  protected readonly counts = rxResource({
+    params: () => {
+      const e = this.event();
+      return e ? { id: e.id, tick: this.refreshTick() } : undefined;
+    },
+    stream: ({ params }) =>
+      this.attachmentsApi.counts(params.id).pipe(catchError(() => of(null))),
+  });
+  protected readonly threads = rxResource<CommentThread[], { id: string; tick: number } | undefined>({
+    params: () => {
+      const e = this.event();
+      return e ? { id: e.id, tick: this.refreshTick() } : undefined;
+    },
+    stream: ({ params }) =>
+      params ? this.commentsApi.list(params.id).pipe(catchError(() => of([]))) : of([]),
+  });
+  protected readonly threadList = computed(() => (this.threads.hasValue() ? this.threads.value() : []));
+  protected readonly canComment = computed(() => this.editable() || this.auth.can('comment.write'));
+
+  protected readonly tabs = computed<TabItem[]>(() => {
+    const c = this.counts.hasValue() ? this.counts.value() : null;
+    const tab = (id: DetailTab, key: TranslationKey, count?: number): TabItem => ({
+      id,
+      label: this.i18n.translate(key),
+      ...(count ? { count } : {}),
+    });
+    return [
+      tab('overview', 'detail.tabOverview'),
+      tab('attachments', 'detail.tabAttachments', c?.attachments),
+      tab('howto', 'detail.tabHowto', c?.howto),
+      tab('checklist', 'detail.tabChecklist', c?.openChecklist),
+      tab('mails', 'detail.tabMails', c?.mailTemplates),
+      tab('history', 'detail.tabHistory', c?.openComments),
+    ];
+  });
 
   protected readonly changes = rxResource({
     params: () => {
@@ -202,6 +253,20 @@ export class DossierDetailComponent implements PendingChanges {
     });
   }
 
+  protected changedKnowledge(): void {
+    this.refreshTick.update((n) => n + 1);
+    this.guards.reload();
+  }
+
+  protected useBudget(cents: number): void {
+    // TODO-M4: the event form has no budget field yet (`facts.budgetCents` comes with the facts block); show the suggestion only.
+    this.toast.show(
+      this.i18n.translate('quote.budgetSuggested', { amount: (cents / 100).toFixed(2).replace('.', ',') }),
+      'info',
+      8000,
+    );
+  }
+
   protected reload(): void {
     this.loaded.reload();
   }
@@ -233,6 +298,10 @@ export class DossierDetailComponent implements PendingChanges {
       );
     } else if (action === 'confirm_flyer') {
       this.confirmFlyer();
+    } else if (action === 'open_comment') {
+      this.tab.set('history');
+    } else if (action === 'open_checklist') {
+      this.tab.set('checklist');
     } else if (action) {
       this.tab.set('overview');
       setTimeout(() => focusField(this.host.nativeElement, action, reason.field));
@@ -264,6 +333,7 @@ export class DossierDetailComponent implements PendingChanges {
         this.draft.set(null);
         this.restoredAt.set(null);
         this.toast.success(this.i18n.translate('detail.saved'));
+        this.recomputed.set(updated.checklistRecomputed ?? 0);
         this.event.set(updated);
       },
       error: (err: unknown) => this.failed(err),

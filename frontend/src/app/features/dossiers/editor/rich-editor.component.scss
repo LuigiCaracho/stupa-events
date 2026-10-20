@@ -1,0 +1,10 @@
+:host {
+  display: block;
+}
+
+.rich__bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding-bottom: var(--space-2);
+}

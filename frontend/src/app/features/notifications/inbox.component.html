@@ -1,0 +1,50 @@
+<app-side-sheet [(open)]="store.open" [heading]="'inbox.title' | t" side="end">
+  <div sheet-actions>
+    <app-button
+      variant="text"
+      size="sm"
+      [disabled]="store.count() === 0"
+      (click)="store.markAllRead()"
+      >{{ 'inbox.markAll' | t }}</app-button
+    >
+  </div>
+  @if (store.failed()) {
+    <app-note kind="error" role="alert">{{ 'inbox.loadFailed' | t }}</app-note>
+  } @else if (store.loading() && store.items().length === 0) {
+    <app-skeleton variant="rows" />
+  } @else if (store.items().length === 0) {
+    <p class="inbox__empty">{{ 'inbox.empty' | t }}</p>
+  } @else {
+    <ul class="inbox">
+      @for (item of store.items(); track item.id) {
+        <li>
+          <button
+            type="button"
+            class="inbox__item"
+            [class.inbox__item--unread]="!item.readAt"
+            (click)="go(item)"
+          >
+            @if (!item.readAt) {
+              <span class="inbox__dot" aria-hidden="true"></span>
+              <span class="inbox__sr">{{ 'inbox.unread' | t }}:</span>
+            }
+            <span class="inbox__kind">{{ kind(item) }}</span>
+            @if (item.eventTitle) {
+              <span class="inbox__title">{{ item.eventTitle }}</span>
+            }
+            <span class="inbox__time num">{{ item.createdAt | ldate }}</span>
+          </button>
+        </li>
+      }
+    </ul>
+    @if (store.nextCursor()) {
+      <app-button
+        class="inbox__more"
+        variant="text"
+        [disabled]="store.loadingMore()"
+        (click)="store.loadMore()"
+        >{{ 'inbox.more' | t }}</app-button
+      >
+    }
+  }
+</app-side-sheet>

@@ -1,0 +1,87 @@
+<section class="at" aria-labelledby="attachments-heading">
+  <div class="at__head">
+    <h2 class="sec" id="attachments-heading">{{ 'attachment.title' | t }}</h2>
+    @if (canEdit() && !uploading()) {
+      <app-button variant="tonal" (click)="uploading.set(true)">{{
+        'attachment.add' | t
+      }}</app-button>
+    }
+  </div>
+
+  @if (uploading()) {
+    <app-attachment-upload
+      [busy]="busy()"
+      (submitted)="upload($event)"
+      (cancelled)="uploading.set(false)"
+    />
+  }
+  @if (replacing(); as target) {
+    <app-note>{{ 'attachment.replacing' | t: { name: target.displayName } }}</app-note>
+    <app-attachment-upload
+      [fixedKind]="target.kind"
+      [busy]="busy()"
+      (submitted)="replaceWith($event)"
+      (cancelled)="replacing.set(null)"
+    />
+  }
+
+  @if (list.error() && !list.hasValue()) {
+    <app-note kind="error" role="alert">{{ 'attachment.loadFailed' | t }}</app-note>
+  } @else if (!list.hasValue()) {
+    <app-skeleton variant="rows" />
+  } @else if (groups().length === 0 && !quotes.value()) {
+    <app-empty-state [heading]="'attachment.empty' | t" [plain]="true" />
+  }
+
+  @for (g of groups(); track g.id) {
+    <section class="at__group" [attr.aria-labelledby]="'at-g-' + g.id">
+      <h3 class="sec" [id]="'at-g-' + g.id">{{ groupLabel(g.id) }}</h3>
+      <ul class="at__list">
+        @for (a of g.current; track a.id) {
+          <li>
+            <app-attachment-row
+              [attachment]="a"
+              [eventId]="event().id"
+              [canEdit]="canEdit()"
+              [openQuestion]="openAttachments().has(a.id)"
+              [downloadHref]="href(a.id)"
+              [previewHref]="preview(a.id)"
+              (command)="command(a, $event)"
+              (asked)="changed.emit()"
+              (showQuestions)="showQuestions.emit()"
+            />
+          </li>
+        }
+      </ul>
+      @if (g.older.length > 0) {
+        <details class="at__older">
+          <summary>{{ 'attachment.older' | t: { count: g.older.length } }}</summary>
+          <ul class="at__list">
+            @for (a of g.older; track a.id) {
+              <li>
+                <app-attachment-row
+                  [attachment]="a"
+                  [eventId]="event().id"
+                  [downloadHref]="href(a.id)"
+                  [previewHref]="preview(a.id)"
+                />
+              </li>
+            }
+          </ul>
+        </details>
+      }
+    </section>
+  }
+
+  @if (quotes.value(); as q) {
+    <app-quotes-section
+      [quotes]="q"
+      [canEdit]="canEdit()"
+      [busy]="busy()"
+      (add)="addQuote($event)"
+      (select)="selectQuote($event)"
+      (remove)="removeQuote($event)"
+      (budget)="budget.emit($event)"
+    />
+  }
+</section>

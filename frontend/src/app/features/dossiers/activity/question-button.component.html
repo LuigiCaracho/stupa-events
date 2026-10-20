@@ -1,0 +1,16 @@
+<app-button variant="text" size="sm" (click)="toggle()">{{
+  what() ? ('question.ask' | t: { what: what() }) : ('question.askShort' | t)
+}}</app-button>
+@if (open()) {
+  <form class="qb__box" [id]="id" (ngSubmit)="send()">
+    <app-textarea name="question" [label]="'question.label' | t" [rows]="3" [(ngModel)]="text" />
+    <div class="qb__actions">
+      <app-button type="submit" variant="fill" size="sm" [loading]="busy()">{{
+        'question.send' | t
+      }}</app-button>
+      <app-button variant="text" size="sm" (click)="open.set(false)">{{
+        'action.cancel' | t
+      }}</app-button>
+    </div>
+  </form>
+}

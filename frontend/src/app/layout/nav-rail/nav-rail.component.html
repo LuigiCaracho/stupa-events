@@ -24,6 +24,23 @@
 
   <div class="rail__spacer"></div>
 
+  @if (store.signedIn()) {
+    <button
+      type="button"
+      class="rail__item"
+      [attr.aria-label]="bellLabel()"
+      (click)="store.openInbox()"
+    >
+      <span class="rail__ind">
+        <app-icon name="bell" [size]="22" />
+        @if (store.count() > 0) {
+          <span class="rail__badge" aria-hidden="true">{{ store.badge() }}</span>
+        }
+      </span>
+      <span class="rail__label">{{ 'bell.label' | t }}</span>
+    </button>
+  }
+
   @for (item of endItems(); track item.key) {
     <a
       class="rail__item"

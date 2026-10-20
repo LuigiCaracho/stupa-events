@@ -10,6 +10,8 @@
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true,
     "isolatedModules": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
     "experimentalDecorators": true,
     "importHelpers": true,
     "target": "ES2022",
@@ -18,7 +20,8 @@
     "paths": {
       "@core/*": ["src/app/core/*"],
       "@shared/*": ["src/app/shared/*"],
-      "@stupa-makers/ui-kit": ["vendor/ui-kit/src/public-api.ts"]
+      "@stupa-makers/ui-kit": ["vendor/ui-kit/src/public-api.ts"],
+      "@stupa-makers/ui-kit/markdown-editor": ["vendor/ui-kit/markdown-editor/src/public-api.ts"]
     }
   },
   "angularCompilerOptions": {

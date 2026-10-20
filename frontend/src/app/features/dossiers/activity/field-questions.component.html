@@ -1,0 +1,20 @@
+<ul class="fq">
+  @for (row of rows(); track row.field) {
+    <li class="fq__row">
+      <span class="fq__label">{{ row.label | t }}</span>
+      @if (row.open) {
+        <button type="button" class="fq__open" (click)="show.emit()">
+          <app-status-text kind="warn">{{ 'question.open' | t }}</app-status-text>
+        </button>
+      }
+      @if (canComment()) {
+        <app-question-button
+          [eventId]="eventId()"
+          [anchor]="{ field: row.field }"
+          [what]="row.label | t"
+          (asked)="asked.emit()"
+        />
+      }
+    </li>
+  }
+</ul>

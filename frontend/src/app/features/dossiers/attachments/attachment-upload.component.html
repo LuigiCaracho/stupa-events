@@ -1,0 +1,84 @@
+<form class="au" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <app-file-drop-zone
+    [label]="'attachment.drop' | t"
+    [hint]="'attachment.dropHint' | t"
+    [buttonLabel]="'attachment.pick' | t"
+    [accept]="accept"
+    [multiple]="false"
+    [disabled]="busy()"
+    (files)="pick($event)"
+    (rejected)="rejected.set(true)"
+  />
+  @if (file(); as chosen) {
+    <p class="au__chosen" role="status">{{ 'poster.chosen' | t: { name: chosen.name } }}</p>
+  }
+  @if (rejected()) {
+    <app-note kind="error" role="alert">{{ 'attachment.rejected' | t }}</app-note>
+  }
+  @if (attempted() && !file()) {
+    <p class="au__error" role="alert">{{ 'poster.errFile' | t }}</p>
+  }
+  @if (!fixedKind()) {
+    <app-select
+      formControlName="kind"
+      [label]="'attachment.kind' | t"
+      [options]="kinds()"
+      [clearable]="false"
+    />
+  }
+  <app-select
+    formControlName="visibility"
+    [label]="'attachment.visibility' | t"
+    [options]="visibilities()"
+    [clearable]="false"
+  />
+  @if (image()) {
+    <app-input
+      formControlName="altText"
+      [label]="'poster.alt' | t"
+      [hint]="'poster.altHint' | t"
+      [error]="missing('altText') ? ('poster.errAlt' | t) : ''"
+      [required]="true"
+    />
+    <app-input
+      formControlName="credit"
+      [label]="'poster.credit' | t"
+      [hint]="'poster.creditHint' | t"
+      [error]="missing('credit') ? ('poster.errCredit' | t) : ''"
+      [required]="true"
+    />
+    <app-select
+      formControlName="rightsBasis"
+      [label]="'poster.rights' | t"
+      [options]="rights()"
+      [clearable]="false"
+      [required]="true"
+      [error]="missing('rightsBasis') ? ('poster.errRights' | t) : ''"
+    />
+    <app-checkbox formControlName="personsDepicted">{{ 'poster.persons' | t }}</app-checkbox>
+    @if (form.controls.personsDepicted.value) {
+      <app-input
+        formControlName="consentNote"
+        [label]="'poster.consent' | t"
+        [hint]="'poster.consentHint' | t"
+        [error]="attempted() && consentMissing() ? ('poster.errConsent' | t) : ''"
+        [required]="true"
+      />
+    }
+    <app-checkbox formControlName="containsDate">{{ 'attachment.containsDate' | t }}</app-checkbox>
+    @if (form.controls.containsDate.value) {
+      <app-input
+        formControlName="datedFor"
+        type="number"
+        [label]="'attachment.datedFor' | t"
+        [hint]="'attachment.datedForHint' | t"
+      />
+    }
+  }
+  <div class="au__actions">
+    <app-button type="submit" variant="fill" [loading]="busy()">{{
+      'attachment.upload' | t
+    }}</app-button>
+    <app-button variant="text" (click)="cancelled.emit()">{{ 'action.cancel' | t }}</app-button>
+  </div>
+</form>

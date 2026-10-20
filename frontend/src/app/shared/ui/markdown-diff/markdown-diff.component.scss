@@ -1,0 +1,61 @@
+:host {
+  display: block;
+}
+
+.md-diff {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: var(--radius-field);
+  background: var(--color-surface-2);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  overflow: hidden;
+}
+
+.md-diff__sum {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.md-diff__row {
+  display: grid;
+  grid-template-columns: 2.5rem 2.5rem 1.25rem 1fr;
+  align-items: start;
+  gap: 0 var(--space-1);
+  padding: 0 var(--space-2);
+}
+
+.md-diff__row--add {
+  background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+}
+
+.md-diff__row--remove {
+  background: color-mix(in srgb, var(--color-danger) 16%, transparent);
+}
+
+.md-diff__no {
+  color: var(--color-text-subtle);
+  text-align: right;
+}
+
+.md-diff__sign {
+  font-weight: var(--fw-medium);
+  text-align: center;
+}
+
+.md-diff__text {
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.md-diff__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}

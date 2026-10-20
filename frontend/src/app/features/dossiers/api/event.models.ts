@@ -123,6 +123,8 @@ export interface EventDto {
   allowedActions?: string[];
   editableFields?: string[];
   lockReason?: LockReason | null;
+  /** Set on the answer of a save that moved the start: how many checklist due dates were recomputed. */
+  checklistRecomputed?: number;
 }
 
 export interface EventCreate {

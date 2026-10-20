@@ -1,0 +1,50 @@
+<div class="dme">
+  <div class="dme__head">
+    <span class="dme__label" [id]="labelId">{{ label() }}</span>
+    <app-segmented
+      [options]="options()"
+      [value]="mode()"
+      [ariaLabel]="'editor.mode' | t"
+      [disabled]="disabled()"
+      (valueChange)="setMode($event)"
+    />
+  </div>
+  @if (lossy()) {
+    <app-note kind="warn" role="status">{{ 'editor.lossy' | t }}</app-note>
+  }
+  @if (mode() === 'editor') {
+    @defer (on immediate) {
+      <app-rich-editor
+        [value]="value()"
+        [docKey]="docKey()"
+        [disabled]="disabled()"
+        [placeholder]="placeholder()"
+        (valueChange)="value.set($event)"
+        (lossless)="onChecked($event)"
+      />
+    } @placeholder {
+      <p class="dme__loading" role="status">{{ 'editor.loading' | t }}</p>
+    }
+  } @else {
+    <textarea
+      #area
+      appMarkdownImageUpload
+      class="dme__source"
+      rows="14"
+      [attr.aria-labelledby]="labelId"
+      [value]="value()"
+      [disabled]="disabled()"
+      [placeholder]="placeholder()"
+      (input)="type($event)"
+      (select)="select()"
+      (keyup)="select()"
+      (mouseup)="select()"
+    ></textarea>
+    @if (value().trim()) {
+      <details class="dme__preview">
+        <summary>{{ 'editor.preview' | t }}</summary>
+        <app-markdown-view [src]="value()" [headingOffset]="3" />
+      </details>
+    }
+  }
+</div>

@@ -1,0 +1,19 @@
+<p class="md-diff__sum" role="status">
+  {{
+    'diff.summary'
+      | t: { from: diff().from, to: diff().to, added: diff().added, removed: diff().removed }
+  }}
+</p>
+<ol class="md-diff" [attr.aria-label]="'diff.label' | t">
+  @for (row of rows(); track $index) {
+    <li class="md-diff__row md-diff__row--{{ row.op }}">
+      <span class="md-diff__no num" aria-hidden="true">{{ row.fromLine ?? '' }}</span>
+      <span class="md-diff__no num" aria-hidden="true">{{ row.toLine ?? '' }}</span>
+      <span class="md-diff__sign" aria-hidden="true">{{ row.sign }}</span>
+      @if (row.op !== 'equal') {
+        <span class="md-diff__sr">{{ row.wordKey | t }}:</span>
+      }
+      <span class="md-diff__text">{{ row.text }}</span>
+    </li>
+  }
+</ol>

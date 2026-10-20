@@ -1,0 +1,45 @@
+.ci {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-2) 0;
+}
+
+.ci__text--done {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+
+.ci__meta {
+  grid-column: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  padding-left: 1.75rem;
+  color: var(--color-text-muted);
+  font-size: 0.8125rem;
+}
+
+.ci__due {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+}
+
+.ci__due--overdue {
+  color: var(--color-danger);
+}
+
+.ci__box {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: var(--space-2);
+  max-width: 28rem;
+  padding-left: 1.75rem;
+}
+
+.ci__actions {
+  display: flex;
+  gap: var(--space-2);
+}

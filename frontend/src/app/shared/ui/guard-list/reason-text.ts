@@ -29,4 +29,6 @@ export const HANDLED_FIXES: ReadonlySet<string> = new Set([
   'mark_cancellation',
   'confirm_flyer',
   'set_end',
+  'open_comment',
+  'open_checklist',
 ]);

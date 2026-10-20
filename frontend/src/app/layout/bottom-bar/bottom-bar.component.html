@@ -11,4 +11,20 @@
       <span class="bb__label">{{ item.labelKey | t }}</span>
     </a>
   }
+  @if (store.signedIn()) {
+    <button
+      type="button"
+      class="bb__item"
+      [attr.aria-label]="bellLabel()"
+      (click)="store.openInbox()"
+    >
+      <span class="bb__ind">
+        <app-icon name="bell" [size]="22" />
+        @if (store.count() > 0) {
+          <span class="bb__badge" aria-hidden="true">{{ store.badge() }}</span>
+        }
+      </span>
+      <span class="bb__label">{{ 'bell.label' | t }}</span>
+    </button>
+  }
 </nav>

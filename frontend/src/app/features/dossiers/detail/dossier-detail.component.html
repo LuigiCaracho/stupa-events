@@ -55,6 +55,10 @@
         </section>
       }
 
+      @if (recomputed() > 0) {
+        <app-note role="status">{{ 'checklist.recomputed' | t: { count: recomputed() } }}</app-note>
+      }
+
       <section class="dd__poster" aria-labelledby="poster-heading">
         <h2 class="sec" id="poster-heading" tabindex="-1">{{ 'detail.poster' | t }}</h2>
         @if (e.poster; as p) {
@@ -82,11 +86,39 @@
           <app-poster-upload [busy]="busy()" (submitted)="upload($event)" />
         }
       </section>
+
+      <section class="dd__questions" aria-labelledby="questions-heading">
+        <h2 class="sec" id="questions-heading">{{ 'activity.fieldQuestions' | t }}</h2>
+        <app-field-questions
+          [eventId]="e.id"
+          [threads]="threadList()"
+          [canComment]="canComment()"
+          (asked)="changedKnowledge()"
+          (show)="tab.set('history')"
+        />
+      </section>
+    } @else if (tab() === 'attachments') {
+      <app-attachments-tab
+        [event]="e"
+        [canEdit]="editable()"
+        [threads]="threadList()"
+        (changed)="changedKnowledge()"
+        (showQuestions)="tab.set('history')"
+        (budget)="useBudget($event)"
+      />
+    } @else if (tab() === 'howto') {
+      <app-howto-tab [event]="e" [canEdit]="editable()" (changed)="changedKnowledge()" />
+    } @else if (tab() === 'checklist') {
+      <app-checklist-tab [event]="e" [canEdit]="editable()" (changed)="changedKnowledge()" />
+    } @else if (tab() === 'mails') {
+      <app-mails-tab [event]="e" [canEdit]="editable()" (changed)="changedKnowledge()" />
     } @else {
-      <app-dossier-history
-        [eventId]="e.id"
-        [rev]="e.rev"
+      <app-activity-tab
+        [event]="e"
+        [threads]="threadList()"
+        [canComment]="canComment()"
         [canRevert]="canRevert()"
+        (changed)="changedKnowledge()"
         (revert)="revertTo($event)"
       />
     }

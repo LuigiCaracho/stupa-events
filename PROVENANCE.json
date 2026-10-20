@@ -180,6 +180,11 @@
       "mode": "U"
     },
     {
+      "path": "backend/app/modules/dossier/lexorank.py",
+      "source": "backend/app/modules/todos/lexorank.py",
+      "mode": "K"
+    },
+    {
       "path": "backend/app/modules/files/mime.py",
       "source": "backend/app/modules/files/mime.py",
       "mode": "U"
@@ -900,6 +905,66 @@
       "mode": "K"
     },
     {
+      "path": "frontend/src/app/shared/markdown/internal-link.spec.ts",
+      "source": "frontend/src/app/shared/markdown/internal-link.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/markdown/internal-link.ts",
+      "source": "frontend/src/app/shared/markdown/internal-link.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/markdown/linkify.ts",
+      "source": "frontend/src/app/shared/markdown/linkify.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/markdown/markdown-image-upload.directive.spec.ts",
+      "source": "frontend/src/app/shared/markdown/markdown-image-upload.directive.spec.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/shared/markdown/markdown-image-upload.directive.ts",
+      "source": "frontend/src/app/shared/markdown/markdown-image-upload.directive.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/markdown/markdown-view.component.scss",
+      "source": "frontend/src/app/shared/markdown/markdown-view.component.scss",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/markdown/markdown-view.component.spec.ts",
+      "source": "frontend/src/app/shared/markdown/markdown-view.component.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/markdown/markdown-view.component.ts",
+      "source": "frontend/src/app/shared/markdown/markdown-view.component.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/markdown/markdown.util.spec.ts",
+      "source": "frontend/src/app/shared/markdown/markdown.util.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/markdown/markdown.util.ts",
+      "source": "frontend/src/app/shared/markdown/markdown.util.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/markdown/media-api.service.spec.ts",
+      "source": "frontend/src/app/shared/markdown/media-api.service.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/markdown/media-api.service.ts",
+      "source": "frontend/src/app/shared/markdown/media-api.service.ts",
+      "mode": "U"
+    },
+    {
       "path": "frontend/src/app/shared/scroll-fade.directive.spec.ts",
       "source": "frontend/src/app/shared/scroll-fade.directive.spec.ts",
       "mode": "U"
@@ -1062,6 +1127,26 @@
     {
       "path": "frontend/src/app/shared/ui/global-class-collision.spec.ts",
       "source": "frontend/src/app/shared/ui/global-class-collision.spec.ts",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/history/history.component.html",
+      "source": "frontend/src/app/shared/ui/history/history.component.html",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/history/history.component.scss",
+      "source": "frontend/src/app/shared/ui/history/history.component.scss",
+      "mode": "K"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/history/history.component.spec.ts",
+      "source": "frontend/src/app/shared/ui/history/history.component.spec.ts",
+      "mode": "U"
+    },
+    {
+      "path": "frontend/src/app/shared/ui/history/history.component.ts",
+      "source": "frontend/src/app/shared/ui/history/history.component.ts",
       "mode": "K"
     },
     {

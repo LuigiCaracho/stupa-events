@@ -88,7 +88,7 @@ export const eventsDe = {
   'guards.attachment_quarantined': 'Ein Anhang wird noch geprüft oder wurde abgelehnt.',
   'guards.duplicate_unresolved': 'Eine mögliche Dublette ist nicht geklärt.',
   'guards.title_has_status': 'Der Titel nennt schon „abgesagt“ oder „verschoben“.',
-  'guards.open_comment_on_hero': 'Zum Bild gibt es noch eine offene Rückfrage.',
+  'guards.open_comment_on_hero': 'Eine offene Rückfrage am Poster blockiert die Freigabe.',
   'guards.flyer_date': 'Der Flyer wurde schon für ein anderes Jahr verwendet. Bitte prüfen.',
   'guards.location_unconfirmed': 'Der Ort ist noch nicht bestätigt.',
   'guards.facts_invalid': 'Angaben für diese Kategorie fehlen.',

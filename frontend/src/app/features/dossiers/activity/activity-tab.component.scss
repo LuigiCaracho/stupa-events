@@ -1,0 +1,19 @@
+:host {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.act {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.act__muted {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.act__done summary {
+  cursor: pointer;
+  color: var(--color-text-muted);
+}

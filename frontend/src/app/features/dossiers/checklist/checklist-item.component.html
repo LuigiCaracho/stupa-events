@@ -1,0 +1,74 @@
+<div class="ci" [class.ci--closed]="state() !== 'open'">
+  <app-checkbox
+    [ngModel]="!!item().doneAt"
+    [disabled]="!canTick() || !!item().waivedReason"
+    (ngModelChange)="command.emit({ name: 'done', done: $event })"
+  >
+    <span class="ci__text" [class.ci__text--done]="state() === 'done'">{{ item().text }}</span>
+  </app-checkbox>
+  <div class="ci__meta">
+    @if (item().required) {
+      <app-status-text kind="neutral">{{ 'checklist.required' | t }}</app-status-text>
+    }
+    @if (item().waivedReason) {
+      <span>{{ 'checklist.waivedBecause' | t: { reason: item().waivedReason ?? '' } }}</span>
+    }
+    @if (item().assigneeName) {
+      <span>{{ item().assigneeName }}</span>
+    }
+    @if (item().dueAt) {
+      <span class="ci__due" [class.ci__due--overdue]="item().overdue">
+        @if (relative()) {
+          <span>{{ relative() }}</span>
+        }
+        <span class="num">{{ item().dueAt | ldate: 'mediumDate' }}</span>
+        @if (item().overdue) {
+          <app-status-text kind="error">{{ 'checklist.overdue' | t }}</app-status-text>
+        }
+      </span>
+    }
+  </div>
+  @if (canEdit()) {
+    <app-row-menu
+      [sections]="sections()"
+      [label]="'checklist.menu' | t"
+      (selected)="pick($event)"
+    />
+  }
+  @if (assigning()) {
+    <div class="ci__box">
+      <app-select
+        [label]="'checklist.assignee' | t"
+        [options]="assignees()"
+        [value]="item().assigneeSub ?? ''"
+        (valueChange)="assign($event)"
+      />
+      <app-button variant="text" size="sm" (click)="assigning.set(false)">{{
+        'action.cancel' | t
+      }}</app-button>
+    </div>
+  }
+  @if (waiving()) {
+    <div class="ci__box">
+      <app-textarea
+        name="waiver"
+        [label]="'checklist.waiveReason' | t"
+        [hint]="item().required ? ('checklist.waiveHintRequired' | t) : ''"
+        [rows]="2"
+        [(ngModel)]="reason"
+      />
+      <div class="ci__actions">
+        <app-button
+          variant="fill"
+          size="sm"
+          [disabled]="reasonTooShort() || !reason.trim()"
+          (click)="waive()"
+          >{{ 'checklist.waiveConfirm' | t }}</app-button
+        >
+        <app-button variant="text" size="sm" (click)="waiving.set(false)">{{
+          'action.cancel' | t
+        }}</app-button>
+      </div>
+    </div>
+  }
+</div>
