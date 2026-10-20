@@ -40,8 +40,27 @@ description: Angular 20 app of STUPA Events (frontend/). Shell, auth, i18n, them
 - Build budgets fail the Docker build but not jest or tsc: run `npm run build` after CSS changes. Check light and dark
   against the production build.
 
+**M4 (dossier and knowledge, `docs/M4-KONTRAKT.md` 6 and 7):**
+- Tabs of `/dossiers/:id`: Übersicht, Anhänge, Anleitung, Checkliste, Mails, Verlauf (a `tab` signal in `dossier-detail`, not child
+  routes; counters from `GET /events/{id}/dossier-counts`, threads from `GET /events/{id}/comments`). Each tab is a component under
+  `features/dossiers/{attachments,howto,checklist,mails,activity}` with `event`, `canEdit` and a `changed` output that refreshes counters and guards.
+- Editor shell `features/dossiers/editor/dossier-markdown-editor`: "Editor | Quelltext" over one Markdown value. Tiptap
+  (`@stupa-makers/ui-kit/markdown-editor`, tsconfig and jest alias) is imported only by `rich-editor.component.ts`, which the shell loads
+  with `@defer`, so it stays in a lazy chunk (check `npm run build`). In specs of a page that mounts the shell use `deferBlockBehavior: Playthrough`.
+- Roundtrip gate E20: `npm run gate:roundtrip [-- --write]` runs `shared/markdown/roundtrip.gate.spec.ts` over
+  `frontend/tests/fixtures/markdown/*.md` (30 files) and the stored decision `shared/markdown/roundtrip-gate.json` (`passed`, `failed[]`, `corpusHash`,
+  `kitCommit` = hash of the kit's editor sources). `passed = false` (as measured: Tiptap drops the final newline, escapes `[ ]` task lists, joins
+  soft breaks, rewrites reference links and indented code) makes the Markdown source the default mode; the editor stays a switch, and a text that does not
+  survive is sent back to the source with a note (`kit-roundtrip.ts` reaches into the kit's private editor once, for gate and runtime check).
+  Never edit the corpus to make it pass; rerun with `--write` after a kit or corpus change.
+- Timers (draft autosave, bell polling) start outside the Angular zone, so they do not block `fixture.whenStable()`.
+- Number formats go through `shared/format.util.ts` (`Intl`), not `CurrencyPipe`/`DecimalPipe` (no `registerLocaleData('de')`).
+- Bell and inbox: `features/notifications` (store with 60 s poll while the tab is visible and on route change), bell button in nav rail and phone bar.
+  Preferences: `features/account/notification-prefs`. A ui-kit switch keeps its own state, so a rollback re-renders the rows (`rollbacks` signal).
+- `app-button` takes `[ariaPressed]`, not `[attr.aria-pressed]` (the attribute would land on the host, not the button).
+
 **Gates:** `npm run lint`, `npm run typecheck` (app and specs), `npm test` (coverage thresholds in `jest.config`), `npm run build`,
-E2E `npx playwright test` (browsers from `nix build nixpkgs#playwright-driver.browsers`, against the compose stack or `ng serve` with `E2E_BASE_URL`; `m1.spec.ts`, `m2.spec.ts`, `m3.spec.ts`). `m3.spec.ts` ends with axe (`@axe-core/playwright` 4.13.0, light and dark, contrast included); run it against the production build of the compose `web` container.
+E2E `npx playwright test` (browsers from `nix build nixpkgs#playwright-driver.browsers`, against the compose stack or `ng serve` with `E2E_BASE_URL`; `m1.spec.ts`, `m2.spec.ts`, `m3.spec.ts`, `m4.spec.ts`). `m3.spec.ts` ends with axe (`@axe-core/playwright` 4.13.0, light and dark, contrast included); run it against the production build of the compose `web` container.
 
 **Traps:**
 - `ng serve` can keep serving a stale bundle after a lockfile change; restart it when the nav lacks a new entry.

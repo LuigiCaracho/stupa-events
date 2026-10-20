@@ -61,6 +61,13 @@ worker after 30 days; T10 archived to followup (editor, note); T11 withdraw (not
   `function 'advance_states' not found` for a share of the jobs. Before a worker check `pgrep -af 'arq worker'`
   must show only the `stupa-worker` unit.
 
+**M4 data behind the guards:** `dossier/guard_data.py` fills `open_comments` (T03 needs one), `open_hero_comments` (anchor `hero`
+or any file in the poster's replacement chain, T04), `open_required_checklist` (planning, T02), `quarantined_attachments`
+(poster, social post or shared file, hero excluded) and the flyer check (`contains_date`/`dated_for`, same file in another
+year). `rightsComplete` reports one reason per open field (`altText`, `credit`, `rightsBasis`, `consentNote`);
+`imageOrException` only checks scan and derivatives. `pipeline/notices.py` creates the notifications of a transition or
+action; the routers send the returned mails after the commit.
+
 **Tests:** `tests/unit/pipeline/*` (full matrix against the oracle, guards, U-GUARD, field classes, actor, advance,
 property), `tests/integration/pipeline/*` (full flow, Four-Eyes, worker, U-GUARD with DB, `test_api_walk.py`: seeded random walks over the real API with the publish invariants; extend its operations when a new write path appears), `tests/integration/events/
 {test_rbac_transitions,test_actions,test_field_classes_api,test_autosave}.py`. Acceptance: `scripts/m3_acceptance.py`.

@@ -80,6 +80,15 @@ belongs to a public event). Shapes: `docs/M1-KONTRAKT.md` 4.2 and 4.4, schema `t
   (`NULL` for a private venue).
 - `editor_draft` has no FK and is wiped by `purge_drafts` after 14 days; no role reads another person's draft.
 
+**Dossier and knowledge (M4, `docs/M4-KONTRAKT.md`):** `modules/files` (upload rules in `attachment_types.py`, one write path
+`attachments.py`, pure visibility table `access.py`), `modules/dossier` (documents with `If-Match`, checklist, comments,
+quotes, mail template facade, `guard_data.py`, worker jobs `build_preview` and `promote_poster`), `modules/media/router.py`
+and `ref_sync.py`. A poster in `approved`/`live` stays the hero until `promote_poster` swaps it after scan and derivatives.
+Quotes, business plans and contracts are never `shared` (CHECK) and only readable with `event.edit`/`event.read_all`/
+`dossier.read_restricted`; amounts live in `quote` only. `events/writer.update_event` recomputes checklist due dates
+when `starts_at` changes and records description images in `media_ref`. Tests: `tests/integration/dossier/*`,
+`tests/unit/{files,dossier}/*`; helpers `tests/_support/samples.py`.
+
 **Tests:** `tests/integration/events/{test_board_api,test_tasks_api,test_revisions_api,test_proposals,test_autosave}.py`, `tests/unit/events/*`, `tests/unit/publicapi/*`, `tests/integration/events/{test_flow,test_poster,
 test_locking_and_fields,test_edges}.py`, `tests/integration/publicapi/test_public_feed.py`,
 `tests/integration/test_db_grants_roles_sql.py` (real `roles.sql`), `tests/integration/orgs/*`.
