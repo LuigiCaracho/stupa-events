@@ -46,7 +46,7 @@ test('published: the organizer corrects summary and time in the same form', asyn
   await time.blur();
   await page.getByRole('button', { name: 'Speichern', exact: true }).click();
   await expect(page.getByText('Gespeichert.')).toBeVisible();
-  expect((await eventOf(page, ids['live']))['startsAt']).not.toBe(before['startsAt']);
+  await expect.poll(async () => (await eventOf(page, ids['live']))['startsAt']).not.toBe(before['startsAt']);
   await page.context().close();
 });
 
