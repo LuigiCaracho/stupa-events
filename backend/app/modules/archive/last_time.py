@@ -39,6 +39,7 @@ async def _earlier_edition(
         .where(
             Event.format_id == event.format_id,
             Event.state == "archived",
+            Event.published_at.is_not(None),
             Event.starts_at < event.starts_at,
             Event.id != event.id,
         )

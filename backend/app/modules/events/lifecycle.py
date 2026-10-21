@@ -9,6 +9,7 @@ changes, queues the feed invalidation. `archive_as_system` is the same step for 
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -75,7 +76,12 @@ async def publish(
     slug = event.slug or await slugs.unique_slug(
         session, slugs.base_slug(event.title, event.starts_at, event.tzid)
     )
-    values = {"state": EventState.PUBLISHED.value, "slug": slug, "public_seq": event.public_seq + 1}
+    values = {
+        "state": EventState.PUBLISHED.value,
+        "slug": slug,
+        "published_at": datetime.now(UTC),
+        "public_seq": event.public_seq + 1,
+    }
     return await finish(
         session,
         ctx,
@@ -97,6 +103,7 @@ async def unpublish(
     require_state(event, EventState.PUBLISHED)
     values = {
         "state": EventState.DRAFT.value,
+        "published_at": None,
         "public_seq": event.public_seq + 1,
         **RESET_PUBLIC,
     }
@@ -166,7 +173,12 @@ async def restore(
     ctx = await prepare(session, principal, event_id, "event.restore", expected_rev=expected_rev)
     event = ctx.event
     require_state(event, EventState.ARCHIVED)
-    values = {"state": EventState.DRAFT.value, "public_seq": event.public_seq + 1, **RESET_PUBLIC}
+    values = {
+        "state": EventState.DRAFT.value,
+        "published_at": None,
+        "public_seq": event.public_seq + 1,
+        **RESET_PUBLIC,
+    }
     return await finish(
         session,
         ctx,

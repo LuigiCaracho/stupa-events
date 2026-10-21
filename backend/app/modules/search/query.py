@@ -17,6 +17,7 @@ from uuid import UUID
 from sqlalchemy import Integer, String, TextClause, Uuid, bindparam
 from sqlalchemy.dialects.postgresql import ARRAY
 
+from app.modules.archive.access import LISTED_ARCHIVE_SQL
 from app.modules.search import clauses
 from app.modules.search.clauses import CFG, DOCUMENT_FACTOR, NAME_FACTOR, WordSql
 from app.modules.search.filters import Filters, Reader
@@ -85,8 +86,8 @@ def own_clause(reader: Reader, params: Params) -> str:
 def _visible(reader: Reader, filters: Filters, params: Params) -> str:
     own = own_clause(reader, params)
     if filters.clonable:
-        return f"(e.state = 'archived' OR ({own} AND e.state = 'published'))"
-    return f"({own} OR e.state = 'archived')"
+        return f"({LISTED_ARCHIVE_SQL} OR ({own} AND e.state = 'published'))"
+    return f"({own} OR {LISTED_ARCHIVE_SQL})"
 
 
 def _filters(filters: Filters, params: Params, *, state: str, starts: str) -> str:
@@ -180,7 +181,7 @@ def documents_spec(reader: Reader, filters: Filters, params: Params) -> Spec:
         " LEFT JOIN category c ON c.id = e.primary_category_id"
         " LEFT JOIN category cp ON cp.id = c.parent_id"
         " WHERE ((d.format_id IS NOT NULL AND d.visibility = 'shared')"
-        f" OR (d.event_id IS NOT NULL AND ({own} OR e.state = 'archived') AND {visible}))"
+        f" OR (d.event_id IS NOT NULL AND ({own} OR {LISTED_ARCHIVE_SQL}) AND {visible}))"
         f" AND {_filters(filters, params, state='e.state', starts=DOC_STARTS)}"
     )
     return Spec(base, lambda word: "false", lambda word: "0")
@@ -309,7 +310,7 @@ def suggestion(reader: Reader, word: str) -> TextClause:
     sql = (
         "SELECT w FROM (SELECT DISTINCT tw AS w FROM ("
         "SELECT regexp_split_to_table(e.title, '[^[:alnum:]äöüßÄÖÜ]+') AS tw FROM event e"
-        f" WHERE {own} OR e.state = 'archived'"
+        f" WHERE {own} OR {LISTED_ARCHIVE_SQL}"
         " UNION ALL SELECT regexp_split_to_table(f.title, '[^[:alnum:]äöüßÄÖÜ]+')"
         " FROM format f WHERE f.active) t"
         f" WHERE length(tw) >= {SUGGESTION_MIN_LETTERS}) x"

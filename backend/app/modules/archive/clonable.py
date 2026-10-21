@@ -18,7 +18,8 @@ def clonable_clause(scope: set[UUID] | None) -> ColumnElement[bool]:
         scope: The organizations the reader reads (`None` for all), from `readable_org_ids`.
     """
     own = Event.organization_id.in_(scope) if scope is not None else true()
-    return or_(Event.state == "archived", and_(Event.state.in_(OWN_CLONABLE), own))
+    listed = and_(Event.state == "archived", Event.published_at.is_not(None))
+    return or_(listed, and_(Event.state.in_(OWN_CLONABLE), own))
 
 
 def is_clonable(state: str, own: bool) -> bool:

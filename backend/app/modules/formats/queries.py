@@ -189,7 +189,11 @@ async def latest_mail_templates(
     """Link the mail templates of the newest readable archived edition (shared ones only)."""
     newest = await session.scalar(
         select(Event.id)
-        .where(Event.format_id == fmt.id, Event.state == "archived")
+        .where(
+            Event.format_id == fmt.id,
+            Event.state == "archived",
+            Event.published_at.is_not(None),
+        )
         .order_by(Event.starts_at.desc())
         .limit(1)
     )

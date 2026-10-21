@@ -81,6 +81,7 @@ class Event(UUIDPkMixin, TimestampMixin, Base):
     )
     origin_kind: Mapped[str] = mapped_column(Text, server_default="internal")
     rev: Mapped[int] = mapped_column(Integer, server_default="1")
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     public_seq: Mapped[int] = mapped_column(Integer, server_default="0")
     created_by: Mapped[str] = mapped_column(Text)
     ticket_url: Mapped[str | None] = mapped_column(Text, nullable=True)

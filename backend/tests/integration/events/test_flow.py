@@ -62,6 +62,31 @@ async def test_unpublish_leaves_the_feed_and_restore_returns_a_draft(api: Api) -
     assert await feed_ids(api) == []
 
 
+async def test_a_dossier_archived_without_being_public_stays_out_of_feed_and_ics(
+    api: Api,
+) -> None:
+    never = (await api.create_event())["id"]
+    await api.act("organizer-fsi", never, "publish")
+    await api.act("organizer-fsi", never, "unpublish")
+    await api.act("organizer-fsi", never, "archive")
+    plain = (await api.create_event())["id"]
+    await api.act("organizer-fsi", plain, "archive")
+    assert await feed_ids(api) == []
+    ics = (await api.request(None, "GET", "/ics/all.ics")).content
+    assert never.encode() not in ics and plain.encode() not in ics
+    visible = await api.sql("SELECT count(*) FROM public_event_v")
+    assert visible == [(0,)]
+
+
+async def test_a_published_dossier_stays_public_after_the_archive(api: Api) -> None:
+    eid = (await api.to_state("published"))["id"]
+    await api.act("organizer-fsi", eid, "archive")
+    assert await feed_ids(api) == [eid]
+    assert (await api.sql("SELECT published_at IS NOT NULL FROM event WHERE id = :e", e=eid)) == [
+        (True,)
+    ]
+
+
 async def test_publish_asks_for_title_start_and_organization_only(api: Api) -> None:
     event = await api.create_event()
     await api.sql("UPDATE event SET title = '  ' WHERE id = :e", e=event["id"])

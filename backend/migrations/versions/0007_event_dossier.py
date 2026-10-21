@@ -7,14 +7,19 @@ Create Date: 2026-10-21 00:00:07
 Maps the eight pipeline states onto `draft`, `published` and `archived` (one
 `event_status_event` row per changed event), folds the role `approver` into `organizer`,
 drops the notification kinds of the pipeline, tightens `state`, `organization` and `tzid`,
-rebuilds `public_event_v` without the image exception, softens `attachment_poster_ok` (alt
-text, credit and rights basis become hints) and removes the publish triggers, the Four-Eyes
-and field class columns, the review markers, `publish_at` and `organization.trusted`.
+rebuilds `public_event_v` without the image exception and with the marker `event.published_at`
+(set on publish, cleared on unpublish and restore, backfilled for published and slugged archived dossiers), so a
+draft archived without ever being public stays out of the feed, the ICS and the library, softens
+`attachment_poster_ok` (alt text, credit and rights basis become hints) and removes the publish
+triggers, the Four-Eyes and field class columns, the review markers, `publish_at` and
+`organization.trusted`.
 `event_status_event` and `event_revision` are append-only, so the old state names stay in the
 history and the CHECK on `to_state` accepts both vocabularies.
 
 The migration is one-way for data: the downgrade rebuilds the old structure (columns as
-nullable, `live` for `published`, `idea` for `draft`) but restores no value.
+nullable, `live` for `published`, `idea` for `draft`) but restores no value. A published
+dossier without a valid poster no longer matches the old view condition, so it is not public
+after a downgrade.
 """
 
 from __future__ import annotations
@@ -131,7 +136,8 @@ LEFT JOIN attachment a ON a.id = e.hero_attachment_id AND a.event_id = e.id
 _VIEW_NEW = (
     "CREATE OR REPLACE VIEW public_event_v AS"
     + _VIEW_BODY
-    + "WHERE e.state IN ('published', 'archived') AND e.slug IS NOT NULL"
+    + "WHERE (e.state = 'published' OR (e.state = 'archived' AND e.published_at IS NOT NULL))\n"
+    "  AND e.slug IS NOT NULL"
 )
 _VIEW_OLD = (
     "CREATE OR REPLACE VIEW public_event_v AS"
@@ -218,6 +224,12 @@ def _migrate_states() -> None:
         )
     )
     bind.execute(sa.text(f"UPDATE event SET state = {_NEW_STATE_CASE}"))
+    bind.execute(
+        sa.text(
+            "UPDATE event SET published_at = updated_at "
+            "WHERE state IN ('published', 'archived') AND slug IS NOT NULL"
+        )
+    )
 
 
 def _migrate_roles() -> None:
@@ -265,6 +277,7 @@ def _drop_pipeline_objects() -> None:
 
 
 def upgrade() -> None:
+    op.add_column("event", sa.Column("published_at", sa.DateTime(timezone=True)))
     op.drop_constraint("ck_event_status_event_ck_event_status_event_to_state", "event_status_event")
     op.create_check_constraint(
         op.f("ck_event_status_event_to_state"), "event_status_event", f"to_state IN ({_ALL_STATES})"
@@ -348,6 +361,7 @@ def downgrade() -> None:
     _restore_pipeline_objects()
     op.execute(_POSTER_OK_OLD)
     op.execute(_VIEW_OLD)
+    op.drop_column("event", "published_at")
     for table in ("notification", "notification_pref"):
         name = op.f(f"ck_{table}_kind")
         _swap_check(table, name, name, f"kind IN ({_OLD_KINDS})")

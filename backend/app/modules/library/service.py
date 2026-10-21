@@ -12,6 +12,7 @@ from sqlalchemy import Integer, String, text
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.archive.access import LISTED_ARCHIVE_SQL
 from app.modules.auth.principal import Principal
 from app.modules.dossier import documents
 from app.modules.dossier.models_documents import Document
@@ -88,7 +89,7 @@ def _documents(reader: Reader, filters: Filters, params: Params, words: list) ->
         " d.verified_at, d.updated_at, NULL::text AS mime, NULL::bigint AS size_bytes,"
         f" coalesce(({own}), false) AS own{_DOC_JOINS}"
         " WHERE d.visibility = 'shared' AND ((d.format_id IS NOT NULL AND d.kind = 'howto')"
-        f" OR (e.state = 'archived' AND d.kind = ANY({kinds})))"
+        f" OR ({LISTED_ARCHIVE_SQL} AND d.kind = ANY({kinds})))"
         f" AND {_narrow(filters, params, DOC_STARTS)} AND {match}"
     )
 
@@ -104,7 +105,7 @@ def _files(reader: Reader, filters: Filters, params: Params, q: str) -> str:
         " NULL::timestamptz AS verified_at, a.created_at AS updated_at, a.mime,"
         f" a.size_bytes, coalesce(({own}), false) AS own{_FILE_JOINS}"
         " WHERE a.visibility = 'shared' AND a.scan_status = 'clean' AND a.retired_at IS NULL"
-        f" AND e.state = 'archived' AND {_narrow(filters, params, 'e.starts_at')} AND {name}"
+        f" AND {LISTED_ARCHIVE_SQL} AND {_narrow(filters, params, 'e.starts_at')} AND {name}"
     )
 
 
@@ -207,7 +208,7 @@ async def adopt(session: AsyncSession, principal: Principal, document_id, event_
     listed = (
         doc.visibility == "shared"
         and doc.kind in LIBRARY_KINDS
-        and (source is None or source.state == "archived")
+        and (source is None or (source.state == "archived" and source.published_at is not None))
     )
     if not listed:
         raise NotFoundError("document not found")
