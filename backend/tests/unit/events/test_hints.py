@@ -14,6 +14,7 @@ NOW = datetime(2026, 11, 20, 12, tzinfo=UTC)
 GOOD_POSTER = PosterFacts("clean", True, "Alt", "Foto: Ada", False, None)
 COMPLETE = HintInput(
     state="published",
+    organization_id=uuid4(),
     now=NOW,
     ends_at=NOW + timedelta(days=3),
     summary="Ein Film.",
@@ -51,6 +52,7 @@ def test_a_complete_dossier_has_no_hint() -> None:
         ({"poster": replace(GOOD_POSTER, scan_status="pending")}, "poster_not_ready", "warn"),
         ({"poster": replace(GOOD_POSTER, scan_status="infected")}, "poster_not_ready", "warn"),
         ({"poster": replace(GOOD_POSTER, has_derivatives=False)}, "poster_not_ready", "warn"),
+        ({"organization_id": None}, "no_organization", "warn"),
         ({"summary": "  "}, "no_summary", "info"),
         ({"primary_category_id": None}, "no_category", "info"),
         ({"venue_id": None, "venue_text": " "}, "no_venue", "info"),

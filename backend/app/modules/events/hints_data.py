@@ -82,6 +82,7 @@ async def hint_inputs(
         category = categories.get(event.primary_category_id) if event.primary_category_id else None
         result[event.id] = HintInput(
             state=event.state,
+            organization_id=event.organization_id,
             now=moment,
             ends_at=event.ends_at,
             summary=event.summary,

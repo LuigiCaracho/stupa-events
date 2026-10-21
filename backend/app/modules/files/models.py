@@ -101,10 +101,6 @@ class Attachment(UUIDPkMixin, CreatedAtMixin, Base):
     retired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     contains_date: Mapped[bool] = mapped_column(Boolean, server_default="false", default=False)
     dated_for: Mapped[date | None] = mapped_column(Date, nullable=True)
-    flyer_date_confirmed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    flyer_date_confirmed_by: Mapped[str | None] = mapped_column(Text, nullable=True)
     preview_key: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     __table_args__ = (

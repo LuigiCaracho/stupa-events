@@ -107,6 +107,23 @@ Upstream-Golden in `test_hash.py` (`"transition": "T01"`, kopiert aus dem Workfl
 6. `docs`: Skill `be-lifecycle` ersetzt `be-pipeline`; `be-events`, `be-archive`, `be-auth`, `be-notifications`,
    `be-public`, `conventions`, `CLAUDE.md`, `README.md` auf das Event-Dossier.
 
+## D2: Fixes des Reviews (eigene Commits)
+
+1. `event.published_at` (Migration `0007`, nachgeführt statt `0008`, weil unveröffentlicht): gesetzt bei `publish`, gelöscht
+   bei `unpublish` und `restore`. `public_event_v`, Suche, Bibliothek, Klon-Quellen und `foreign_archived` zeigen ein
+   archiviertes Dossier nur mit Marke; ein Entwurf, der ohne je öffentlich zu sein archiviert wird, bleibt aus Feed, ICS und
+   fremden Organisationen heraus (`test_flow.py`). Die Dev-DB wurde per Hand nachgezogen (Spalte, Backfill, View).
+2. Benachrichtigungsarten `published` und `cancelled` übersetzt, `NOTIFICATION_KINDS` als eine Liste, tote Schlüssel
+   (`notification.kind.*` der Pipeline, `clone.reason.exception`) gelöscht, `clone.reason.factsForeign` ergänzt.
+3. `attachment.flyer_date_confirmed_at/_by` fallen in `0007` (Downgrade legt sie leer wieder an); `contains_date` und
+   `dated_for` bleiben als Info am Bild, der Hinweistext verspricht keine Prüfung mehr.
+4. Altentwürfe ohne Organisation: Ersteller:in und Redaktion dürfen sie bearbeiten, neuer Hinweis `no_organization` (`warn`).
+5. Landmarken: die Ankerblöcke `doku` bis `angebote` tragen `role="group"` mit Namen.
+6. `coverage_critical` nennt `events/public_status.py`; das Testbeispiel nutzt `events/lifecycle.py`.
+
+Downgrade von `0007`: veröffentlichte Dossiers ohne gültiges Poster erfüllen die alte View-Bedingung nicht und sind danach
+nicht öffentlich.
+
 ## E: Abweichungen vom Kontrakt (zur Nachführung)
 
 - Die alten Abnahmeskripte `m1_acceptance` bis `m5_acceptance`, `m5_clone`, `m5_fixture`, `m5_followup`, `m5_frame`
@@ -124,6 +141,10 @@ Upstream-Golden in `test_hash.py` (`"transition": "T01"`, kopiert aus dem Workfl
 
 ## Offen
 
+- Luis: Soll `publish_requires_editor` auch `archive` und `unpublish` eines veröffentlichten Dossiers der Redaktion
+  vorbehalten? Heute bindet die Einstellung nur `publish`; die Entscheidungstext sagt nur "Redaktion klickt" beim Veröffentlichen.
+- `.github/CODEOWNERS` trägt noch den Platzhalter `TODO(owner)`; vor dem Pilot-Tag das echte Team eintragen und
+  "Require review from Code Owners" auf `main` einschalten (sonst wirkt der Schutz der Allowlist E39 nicht).
 - Luis: Entscheidungen 13.1 O1 bis O8 (Vorschläge sind gebaut), dazu Review-Reste 15 (`CODEOWNERS`-Team), 16
   (Kalender-Import in Thunderbird, Google, Apple, Schrittfolge `M5-ABNAHME.md` T), 17 (D8), 18 (Kosten für `viewer`,
   = O2), 22 (Pilotkriterium "Dossier anlegen bis Archiv", `pilot_check.py` gegen die Ziel-Instanz), 23 (PLAN §18 Minor 2, 3).

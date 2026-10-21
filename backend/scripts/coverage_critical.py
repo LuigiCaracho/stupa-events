@@ -8,7 +8,7 @@ The packages are `auth`, `audit` and `publicapi` (with `ics/`); the single files
 `CRITICAL_FILES` (uploads, sniffing, comments, checklist, notification fan-out, the packages
 `archive` and `search`, `formats/service.py`, `worker/public_cache.py`; since M5b the
 lifecycle of the dossier: `events/lifecycle.py`, `publish.py`, `hints.py`, `allowed.py`,
-`editing.py`, `step.py` and `worker/advance.py`). A file may
+`editing.py`, `step.py`, `public_status.py` and `worker/advance.py`). A file may
 sit in `EXEMPT` with the reason why it stays below 100 % until a later milestone changes it.
 Exit status 1 lists the files below the bar.
 """
@@ -38,6 +38,7 @@ CRITICAL_FILES = frozenset(
         "app/modules/events/allowed.py",
         "app/modules/events/editing.py",
         "app/modules/events/step.py",
+        "app/modules/events/public_status.py",
         "worker/advance.py",
     }
 )

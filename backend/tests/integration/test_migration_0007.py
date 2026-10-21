@@ -237,6 +237,8 @@ def test_the_pipeline_objects_are_gone(migrated: tuple[str, str]) -> None:
             ("event", "published_rev"),
             ("event", "text_reviewed_rev"),
             ("event", "flyer_checked_at"),
+            ("attachment", "flyer_date_confirmed_at"),
+            ("attachment", "flyer_date_confirmed_by"),
             ("event_status_event", "four_eyes"),
             ("event_status_event", "submitted_by"),
             ("event_revision", "field_class"),

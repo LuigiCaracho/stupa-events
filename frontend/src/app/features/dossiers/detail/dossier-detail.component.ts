@@ -379,6 +379,8 @@ export class DossierDetailComponent implements PendingChanges {
       case 'facts_incomplete':
         this.basicsOpen.set(true);
         return this.afterRender(() => this.focusHeading('#facts-heading'));
+      case 'no_organization':
+        return this.goTo('eckdaten');
       case 'howto_missing':
         return this.goTo('doku');
       case 'outcome_open':

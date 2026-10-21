@@ -55,10 +55,13 @@ def has_edit_right(principal: Principal, event: Event) -> bool:
     """Tell if the principal holds the right to edit this dossier, whatever its state.
 
     A published dossier asks for `event.publish`; any other state for `event.edit`, and a
-    submitter edits only its own dossiers. The principal must have bound its organization
+    submitter edits only its own dossiers. A legacy draft without an organization stays editable
+    for its creator and the editorial team. The principal must have bound its organization
     ids (`orgs.scope.bind`).
     """
     org = event.organization_id
+    if org is None:
+        return event.created_by == principal.sub or principal.has("event.edit", None)
     if event.state == EventState.PUBLISHED:
         return principal.has("event.publish", org)
     if not principal.has("event.edit", org):

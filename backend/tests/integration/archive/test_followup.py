@@ -224,7 +224,7 @@ async def test_a_foreign_edition_does_not_date_the_master_of_another_organizatio
         e=eid,
     )
     await api.sql(
-        "UPDATE event SET state = 'archived', "
+        "UPDATE event SET state = 'archived', published_at = now(), "
         "format_id = (SELECT id FROM format WHERE slug = 'movienight'), "
         "organization_id = (SELECT id FROM organization WHERE slug = 'makers') WHERE id = :e",
         e=eid,

@@ -84,11 +84,11 @@
     </div>
   </section>
 
-  <div class="dd__sec" id="doku" tabindex="-1">
+  <div class="dd__sec" role="group" id="doku" tabindex="-1" [attr.aria-label]="'detail.tabHowto' | t">
     <app-howto-tab [event]="e" [canEdit]="canWrite()" (changed)="changedKnowledge()" />
   </div>
 
-  <div class="dd__sec" id="anhaenge" tabindex="-1">
+  <div class="dd__sec" role="group" id="anhaenge" tabindex="-1" [attr.aria-label]="'detail.tabAttachments' | t">
     <app-attachments-tab
       [event]="e"
       [canEdit]="canWrite()"
@@ -98,15 +98,15 @@
     />
   </div>
 
-  <div class="dd__sec" id="checkliste" tabindex="-1">
+  <div class="dd__sec" role="group" id="checkliste" tabindex="-1" [attr.aria-label]="'detail.tabChecklist' | t">
     <app-checklist-tab [event]="e" [canEdit]="canWrite()" (changed)="changedKnowledge()" />
   </div>
 
-  <div class="dd__sec" id="mails" tabindex="-1">
+  <div class="dd__sec" role="group" id="mails" tabindex="-1" [attr.aria-label]="'detail.tabMails' | t">
     <app-mails-tab [event]="e" [canEdit]="canWrite()" (changed)="changedKnowledge()" />
   </div>
 
-  <div class="dd__sec" id="angebote" tabindex="-1">
+  <div class="dd__sec" role="group" id="angebote" tabindex="-1" [attr.aria-label]="'detail.tabQuotes' | t">
     <app-quotes-tab
       [event]="e"
       [canEdit]="canWrite()"

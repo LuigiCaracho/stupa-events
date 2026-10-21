@@ -103,6 +103,12 @@ def test_the_base_data_are_editable_in_draft_and_published_only() -> None:
     assert not may_edit(ROLES["foreign"], row("draft"))
 
 
+def test_a_legacy_draft_without_organization_stays_editable_for_its_creator() -> None:
+    orphan = row("draft", organization_id=None)
+    assert may_edit(ROLES["submitter"], orphan) and may_edit(ROLES["editor"], orphan)
+    assert not may_edit(person("events-fsi-organizer", sub="sub-2"), orphan)
+
+
 def test_the_helper_actions_follow_state_and_right() -> None:
     draft = set(allowed_actions(ROLES["organizer"], row("draft")))
     assert {"confirm-location", "save-as-format", "revert-revision"} <= draft

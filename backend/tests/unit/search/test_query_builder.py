@@ -40,7 +40,7 @@ def test_the_right_filter_is_part_of_every_event_and_document_statement() -> Non
             assert "organization_id = ANY" in text and "'archived'" in text
     assert "d.visibility = 'shared'" in sql_of(build("kino", "documents").total)
     open_text = sql_of(build("kino", "events", reader=EVERYBODY).total)
-    assert "true OR e.state = 'archived'" in open_text
+    assert "true OR (e.state = 'archived' AND e.published_at IS NOT NULL)" in open_text
 
 
 def test_the_formats_scope_reads_only_active_formats() -> None:

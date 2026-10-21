@@ -14,9 +14,10 @@ from tests.integration.events.harness import Api
 FIXTURES = Path(__file__).resolve().parents[2] / "fixtures" / "search"
 INSERT_EVENT = text(
     "INSERT INTO event (title, state, starts_at, ends_at, organization_id, format_id, created_by,"
-    " summary) VALUES (:title, :state, CAST(:start AS timestamptz),"
+    " summary, published_at) VALUES (:title, :state, CAST(:start AS timestamptz),"
     " CAST(:start AS timestamptz) + interval '3 hours', (SELECT id FROM organization WHERE slug = :org),"
-    " (SELECT id FROM format WHERE slug = :format), 'seed', :summary) RETURNING id"
+    " (SELECT id FROM format WHERE slug = :format), 'seed', :summary,"
+    " CASE WHEN :state = 'archived' THEN now() END) RETURNING id"
 )
 INSERT_DOCUMENT = text(
     "INSERT INTO document (event_id, kind, title, body_md, visibility)"

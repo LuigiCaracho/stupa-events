@@ -8,11 +8,11 @@ Maps the eight pipeline states onto `draft`, `published` and `archived` (one
 `event_status_event` row per changed event), folds the role `approver` into `organizer`,
 drops the notification kinds of the pipeline, tightens `state`, `organization` and `tzid`,
 rebuilds `public_event_v` without the image exception and with the marker `event.published_at`
-(set on publish, cleared on unpublish and restore, backfilled for published and slugged archived dossiers), so a
-draft archived without ever being public stays out of the feed, the ICS and the library, softens
-`attachment_poster_ok` (alt text, credit and rights basis become hints) and removes the publish
-triggers, the Four-Eyes and field class columns, the review markers, `publish_at` and
-`organization.trusted`.
+(set on publish, cleared on unpublish and restore, backfilled for published and slugged archived
+dossiers), so a draft archived without ever being public stays out of the feed, the ICS and the
+library, softens `attachment_poster_ok` (alt text, credit and rights basis become hints) and
+removes the publish triggers, the Four-Eyes and field class columns, the review markers,
+`publish_at`, `organization.trusted` and the flyer date confirmation of the attachments.
 `event_status_event` and `event_revision` are append-only, so the old state names stay in the
 history and the CHECK on `to_state` accepts both vocabularies.
 
@@ -274,6 +274,8 @@ def _drop_pipeline_objects() -> None:
     for column in _REMOVED_EVENT_COLUMNS:
         op.drop_column("event", column)
     op.drop_column("organization", "trusted")
+    op.drop_column("attachment", "flyer_date_confirmed_at")
+    op.drop_column("attachment", "flyer_date_confirmed_by")
 
 
 def upgrade() -> None:
@@ -303,6 +305,8 @@ def _restore_pipeline_objects() -> None:
         "organization",
         sa.Column("trusted", sa.Boolean, server_default=sa.text("false"), nullable=False),
     )
+    op.add_column("attachment", sa.Column("flyer_date_confirmed_at", sa.DateTime(timezone=True)))
+    op.add_column("attachment", sa.Column("flyer_date_confirmed_by", sa.Text))
     op.add_column("event", sa.Column("submitted_by", sa.Text))
     op.add_column("event", sa.Column("approved_by", sa.Text))
     op.add_column("event", sa.Column("image_exception", sa.dialects.postgresql.JSONB))

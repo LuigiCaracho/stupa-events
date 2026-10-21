@@ -42,6 +42,7 @@ class HintInput:
     """The facts of a dossier that the hints read."""
 
     state: str
+    organization_id: UUID | None
     now: datetime
     ends_at: datetime
     summary: str | None
@@ -90,6 +91,7 @@ def _content_hints(item: HintInput) -> list[Hint]:
         item.venue_id is None and not _blank(item.venue_text) and not item.location_confirmed
     )
     checks = (
+        (item.organization_id is None, Hint("no_organization", "warn", "organizationId")),
         (_blank(item.summary), Hint("no_summary", "info", "summary")),
         (item.primary_category_id is None, Hint("no_category", "info", "primaryCategoryId")),
         (no_venue, Hint("no_venue", "info", "venueId")),

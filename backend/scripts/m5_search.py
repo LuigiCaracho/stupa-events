@@ -23,11 +23,12 @@ FIXTURES = Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "search"
 MARK = "m5-corpus"
 PAGE = 50
 INSERT_EVENT = (
-    "INSERT INTO event (title, state, starts_at, ends_at, organization_id, format_id, created_by)"
-    " VALUES (:title, :state, CAST(:start AS timestamptz),"
+    "INSERT INTO event (title, state, starts_at, ends_at, organization_id, format_id, created_by,"
+    " published_at) VALUES (:title, :state, CAST(:start AS timestamptz),"
     " CAST(:start AS timestamptz) + interval '3 hours',"
     " (SELECT id FROM organization WHERE slug = :org),"
-    " (SELECT id FROM format WHERE slug = :format), :mark) RETURNING id"
+    " (SELECT id FROM format WHERE slug = :format), :mark,"
+    " CASE WHEN :state = 'archived' THEN now() END) RETURNING id"
 )
 INSERT_DOCUMENT = (
     "INSERT INTO document (event_id, kind, title, body_md, visibility)"
