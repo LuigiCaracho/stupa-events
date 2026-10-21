@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import pytest
 
+from app.settings import get_settings
+from tests._support.factories import make_settings
 from tests.integration.events.harness import Api
 
 pytestmark = pytest.mark.integration
@@ -66,3 +68,14 @@ async def test_publish_asks_for_title_start_and_organization_only(api: Api) -> N
     refused = await api.act("organizer-fsi", event["id"], "publish")
     assert refused.status_code == 422 and refused.json()["code"] == "publish_incomplete"
     assert [r["field"] for r in refused.json()["reasons"]] == ["title"]
+
+
+async def test_publish_requires_editor_leaves_the_click_to_the_editorial_team(api: Api) -> None:
+    api.app.dependency_overrides[get_settings] = lambda: make_settings(publish_requires_editor=True)
+    try:
+        eid = (await api.create_event())["id"]
+        refused = await api.act("organizer-fsi", eid, "publish")
+        assert refused.status_code == 403
+        assert (await api.act("editor", eid, "publish")).json()["state"] == "published"
+    finally:
+        del api.app.dependency_overrides[get_settings]
