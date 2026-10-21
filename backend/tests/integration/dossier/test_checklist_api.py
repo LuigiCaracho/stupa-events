@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from tests.integration.dossier.helpers import planning_event, seed_principals
+from tests.integration.dossier.helpers import draft_event, seed_principals
 from tests.integration.events.harness import Api, future
 
 pytestmark = pytest.mark.integration
@@ -22,13 +22,13 @@ async def items(api: Api, eid: str) -> dict[str, dict]:
 
 
 async def test_the_template_follows_the_category_profile_and_is_idempotent(api: Api) -> None:
-    party = await planning_event(api, primaryCategoryId=api.category_ids["party"])
+    party = await draft_event(api, primaryCategoryId=api.category_ids["party"])
     first = await apply(api, party)
     assert first.status_code == 200 and first.json()["added"] == 9
     assert first.json()["template"]["slug"] == "party"
     second = await apply(api, party)
     assert second.json()["added"] == 0 and len(second.json()["items"]) == 9
-    movie = await planning_event(api)
+    movie = await draft_event(api)
     generic = (await apply(api, movie)).json()
     assert generic["template"]["slug"] == "generic" and generic["added"] == 6
     forced = (await apply(api, movie, templateSlug="meeting")).json()
@@ -39,7 +39,7 @@ async def test_the_template_follows_the_category_profile_and_is_idempotent(api: 
 
 
 async def test_due_dates_follow_a_new_start_but_not_manual_or_finished_items(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     await apply(api, eid)
     rows = await items(api, eid)
     poster = rows["Plakat bestellen"]
@@ -79,7 +79,7 @@ async def test_due_dates_follow_a_new_start_but_not_manual_or_finished_items(api
 
 
 async def test_handing_a_date_back_to_the_rule(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     await apply(api, eid)
     row = (await items(api, eid))["Raum bestätigt"]
     url = f"/api/checklist-items/{row['id']}"
@@ -90,12 +90,12 @@ async def test_handing_a_date_back_to_the_rule(api: Api) -> None:
 
 
 async def test_postpone_with_a_new_date_recomputes_the_due_dates(api: Api) -> None:
-    event = await api.to_state("live")
+    event = await api.to_state("published")
     eid = event["id"]
     await apply(api, eid, user="editor")
     before = (await items(api, eid))["Plakat bestellen"]["dueAt"]
     new = future(days=90)
-    postponed = await api.action(
+    postponed = await api.act(
         "editor",
         eid,
         "postpone",
@@ -111,7 +111,7 @@ async def test_postpone_with_a_new_date_recomputes_the_due_dates(api: Api) -> No
 
 async def test_waivers_assignees_and_the_free_items(api: Api) -> None:
     await seed_principals(api)
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     await apply(api, eid)
     rows = await items(api, eid)
     required, optional = rows["Raum bestätigt"], rows["Plakat bestellen"]
@@ -165,26 +165,16 @@ async def test_waivers_assignees_and_the_free_items(api: Api) -> None:
     assert gone.status_code == 204
 
 
-async def test_t02_is_blocked_by_an_open_required_planning_item(api: Api) -> None:
-    eid = await planning_event(api)
-    await api.upload_poster("organizer-fsi", eid)
-    poster = (await api.get("organizer-fsi", eid))["poster"]["id"]
-    assert await api.process_poster(poster) == "clean"
+async def test_an_open_required_planning_item_does_not_block_publishing(api: Api) -> None:
+    eid = await draft_event(api)
     await apply(api, eid)
-    blocked = await api.fire("organizer-fsi", eid, "T02")
-    assert blocked.status_code == 422 and blocked.json()["code"] == "checklist_open"
-    report = (await api.request("organizer-fsi", "GET", f"/api/events/{eid}/guards/T02")).json()
-    assert [r["code"] for r in report["reasons"]] == ["checklist_open"]
-    room = (await items(api, eid))["Raum bestätigt"]
-    await api.request(
-        "organizer-fsi", "POST", f"/api/checklist-items/{room['id']}/done", json={"done": True}
-    )
-    assert (await api.fire("organizer-fsi", eid, "T02")).status_code == 200
+    assert "Raum bestätigt" in await items(api, eid)
+    assert (await api.act("organizer-fsi", eid, "publish")).status_code == 200
 
 
-async def test_the_assignee_may_finish_and_tasks_list_the_item(api: Api) -> None:
+async def test_the_assignee_may_finish_the_item(api: Api) -> None:
     await seed_principals(api)
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     item = (
         await api.request(
             "organizer-fsi",
@@ -193,10 +183,6 @@ async def test_the_assignee_may_finish_and_tasks_list_the_item(api: Api) -> None
             json={"text": "Kuchen", "phase": "live", "assigneeSub": "sub-sub-fsi"},
         )
     ).json()
-    tasks = (await api.request("submitter-fsi", "GET", "/api/tasks")).json()
-    assert [(t["text"], t["eventId"]) for t in tasks["checklistItems"]] == [("Kuchen", eid)]
-    assert tasks["checklistItems"][0]["kind"] == "checklist_item"
-    assert tasks["counts"]["checklistItems"] == 1
     other = await api.request(
         "viewer-fsi", "POST", f"/api/checklist-items/{item['id']}/done", json={"done": True}
     )
@@ -205,27 +191,22 @@ async def test_the_assignee_may_finish_and_tasks_list_the_item(api: Api) -> None
         "submitter-fsi", "POST", f"/api/checklist-items/{item['id']}/done", json={"done": True}
     )
     assert done.status_code == 200 and done.json()["doneBy"] == "sub-sub-fsi"
-    assert (await api.request("submitter-fsi", "GET", "/api/tasks")).json()["checklistItems"] == []
-    assert (await api.request("organizer-makers", "GET", "/api/tasks")).json()[
-        "checklistItems"
-    ] == []
 
 
-async def test_a_new_assignee_gets_a_notification(api: Api) -> None:
+async def test_a_new_assignee_gets_no_notification(api: Api) -> None:
     await seed_principals(api)
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     await api.request(
         "organizer-fsi",
         "POST",
         f"/api/events/{eid}/checklist/items",
         json={"text": "Kuchen", "phase": "live", "assigneeSub": "sub-sub-fsi"},
     )
-    rows = await api.sql("SELECT recipient_sub, kind FROM notification")
-    assert [tuple(r) for r in rows] == [("sub-sub-fsi", "task_assigned")]
+    assert (await api.sql("SELECT count(*) FROM notification"))[0][0] == 0
     await api.request(
         "organizer-fsi",
         "POST",
         f"/api/events/{eid}/checklist/items",
         json={"text": "Selbst", "phase": "live", "assigneeSub": "sub-org-fsi"},
     )
-    assert (await api.sql("SELECT count(*) FROM notification"))[0][0] == 1
+    assert (await api.sql("SELECT count(*) FROM notification"))[0][0] == 0

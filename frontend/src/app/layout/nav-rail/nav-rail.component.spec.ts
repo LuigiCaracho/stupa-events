@@ -29,11 +29,11 @@ async function setup() {
 }
 
 describe('NavRailComponent', () => {
-  it('names the brand mark after the app and links it to the task page', async () => {
+  it('names the brand mark after the app and links it to the event list', async () => {
     await setup();
     expect(screen.getByRole('link', { name: 'STUPA Events, Start' })).toHaveAttribute(
       'href',
-      '/aufgaben',
+      '/dossiers',
     );
   });
 
@@ -43,7 +43,7 @@ describe('NavRailComponent', () => {
       l.textContent?.trim(),
     );
     expect(labels).toEqual([
-      'Aufgaben', 'Pipeline', 'Dossiers', 'Kalender', 'Archiv', 'Formate', 'Bibliothek', 'Meldungen', 'Konto',
+      'Events', 'Archiv', 'Formate', 'Bibliothek', 'Meldungen', 'Konto',
     ]);
     expect(container.querySelector('.rail__spacer + button')).toHaveTextContent('Meldungen');
     expect(Array.from(container.querySelectorAll('.rail__item')).at(-1)).toHaveTextContent('Konto');

@@ -56,11 +56,9 @@ async def test_categories_follow_the_wordpress_archive(api: Api) -> None:
 async def test_organizations_after_m2(api: Api) -> None:
     orgs = {
         r.slug: r
-        for r in await rows(
-            api, "SELECT slug, trusted, legacy_wp_ids, category_id FROM organization"
-        )
+        for r in await rows(api, "SELECT slug, legacy_wp_ids, category_id FROM organization")
     }
-    assert len(orgs) == 13 and [s for s, o in orgs.items() if o.trusted] == ["stupa"]
+    assert len(orgs) == 13
     assert orgs["tec"].legacy_wp_ids == []
     assert orgs["fsi"].legacy_wp_ids == [1649]
     assert orgs["fsi"].category_id == reference_id("category", "fachschaft-fsi")

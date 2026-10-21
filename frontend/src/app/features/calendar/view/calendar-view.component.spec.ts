@@ -1,14 +1,13 @@
-import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { TestBed } from '@angular/core/testing';
 import { render, screen, waitFor } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
-import { BehaviorSubject, of, throwError } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { CALENDAR_NOW } from '@shared/ui/calendar-grid/calendar-grid.component';
-import { fakeApi } from '../../../../testing/event-fixtures';
-import { EventsApi } from '../../dossiers/api/events-api.service';
+import { NO_FILTERS, type EventFilters } from '../../dossiers/filters/event-filters';
 import { CalendarApi } from '../api/calendar-api.service';
 import type { CalendarEntry, CalendarOut } from '../model/calendar.models';
-import { CalendarPageComponent } from './calendar-page.component';
+import { CalendarViewComponent } from './calendar-view.component';
 
 const entry = (id: string, day: string): CalendarEntry => ({
   id,
@@ -18,7 +17,7 @@ const entry = (id: string, day: string): CalendarEntry => ({
   allDay: false,
   startsOn: day,
   endsOn: day,
-  state: 'live',
+  state: 'published',
   publicStatus: 'scheduled',
   organization: { slug: 'fsi', short: 'FSI', colorToken: 'petrol' },
   category: null,
@@ -30,15 +29,16 @@ function out(entries: CalendarEntry[], truncated = false): CalendarOut {
   return { from: '2026-09-28', to: '2026-11-08', entries, truncated };
 }
 
-describe('CalendarPageComponent', () => {
-  async function setup(range = jest.fn(() => of(out([entry('a', '2026-10-20')])))) {
-    const params = new BehaviorSubject(convertToParamMap({}));
-    const view = await render(CalendarPageComponent, {
+describe('CalendarViewComponent', () => {
+  async function setup(
+    range = jest.fn(() => of(out([entry('a', '2026-10-20')]))),
+    filters: EventFilters = NO_FILTERS,
+  ) {
+    const view = await render(CalendarViewComponent, {
+      inputs: { filters },
       providers: [
         provideRouter([]),
         { provide: CalendarApi, useValue: { range } },
-        { provide: EventsApi, useValue: fakeApi() },
-        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: params.value }, queryParamMap: params } },
         { provide: CALENDAR_NOW, useValue: () => new Date('2026-10-14T10:00:00Z') },
       ],
     });
@@ -49,7 +49,7 @@ describe('CalendarPageComponent', () => {
     return { view, range, navigate };
   }
 
-  it('asks for the 42-day range the grid shows, with the filters of the board', async () => {
+  it('asks for the 42-day range the grid shows, with the filters of the list', async () => {
     const { range } = await setup();
     await waitFor(() => expect(range).toHaveBeenCalled());
     expect(range).toHaveBeenCalledWith(
@@ -96,10 +96,27 @@ describe('CalendarPageComponent', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Der Kalender konnte nicht geladen werden.');
   });
 
-  it('goes back to the list and keeps the query', async () => {
-    const { navigate } = await setup();
-    await userEvent.click(screen.getByRole('button', { name: 'Liste' }));
-    expect(navigate).toHaveBeenCalledWith(['/dossiers'], { queryParamsHandling: 'preserve' });
+  it('passes the filters of the list on and asks for the chosen state', async () => {
+    const { range } = await setup(undefined, {
+      ...NO_FILTERS,
+      q: 'kino',
+      organization: 'fsi',
+      state: 'archived',
+    });
+    await waitFor(() => expect(range).toHaveBeenCalled());
+    expect(range).toHaveBeenCalledWith(
+      expect.objectContaining({ q: 'kino', organization: 'fsi', state: ['archived'] }),
+    );
+  });
+
+  it('keeps only cancelled entries for the chip "Abgesagt"', async () => {
+    const cancelled = { ...entry('b', '2026-10-21'), publicStatus: 'cancelled' as const };
+    await setup(
+      jest.fn(() => of(out([entry('a', '2026-10-20'), cancelled]))),
+      { ...NO_FILTERS, state: 'cancelled' },
+    );
+    expect(await screen.findByText('Termin b')).toBeInTheDocument();
+    expect(screen.queryByText('Termin a')).not.toBeInTheDocument();
   });
 
   it('switches back from the week to the month', async () => {

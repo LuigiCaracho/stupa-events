@@ -78,7 +78,7 @@ async def test_a_private_venue_and_a_confirmed_text_in_the_archive_view(api: Api
 
 
 async def test_only_archived_foreign_dossiers_are_readable(api: Api) -> None:
-    live = await api.to_state("live")
+    live = await api.to_state("published")
     assert (
         await api.request("organizer-makers", "GET", f"/api/archive/{live['id']}")
     ).status_code == 404
@@ -117,7 +117,7 @@ async def test_documents_of_a_foreign_archived_dossier(api: Api) -> None:
         headers={"If-Match": '"1"'},
     )
     assert write.status_code == 404
-    live = await api.to_state("live")
+    live = await api.to_state("published")
     await api.sql(
         "INSERT INTO document (event_id, kind, title, body_md, visibility) VALUES (:e, 'notes', 'n', 'b', 'shared')",
         e=live["id"],
@@ -152,7 +152,7 @@ async def test_attachment_download_of_a_foreign_shared_file(api: Api) -> None:
     assert (
         await api.request("organizer-makers", "GET", f"/api/attachments/{shared}/download")
     ).status_code == 404
-    live = await api.to_state("live")
+    live = await api.to_state("published")
     out = await upload(
         api, "organizer-fsi", live["id"], "other", "p.pdf", samples.pdf_bytes(), visibility="shared"
     )

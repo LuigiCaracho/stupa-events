@@ -11,7 +11,6 @@ from app.modules.dossier.derive import derive_poster
 from app.modules.files import attachments
 from app.modules.files.storage import StorageError
 from app.modules.media.images import CleanImage
-from app.modules.pipeline import exception as exception_module
 from tests._support.memory_storage import MemoryStorage
 from tests.integration.events.harness import Api
 
@@ -27,9 +26,7 @@ class BrokenStorage(MemoryStorage):
 
 
 async def planning(api: Api) -> str:
-    event = await api.create_event()
-    await api.fire("organizer-fsi", event["id"], "T01")
-    return event["id"]
+    return (await api.create_event())["id"]
 
 
 async def test_a_reader_without_attach_right_in_the_event_org_is_403(api: Api) -> None:
@@ -39,7 +36,7 @@ async def test_a_reader_without_attach_right_in_the_event_org_is_403(api: Api) -
     )
     assert (await api.upload_poster("reader", eid)).status_code == 403
     patch = await api.request(
-        "reader", "PATCH", f"/api/events/{eid}", json={"rev": 2, "summary": "x"}
+        "reader", "PATCH", f"/api/events/{eid}", json={"rev": 1, "summary": "x"}
     )
     assert patch.status_code == 403
 
@@ -95,38 +92,6 @@ async def test_upload_without_a_queue_still_succeeds(api: Api) -> None:
     assert (await api.upload_poster("organizer-fsi", eid)).status_code == 201
 
 
-async def test_exception_on_a_live_event_is_locked_and_the_service_checks_the_right(
-    api: Api,
-) -> None:
-    ready = await api.approved_ready_event()
-    await api.fire("editor", ready["id"], "T04")
-    await api.fire("editor", ready["id"], "T05")
-    locked = await api.request(
-        "editor",
-        "POST",
-        f"/api/events/{ready['id']}/image-exception",
-        json={"reason": "Nachträglich ohne Bild"},
-    )
-    assert locked.status_code == 409 and locked.json()["code"] == "field_locked"
-
-
-async def test_exception_service_refuses_a_principal_without_the_right(api: Api) -> None:
-    from app.modules.auth.principal import Principal
-    from app.shared.errors import ForbiddenError
-    from tests._support.factories import make_principal
-
-    eid = await planning(api)
-    organizer: Principal = make_principal("events-fsi-organizer")
-    async with api.maker() as session:
-        from app.modules.orgs.scope import bind
-
-        await bind(session, organizer)
-        with pytest.raises(ForbiddenError):
-            await exception_module.grant_image_exception(
-                session, organizer, __import__("uuid").UUID(eid), "Ein langer Grund"
-            )
-
-
 async def race_after_load(
     api: Api, monkeypatch: pytest.MonkeyPatch, module: object, eid: str
 ) -> None:
@@ -143,16 +108,14 @@ async def race_after_load(
     monkeypatch.setattr(module, "load_visible", racing)
 
 
-async def test_exception_race_is_409(api: Api, monkeypatch: pytest.MonkeyPatch) -> None:
-    from app.modules.pipeline import action_base
+async def test_publish_race_is_409(api: Api, monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.modules.events import step
 
     eid = await planning(api)
-    await race_after_load(api, monkeypatch, action_base, eid)
-    response = await api.request(
-        "editor", "POST", f"/api/events/{eid}/image-exception", json={"reason": "Ein langer Grund"}
-    )
+    await race_after_load(api, monkeypatch, step, eid)
+    response = await api.act("organizer-fsi", eid, "publish")
     assert response.status_code == 409 and response.json()["code"] == "conflict"
-    assert response.json()["currentRev"] == 3 and response.json()["current"]["rev"] == 3
+    assert response.json()["currentRev"] == 2 and response.json()["current"]["rev"] == 2
 
 
 async def test_patch_race_is_409(api: Api, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -161,7 +124,7 @@ async def test_patch_race_is_409(api: Api, monkeypatch: pytest.MonkeyPatch) -> N
     eid = await planning(api)
     await race_after_load(api, monkeypatch, events_service, eid)
     response = await api.request(
-        "organizer-fsi", "PATCH", f"/api/events/{eid}", json={"rev": 2, "summary": "x"}
+        "organizer-fsi", "PATCH", f"/api/events/{eid}", json={"rev": 1, "summary": "x"}
     )
     assert response.status_code == 409 and response.json()["code"] == "conflict"
 
@@ -172,7 +135,7 @@ async def test_an_event_without_organization_is_for_editors_and_not_for_posters(
             text(
                 "INSERT INTO event (id, title, starts_at, ends_at, created_by, state) VALUES "
                 "('00000000-0000-0000-0000-0000000000aa', 'Vorschlag', now() + interval '2 days', "
-                "now() + interval '3 days', 'someone', 'idea')"
+                "now() + interval '3 days', 'someone', 'draft')"
             )
         )
         await session.commit()

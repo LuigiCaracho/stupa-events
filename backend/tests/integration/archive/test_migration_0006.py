@@ -1,4 +1,7 @@
-"""Migration 0006 on a database with M4 data: location data step, text cleanup, new objects."""
+"""Migration 0006 on a database with M4 data: location data step, text cleanup, new objects.
+
+It stops at 0006; `test_migration_0007` carries the data on.
+"""
 
 from __future__ import annotations
 
@@ -60,7 +63,7 @@ def test_upgrade_from_0005_keeps_rows_valid_and_confirms_public_free_text(
                 ),
                 {"e": event},
             )
-        command.upgrade(config, "head")
+        command.upgrade(config, "0006_archive_feed")
         with engine.connect() as conn:
             rows = conn.execute(
                 text(
@@ -92,7 +95,7 @@ def test_upgrade_from_0005_keeps_rows_valid_and_confirms_public_free_text(
         with pytest.raises(DBAPIError, match="ck_organization_name_clean"), engine.begin() as conn:
             conn.execute(text("UPDATE organization SET name = 'a' || chr(10) || 'b'"))
         command.downgrade(config, "0005_dossier_knowledge")
-        command.upgrade(config, "head")
+        command.upgrade(config, "0006_archive_feed")
         engine.dispose()
     finally:
         with admin.connect() as conn:

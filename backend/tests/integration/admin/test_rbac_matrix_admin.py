@@ -24,13 +24,11 @@ from tests.unit.test_route_authz_inventory import (
 pytestmark = pytest.mark.integration
 
 ZERO = "00000000-0000-0000-0000-000000000000"
-# user: (global roles, organization roles as they resolve, trusted approver included)
+# user: (global roles, organization roles as they resolve)
 ROLES: dict[str, tuple[set[str], set[str]]] = {
     "admin": ({"admin"}, set()),
     "editor": ({"editor"}, set()),
     "stupa": ({"stupa"}, set()),
-    "approver-stupa": (set(), {"approver"}),
-    "approver-fsi": (set(), {"organizer"}),
     "organizer-fsi": (set(), {"organizer"}),
     "submitter-fsi": (set(), {"submitter"}),
     "viewer-fsi": (set(), {"viewer"}),
@@ -68,7 +66,7 @@ def _protected() -> list[tuple[str, str, str, frozenset[str]]]:
 
 
 def _url(path: str) -> str:
-    return re.sub(r"\{transition\}", "T01", re.sub(r"\{[a-z_]+\}", ZERO, path))
+    return re.sub(r"\{[a-z_]+\}", ZERO, path)
 
 
 async def _call(api: Api, user: str | None, method: str, path: str) -> int:

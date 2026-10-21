@@ -21,7 +21,7 @@ describe('EventsApi', () => {
     api
       .listCards({
         q: 'movie',
-        state: ['idea', 'planning'],
+        state: ['draft', 'published'],
         limit: 50,
         organization: '',
         mine: true,
@@ -30,40 +30,49 @@ describe('EventsApi', () => {
     const req = http.expectOne((r) => r.url === '/api/events');
     expect(req.request.params.get('view')).toBe('list');
     expect(req.request.params.get('q')).toBe('movie');
-    expect(req.request.params.getAll('state')).toEqual(['idea', 'planning']);
+    expect(req.request.params.getAll('state')).toEqual(['draft', 'published']);
     expect(req.request.params.get('limit')).toBe('50');
     expect(req.request.params.get('mine')).toBe('1');
     expect(req.request.params.has('organization')).toBe(false);
     req.flush({ items: [], total: 0, limit: 50, offset: 0 });
   });
 
-  it('loads the board view and the tasks', () => {
-    api.board({ columnLimit: 50, category: 'kino' }).subscribe();
-    const req = http.expectOne((r) => r.url === '/api/events');
-    expect(req.request.params.get('view')).toBe('board');
-    expect(req.request.params.get('columnLimit')).toBe('50');
-    req.flush({ columns: [], generatedAt: 'x' });
-    api.tasks().subscribe();
-    expect(http.expectOne('/api/tasks').request.method).toBe('GET');
+  it('posts each lifecycle step with the revision as If-Match', () => {
+    api.publish('e1', 7).subscribe();
+    const publish = http.expectOne('/api/events/e1/publish');
+    expect(publish.request.body).toEqual({});
+    expect(publish.request.headers.get('If-Match')).toBe('"7"');
+    api.unpublish('e1', 8).subscribe();
+    expect(http.expectOne('/api/events/e1/unpublish').request.headers.get('If-Match')).toBe('"8"');
+    api.archive('e1', 9).subscribe();
+    expect(http.expectOne('/api/events/e1/archive').request.method).toBe('POST');
+    api.restore('e1', 10).subscribe();
+    expect(http.expectOne('/api/events/e1/restore').request.method).toBe('POST');
   });
 
-  it('posts a transition with a note, a publish time and the revision as If-Match', () => {
-    api.transition('e1', 'T04', { note: 'ok', publishAt: '2026-11-01T10:00:00Z' }, 7).subscribe();
-    const req = http.expectOne('/api/events/e1/transitions/T04');
-    expect(req.request.body).toEqual({ note: 'ok', publishAt: '2026-11-01T10:00:00Z' });
-    expect(req.request.headers.get('If-Match')).toBe('"7"');
-    api.transition('e1', 'T05').subscribe();
-    const bare = http.expectOne('/api/events/e1/transitions/T05');
-    expect(bare.request.body).toEqual({});
-    expect(bare.request.headers.has('If-Match')).toBe(false);
+  it('posts cancel, postpone and reinstate with their bodies', () => {
+    api.cancel('e1', 3, { reason: 'Krank', publicReasonCode: 'illness' }).subscribe();
+    const cancel = http.expectOne('/api/events/e1/cancel');
+    expect(cancel.request.body).toEqual({ reason: 'Krank', publicReasonCode: 'illness' });
+    expect(cancel.request.headers.get('If-Match')).toBe('"3"');
+    api
+      .postpone('e1', 4, { publicReasonCode: 'room', newStartsAt: '2026-12-01T18:00:00Z' })
+      .subscribe();
+    expect(http.expectOne('/api/events/e1/postpone').request.body).toEqual({
+      publicReasonCode: 'room',
+      newStartsAt: '2026-12-01T18:00:00Z',
+    });
+    api.reinstate('e1', 5).subscribe();
+    expect(http.expectOne('/api/events/e1/reinstate').request.body).toEqual({});
   });
 
-  it('posts an action with the revision as If-Match', () => {
-    api.action('e1', 'cancel', { reason: 'Krank', publicReasonCode: 'illness' }, 3).subscribe();
-    const req = http.expectOne('/api/events/e1/actions/cancel');
-    expect(req.request.headers.get('If-Match')).toBe('"3"');
-    api.action('e1', 'confirm-flyer').subscribe();
-    expect(http.expectOne('/api/events/e1/actions/confirm-flyer').request.body).toEqual({});
+  it('reverts a revision at the unchanged path and reads the hints', () => {
+    api.revert('e1', 6, { rev: 2, note: 'zurück' }).subscribe();
+    const req = http.expectOne('/api/events/e1/actions/revert-revision');
+    expect(req.request.body).toEqual({ rev: 2, note: 'zurück' });
+    expect(req.request.headers.get('If-Match')).toBe('"6"');
+    api.hints('e1').subscribe();
+    expect(http.expectOne('/api/events/e1/hints').request.method).toBe('GET');
   });
 
   it('reads, writes and drops the draft', () => {
@@ -92,11 +101,6 @@ describe('EventsApi', () => {
     expect(req.request.params.get('offset')).toBe('40');
     api.revision('e1', 2).subscribe();
     expect(http.expectOne('/api/events/e1/revisions/2').request.method).toBe('GET');
-  });
-
-  it('reads the guards', () => {
-    api.guards('e1', 'T04').subscribe();
-    expect(http.expectOne('/api/events/e1/guards/T04').request.method).toBe('GET');
   });
 
   it('uploads a poster as multipart', () => {
@@ -168,26 +172,21 @@ describe('EventsApi defaults', () => {
 
   afterEach(() => http.verify());
 
-  it('lists and loads the board without a query, with the default page of the revisions', () => {
+  it('lists without a query and reads the default page of the revisions', () => {
     api.listCards().subscribe();
     expect(http.expectOne((r) => r.url === '/api/events').request.params.get('view')).toBe('list');
-    api.board().subscribe();
-    expect(http.expectOne((r) => r.url === '/api/events').request.params.get('view')).toBe('board');
     api.revisions('e1').subscribe();
     const req = http.expectOne((r) => r.url === '/api/events/e1/revisions');
     expect(req.request.params.get('limit')).toBe('50');
     expect(req.request.params.get('offset')).toBe('0');
   });
 
-  it('skips the poster fields that are not set and keeps an empty note out', () => {
-    api
-      .uploadPoster('e1', new File(['x'], 'p.png'), {
-        altText: 'a',
-        credit: 'c',
-        rightsBasis: 'own_work',
-      })
-      .subscribe();
+  it('skips the poster fields that are not set: alt text and credit are only recommended', () => {
+    api.uploadPoster('e1', new File(['x'], 'p.png'), { rightsBasis: 'unknown' }).subscribe();
     const body = http.expectOne('/api/events/e1/poster').request.body as FormData;
+    expect(body.get('rightsBasis')).toBe('unknown');
+    expect(body.has('altText')).toBe(false);
+    expect(body.has('credit')).toBe(false);
     expect(body.has('personsDepicted')).toBe(false);
     expect(body.has('consentNote')).toBe(false);
   });

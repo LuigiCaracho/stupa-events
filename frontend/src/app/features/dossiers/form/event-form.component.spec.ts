@@ -9,7 +9,7 @@ const categories: CategoryRef[] = [{ id: 'cat-1', slug: 'kino', name: 'Kino', ki
 const venues = [{ id: 'v1', slug: 'kinosaal', name: 'Kinosaal' }];
 
 async function setup(
-  event: EventDto = makeEvent({ state: 'planning' }),
+  event: EventDto = makeEvent(),
   draft: EventFields | null = null,
 ) {
   const changes: EventFields[] = [];
@@ -52,25 +52,24 @@ describe('EventFormComponent', () => {
     expect(changes.at(-1)).toEqual({ summary: 'Entwurf' });
   });
 
-  it('locks the critical fields in live and says so; the text stays editable', async () => {
-    const live = makeEvent({
-      state: 'live',
+  it('locks the fields the server does not list; the listed ones stay editable', async () => {
+    const published = makeEvent({
+      state: 'published',
       editableFields: ['summary', 'descriptionMd', 'costText'],
-      lockReason: 'live_critical',
     });
-    const { changes } = await setup(live);
+    const { changes } = await setup(published);
     expect(screen.getByLabelText(/^Titel/)).toBeDisabled();
     expect(screen.getByLabelText(/Beginn, Uhrzeit/)).toBeDisabled();
     expect(screen.getByLabelText('Ticket-Link')).toBeDisabled();
-    expect(screen.getAllByText('Nur über die Redaktion änderbar.').length).toBeGreaterThan(3);
     const summary = screen.getByLabelText('Kurztext');
     expect(summary).toBeEnabled();
     await userEvent.type(summary, '!');
     expect(changes.at(-1)).toEqual({ summary: 'Film und Popcorn!' });
   });
 
-  it('locks every field in a closed dossier and hides the save button', async () => {
-    await setup(makeEvent({ state: 'archived', editableFields: [], lockReason: 'closed' }));
+  it('locks every field in the archive, says why and hides the save button', async () => {
+    await setup(makeEvent({ state: 'archived', editableFields: [] }));
+    expect(screen.getAllByText(/Im Archiv lassen sich die Eckdaten nicht mehr ändern/).length).toBeGreaterThan(3);
     expect(screen.getByLabelText(/^Titel/)).toBeDisabled();
     expect(screen.getByLabelText('Beschreibung')).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Speichern' })).not.toBeInTheDocument();

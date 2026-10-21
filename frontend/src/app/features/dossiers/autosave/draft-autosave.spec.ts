@@ -9,7 +9,7 @@ const offline = () => throwError(() => new HttpErrorResponse({ status: 0 }));
 const problem = (status: number, extra: object = {}) =>
   throwError(() => new HttpErrorResponse({ status, error: { status, ...extra } }));
 
-function setup(event: EventDto = makeEvent({ state: 'planning', rev: 3 })) {
+function setup(event: EventDto = makeEvent({ state: 'draft', rev: 3 })) {
   const api = {
     saveDraft: jest.fn(() => of({ baseRev: 3, fields: {}, updatedAt: '2026-10-18T10:00:00Z' })),
     patch: jest.fn(() => of(makeEvent({ rev: 4 }))),
@@ -203,7 +203,7 @@ describe('DraftAutosave', () => {
     ).rejects.toThrow('no event');
   });
 
-  it('applies the draft after 30 minutes without input in planning', () => {
+  it('applies the draft after 30 minutes without input in draft', () => {
     const { auto, api, deps } = setup();
     auto.change({ summary: 'x' });
     jest.advanceTimersByTime(IDLE_APPLY_MS);
@@ -223,7 +223,7 @@ describe('DraftAutosave', () => {
     expect(deps.onError).toHaveBeenCalledTimes(1);
   });
 
-  it.each(['in_review', 'approved', 'live'] as const)(
+  it.each(['published', 'archived'] as const)(
     'keeps the draft as a draft in %s',
     (state) => {
       const { auto, api } = setup(makeEvent({ state, rev: 3 }));

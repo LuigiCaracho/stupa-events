@@ -45,12 +45,12 @@ async def test_clone_movienight_own(api: Api) -> None:
     out = response.json()
     event, report = out["event"], out["report"]
     assert report == preview["report"]
-    assert event["state"] == "idea" and event["derivedFromId"] == source
-    assert event["poster"] is None and event["imageException"] is None
+    assert event["state"] == "draft" and event["derivedFromId"] == source
+    assert event["poster"] is None
     assert event["title"] == "Movienight: Whiplash" and event["slug"] is None
     assert event["format"]["slug"] == "movienight" and event["outcome"] is None
     assert event["locationPrecision"] == "hidden" and event["venueText"] == "Kinosaal 9-133"
-    assert event["costText"] == "Eintritt frei" and event["publishAt"] is None
+    assert event["costText"] == "Eintritt frei"
     eid = event["id"]
     assert (await ok(await api.request("organizer-fsi", "GET", f"/api/events/{eid}/quotes")))[
         "groups"
@@ -121,7 +121,7 @@ async def test_clone_movienight_foreign(api: Api) -> None:
     assert (
         await api.request("organizer-makers", "GET", f"/api/events/{source}")
     ).status_code == 404
-    live = await api.to_state("live", title="Movienight: Live")
+    live = await api.to_state("published", title="Movienight: Live")
     refused = await clone(api, "organizer-makers", live["id"])
     assert refused.status_code == 404
 

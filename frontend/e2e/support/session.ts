@@ -9,7 +9,7 @@ export async function login(page: Page, username: string): Promise<void> {
   await page.locator('#username').fill(username);
   await page.locator('#password').fill(PASSWORD);
   await page.locator('#kc-login').click();
-  await page.waitForURL(/\/aufgaben/);
+  await page.waitForURL(/\/dossiers/);
 }
 
 export async function logout(page: Page): Promise<void> {
@@ -30,13 +30,15 @@ export async function csrfHeaders(page: Page): Promise<Record<string, string>> {
 }
 
 async function currentEtag(page: Page, path: string): Promise<Record<string, string>> {
-  const id = /^\/api\/events\/([^/]+)\/(?:transitions|actions)\//.exec(path)?.[1];
+  const id = /^\/api\/events\/([^/]+)\/(?:publish|unpublish|archive|restore|cancel|postpone|reinstate|actions)\b/.exec(
+    path,
+  )?.[1];
   if (!id) return {};
   const etag = (await page.request.get(`/api/events/${id}`)).headers()['etag'];
   return etag ? { 'If-Match': etag } : {};
 }
 
-/** POSTs JSON with the CSRF header and, for transitions and actions, the current `If-Match` (T04, T05 and the status actions need it). */
+/** POSTs JSON with the CSRF header and, for the lifecycle and action routes, the current `If-Match`. */
 export async function postJson(page: Page, path: string, data: unknown = {}): Promise<APIResponse> {
   const headers = { ...(await csrfHeaders(page)), ...(await currentEtag(page, path)) };
   return page.request.post(path, { data, headers });

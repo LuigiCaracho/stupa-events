@@ -13,14 +13,22 @@ describe('PosterUploadComponent', () => {
     return { view, submitted, picker };
   }
 
-  it('asks for file, alt text, credit and rights before it emits', async () => {
-    const { submitted } = await setup();
-    await userEvent.click(screen.getByRole('button', { name: 'Poster hochladen' }));
+  it('needs only the file: alt text, credit and rights are recommended', async () => {
+    const { submitted, picker } = await setup();
+    await userEvent.click(screen.getByRole('button', { name: 'Bild hochladen' }));
     expect(submitted).not.toHaveBeenCalled();
     expect(screen.getByText('Bitte wähle eine Datei.')).toBeInTheDocument();
-    expect(screen.getByText('Alt-Text fehlt.')).toBeInTheDocument();
-    expect(screen.getByText('Credit fehlt.')).toBeInTheDocument();
-    expect(screen.getByText('Bitte wähle eine Rechtegrundlage.')).toBeInTheDocument();
+    expect(screen.queryByText('Alt-Text fehlt.')).not.toBeInTheDocument();
+    await userEvent.upload(picker, png);
+    await userEvent.click(screen.getByRole('button', { name: 'Bild hochladen' }));
+    expect(submitted).toHaveBeenCalledWith({
+      file: png,
+      altText: '',
+      credit: '',
+      rightsBasis: 'unknown',
+      personsDepicted: false,
+      consentNote: '',
+    });
   });
 
   it('emits the file with the trimmed texts and the chosen rights basis', async () => {
@@ -31,7 +39,7 @@ describe('PosterUploadComponent', () => {
     await userEvent.type(screen.getByLabelText(/Credit/), 'Max Muster');
     await userEvent.click(screen.getByRole('combobox', { name: /Rechtegrundlage/ }));
     await userEvent.click(screen.getByRole('option', { name: 'Eigenes Werk' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Poster hochladen' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Bild hochladen' }));
     expect(submitted).toHaveBeenCalledWith({
       file: png,
       altText: 'Plakat der Movienight',
@@ -45,17 +53,13 @@ describe('PosterUploadComponent', () => {
   it('asks for the consent note when people are recognisable and sends it', async () => {
     const { submitted, picker } = await setup();
     await userEvent.upload(picker, png);
-    await userEvent.type(screen.getByLabelText(/Alt-Text/), 'Plakat');
-    await userEvent.type(screen.getByLabelText(/Credit/), 'Max');
-    await userEvent.click(screen.getByRole('combobox', { name: /Rechtegrundlage/ }));
-    await userEvent.click(screen.getByRole('option', { name: 'Eigenes Werk' }));
     expect(screen.queryByLabelText(/Einwilligung/)).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('checkbox', { name: 'Personen sind erkennbar' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Poster hochladen' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Bild hochladen' }));
     expect(screen.getByText('Die Einwilligung fehlt.')).toBeInTheDocument();
     expect(submitted).not.toHaveBeenCalled();
     await userEvent.type(screen.getByLabelText(/Einwilligung/), ' schriftlich ');
-    await userEvent.click(screen.getByRole('button', { name: 'Poster hochladen' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Bild hochladen' }));
     expect(submitted).toHaveBeenCalledWith(
       expect.objectContaining({ personsDepicted: true, consentNote: 'schriftlich' }),
     );

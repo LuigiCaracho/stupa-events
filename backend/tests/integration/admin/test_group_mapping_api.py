@@ -42,11 +42,6 @@ async def test_create_list_update_delete(api: Api) -> None:
             "organization_forbidden",
             "organizationId",
         ),
-        (
-            {"oidcGroup": "g", "role": "approver", "organizationId": "fsi"},
-            "approver_requires_trusted",
-            "role",
-        ),
         ({"oidcGroup": "g", "role": "member"}, "implicit_role", "role"),
         (
             {
@@ -69,11 +64,11 @@ async def test_every_validation_code(api: Api, body: dict, code: str, field: str
     assert response.headers["content-type"].startswith("application/problem+json")
 
 
-async def test_an_approver_of_a_trusted_organization_is_accepted(api: Api) -> None:
-    response = await post(
-        api, oidcGroup="Stupa-Freigabe", role="approver", organizationId=api.org_ids["stupa"]
+async def test_the_retired_approver_role_is_refused(api: Api) -> None:
+    refused = await post(
+        api, oidcGroup="Freigabe", role="approver", organizationId=api.org_ids["fsi"]
     )
-    assert response.status_code == 201
+    assert refused.status_code == 422
 
 
 async def test_unknown_role_and_unknown_fields_are_validation_errors(api: Api) -> None:
@@ -135,20 +130,13 @@ async def test_a_bootstrap_admin_list_lifts_the_protection(api: Api) -> None:
     assert (await api.request("admin", "DELETE", f"{URL}/{admins[0]['id']}")).status_code == 204
 
 
-async def test_defaults_are_idempotent_and_approver_only_for_trusted_orgs(api: Api) -> None:
+async def test_defaults_are_idempotent(api: Api) -> None:
     first = (await api.request("admin", "POST", f"{URL}/defaults", json={})).json()
     groups = {m["oidcGroup"] for m in first}
     assert {"events-care-viewer", "events-care-submitter", "events-care-organizer"} <= groups
     assert not {g for g in groups if g.endswith("-approver")}
     assert not groups & {"events-admin", "events-fsi-viewer"}  # the harness mapped these already
     assert (await api.request("admin", "POST", f"{URL}/defaults", json={})).json() == []
-    trusted = await api.request(
-        "admin", "PATCH", f"/api/admin/organizations/{api.org_ids['care']}", json={"trusted": True}
-    )
-    assert trusted.status_code == 200
-    later = (await api.request("admin", "POST", f"{URL}/defaults", json={})).json()
-    assert [m["oidcGroup"] for m in later] == ["events-care-approver"]
-    assert later[0]["role"] == "approver" and later[0]["organization"]["slug"] == "care"
 
 
 async def test_mutations_write_audit_entries_without_personal_data(api: Api) -> None:

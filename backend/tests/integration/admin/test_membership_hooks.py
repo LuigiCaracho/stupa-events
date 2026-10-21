@@ -64,26 +64,6 @@ async def test_a_new_mapping_creates_the_membership_and_deleting_it_removes_it(
     assert await held(api, "p1") == set()
 
 
-async def test_the_trust_flag_moves_approvers_between_organizer_and_approver(
-    api: ApiHandle,
-) -> None:
-    await add_person(api, "p2", ["Makers-Freigabe"])
-    async with api.maker() as db:
-        await db.execute(
-            text(
-                "INSERT INTO group_mapping (oidc_group, role, organization_id) "
-                "VALUES ('Makers-Freigabe', 'approver', :o)"
-            ),
-            {"o": api.org_ids["makers"]},
-        )
-        await db.commit()
-    org = f"/api/admin/organizations/{api.org_ids['makers']}"
-    assert (await api.request("admin", "PATCH", org, json={"trusted": True})).status_code == 200
-    assert await held(api, "p2") == {("makers", "approver")}
-    assert (await api.request("admin", "PATCH", org, json={"trusted": False})).status_code == 200
-    assert await held(api, "p2") == {("makers", "organizer")}
-
-
 async def test_the_login_callback_writes_the_membership(
     api: ApiHandle, monkeypatch: pytest.MonkeyPatch
 ) -> None:

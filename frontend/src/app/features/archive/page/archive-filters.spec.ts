@@ -17,9 +17,9 @@ describe('archive filters', () => {
   });
 
   it('reads and writes states, "alle" and the scope', () => {
-    const f = archiveFromParams(convertToParamMap({ q: 'kino', scope: 'documents', status: ['live', 'followup'] }));
-    expect(f).toMatchObject({ q: 'kino', scope: 'documents', state: ['live', 'followup'] });
-    expect(archiveToParams(f)).toMatchObject({ scope: 'documents', status: ['live', 'followup'] });
+    const f = archiveFromParams(convertToParamMap({ q: 'kino', scope: 'documents', status: ['published', 'archived'] }));
+    expect(f).toMatchObject({ q: 'kino', scope: 'documents', state: ['published', 'archived'] });
+    expect(archiveToParams(f)).toMatchObject({ scope: 'documents', status: ['published', 'archived'] });
     const all = archiveFromParams(convertToParamMap({ status: 'alle' }));
     expect(all.state).toEqual([]);
     expect(archiveToParams(all)['status']).toBe('alle');

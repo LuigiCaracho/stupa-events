@@ -12,7 +12,7 @@ function entry(id: string, day: string, over: Partial<GridEntry> = {}): GridEntr
     startsOn: day,
     endsOn: day,
     allDay: false,
-    state: 'live',
+    state: 'published',
     publicStatus: 'scheduled',
     organization: { short: 'FSI', colorToken: 'petrol' },
     ...over,

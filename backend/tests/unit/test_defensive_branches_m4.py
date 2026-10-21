@@ -19,7 +19,7 @@ from app.modules.dossier.schemas_comments import CommentCreate
 from app.modules.files import attachments, mime
 from app.modules.notifications import service
 from app.modules.notifications.templating import TemplateRenderError
-from app.shared.errors import ConflictError, ForbiddenError, ValidationProblem
+from app.shared.errors import ForbiddenError, ValidationProblem
 from tests._support.factories import make_principal, make_settings
 
 
@@ -57,7 +57,6 @@ class _FailingSession:
 @pytest.mark.parametrize(
     ("message", "expected"),
     [
-        ("poster of a published event", ConflictError),
         ("ck_attachment_restricted_not_shared", ValidationProblem),
         ("something else", DBAPIError),
     ],

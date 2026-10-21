@@ -1,9 +1,9 @@
 """A fully archived Movienight edition, built through the real API (the M5 acceptance fixture).
 
-The edition has a poster and an image exception, two quote groups with amounts, a resolved
-comment, a checklist with assignees, a howto, a note and a mail template, a retrospective and
-the outcome 87 / 245,00 EUR / 130,00 EUR. It is archived through T09 and then moved into the
-past, because the pipeline only lets a dossier start in the future.
+The edition has a poster, two quote groups with amounts, a resolved comment, a checklist with
+assignees, a howto, a note and a mail template, a retrospective and the outcome
+87 / 245,00 EUR / 130,00 EUR. It is published, archived by the worker twelve hours after its
+end, documented in the archive and then moved into the past.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from typing import Any
 from tests._support import samples
 from tests.integration.dossier.helpers import clean_poster, upload
 from tests.integration.events.harness import Api, future
-from worker.advance import advance_states
+from worker.advance import archive_ended
 
 OUTCOME = {"attendance": 87, "costsCents": 24500, "revenueCents": 13000, "notes": "Mehr Stühle."}
 
@@ -63,15 +63,6 @@ async def add_quotes_and_comment(api: Api, eid: str) -> None:
     await ok(await api.request("editor", "POST", f"/api/comments/{comment['id']}/resolve"))
 
 
-async def done_required_items(api: Api, eid: str, phase: str) -> None:
-    await api.sql(
-        "UPDATE checklist_item SET done_at = now(), done_by = 'sub-org-fsi', "
-        "assignee_sub = 'sub-org-fsi' WHERE event_id = :e AND phase = :p",
-        e=eid,
-        p=phase,
-    )
-
-
 async def add_files(api: Api, eid: str, files: Sequence[tuple[str, str, bool]]) -> list[str]:
     """Upload `(kind, visibility, scanned)` files of the sample PDF; return their ids."""
     ids = []
@@ -95,8 +86,8 @@ async def archived_movienight(
 ) -> str:
     """Build and archive one edition of the format `movienight`; return the dossier id.
 
-    `files` are extra attachments `(kind, visibility, scanned)`, uploaded before the archive
-    closes the dossier; look them up by SQL (`kind = 'other'` or `'quote'`).
+    `files` are extra attachments `(kind, visibility, scanned)`, uploaded before the dossier
+    is published; look them up by SQL (`kind = 'other'` or `'quote'`).
     """
     event = await api.create_event(
         title=title,
@@ -115,7 +106,6 @@ async def archived_movienight(
             headers={"If-Match": f'"{event["rev"]}"'},
         )
     )
-    await ok(await api.fire("organizer-fsi", eid, "T01"))
     await ok(
         await api.request(
             "organizer-fsi", "POST", f"/api/events/{eid}/checklist/apply-template", json={}
@@ -125,15 +115,12 @@ async def archived_movienight(
     await add_quotes_and_comment(api, eid)
     await clean_poster(api, eid)
     await add_files(api, eid, files)
-    await done_required_items(api, eid, "planning")
-    await ok(await api.fire("organizer-fsi", eid, "T02"))
-    await ok(await api.fire("editor", eid, "T04"))
-    await ok(await api.fire("editor", eid, "T05"))
+    await api.confirm_location(eid)
+    await ok(await api.act("organizer-fsi", eid, "publish"))
     ended = datetime.fromisoformat((await api.get("editor", eid))["endsAt"])
-    await advance_states(
+    await archive_ended(
         {"advance_sessionmaker": api.maker, "redis": api.pool}, now=ended + timedelta(hours=13)
     )
-    await done_required_items(api, eid, "followup")
     await ok(
         await api.request(
             "organizer-fsi",
@@ -154,7 +141,6 @@ async def archived_movienight(
         )
     )
     await ok(await api.request("organizer-fsi", "POST", f"/api/events/{eid}/actions/verify-howto"))
-    await ok(await api.fire("organizer-fsi", eid, "T09"))
     await api.sql(
         "UPDATE event SET starts_at = starts_at - make_interval(days => CAST(:d AS int)), "
         "ends_at = ends_at - make_interval(days => CAST(:d AS int)) WHERE id = :e",

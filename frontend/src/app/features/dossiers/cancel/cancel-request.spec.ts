@@ -13,8 +13,8 @@ const form: CancelForm = {
 };
 
 describe('cancel request', () => {
-  it('needs an internal reason of at most 500 characters', () => {
-    expect(cancelError({ ...form, reason: '  ' })).toBe('reason');
+  it('needs no internal reason but caps it at 500 characters', () => {
+    expect(cancelError({ ...form, reason: '' })).toBeNull();
     expect(cancelError({ ...form, reason: 'x'.repeat(501) })).toBe('reasonLong');
     expect(cancelError(form)).toBeNull();
   });
@@ -31,16 +31,13 @@ describe('cancel request', () => {
     expect(cancelError({ ...postpone, newDate: '2026-11-01', newTime: '10:00' })).toBeNull();
   });
 
-  it('builds the cancel body, with the public text only for those who may write it', () => {
-    expect(cancelBody({ ...form, publicText: ' Krank ' }, true)).toEqual({
+  it('builds the cancel body and leaves empty texts out', () => {
+    expect(cancelBody({ ...form, publicText: ' Krank ' })).toEqual({
       reason: 'Referent krank',
       publicReasonCode: 'illness',
       publicReasonText: 'Krank',
     });
-    expect(cancelBody({ ...form, publicText: 'Krank' }, false)).toEqual({
-      reason: 'Referent krank',
-      publicReasonCode: 'illness',
-    });
+    expect(cancelBody({ ...form, reason: ' ' })).toEqual({ publicReasonCode: 'illness' });
   });
 
   it('adds the new start in UTC only when postponing with a date', () => {
@@ -50,8 +47,13 @@ describe('cancel request', () => {
       newDate: '2026-11-01',
       newTime: '10:00',
     };
-    expect(cancelBody(postpone, false)).toMatchObject({ newStartsAt: '2026-11-01T09:00:00Z' });
-    expect(cancelBody({ ...postpone, mode: 'cancel' }, false)).not.toHaveProperty('newStartsAt');
-    expect(cancelBody({ ...postpone, newDate: '' }, false)).not.toHaveProperty('newStartsAt');
+    expect(cancelBody(postpone)).toMatchObject({ newStartsAt: '2026-11-01T09:00:00Z' });
+    expect(cancelBody({ ...postpone, mode: 'cancel' })).not.toHaveProperty('newStartsAt');
+    expect(cancelBody({ ...postpone, newDate: '' })).not.toHaveProperty('newStartsAt');
+  });
+
+  it('sends only the note when the event is put back on', () => {
+    expect(cancelBody({ ...form, mode: 'reinstate' })).toEqual({ reason: 'Referent krank' });
+    expect(cancelBody({ ...form, mode: 'reinstate', reason: '' })).toEqual({});
   });
 });

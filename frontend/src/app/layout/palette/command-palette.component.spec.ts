@@ -36,7 +36,7 @@ function fakeArchive(over: Record<string, unknown> = {}) {
   };
 }
 
-async function setup(archive = fakeArchive(), url = '/aufgaben', can: (p: string) => boolean = () => true) {
+async function setup(archive = fakeArchive(), url = '/dossiers', can: (p: string) => boolean = () => true) {
   const view = await render(CommandPaletteComponent, {
     providers: [
       provideRouter([]),
@@ -102,7 +102,7 @@ describe('CommandPaletteComponent', () => {
   });
 
   it('lists no creating actions for a person without event.create', async () => {
-    const { palette, view } = await setup(fakeArchive(), '/aufgaben', (p) => p !== 'event.create');
+    const { palette, view } = await setup(fakeArchive(), '/dossiers', (p) => p !== 'event.create');
     await open(palette, view);
     expect(screen.queryByRole('option', { name: 'Neues Event' })).not.toBeInTheDocument();
     expect(screen.queryByRole('option', { name: 'Neu aus Vorlage' })).not.toBeInTheDocument();

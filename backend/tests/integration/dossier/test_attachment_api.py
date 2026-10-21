@@ -9,14 +9,14 @@ from PIL import Image
 
 from tests._support import samples
 from tests._support.factories import png_bytes
-from tests.integration.dossier.helpers import clean_poster, planning_event, upload
+from tests.integration.dossier.helpers import clean_poster, draft_event, published_event, upload
 from tests.integration.events.harness import Api
 
 pytestmark = pytest.mark.integration
 
 
 async def test_every_kind_uploads_lists_and_groups(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     cases = [
         ("other", "foto.png", png_bytes(), "org"),
         ("quote", "angebot.pdf", samples.pdf_bytes(), "org"),
@@ -39,7 +39,7 @@ async def test_every_kind_uploads_lists_and_groups(api: Api) -> None:
 
 
 async def test_hostile_uploads_are_refused_with_the_right_status(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
 
     async def go(kind: str, name: str, data: bytes) -> tuple[int, str]:
         response = await upload(api, "organizer-fsi", eid, kind, name, data)
@@ -65,13 +65,13 @@ async def test_hostile_uploads_are_refused_with_the_right_status(api: Api) -> No
 
 
 async def test_a_poster_below_1200_px_is_too_small(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     small = await api.upload_poster("organizer-fsi", eid, data=png_bytes(400, 300))
     assert small.status_code == 422 and small.json()["code"] == "image_too_small"
 
 
 async def test_a_euro_emoji_name_downloads_without_a_500(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     name = "Plakat 5 € 🎬.pdf"
     out = (await upload(api, "organizer-fsi", eid, "other", name, samples.pdf_bytes())).json()
     assert out["displayName"] == name
@@ -85,14 +85,14 @@ async def test_a_euro_emoji_name_downloads_without_a_500(api: Api) -> None:
 
 
 async def test_quarantine_pending_error_and_infected(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     out = (await upload(api, "organizer-fsi", eid, "quote", "a.pdf", samples.pdf_bytes())).json()
     url = f"/api/attachments/{out['id']}"
     pending = await api.request("organizer-fsi", "GET", f"{url}/download")
     assert pending.status_code == 409 and pending.json()["code"] == "quarantined"
     await api.sql("UPDATE attachment SET scan_status = 'error' WHERE id = :i", i=out["id"])
     assert (await api.request("organizer-fsi", "GET", f"{url}/download")).status_code == 409
-    forbidden = await api.request("organizer-fsi", "POST", f"{url}/rescan")
+    forbidden = await api.request("submitter-fsi", "POST", f"{url}/rescan")
     assert forbidden.status_code == 403
     assert (await api.request("editor", "POST", f"{url}/rescan")).status_code == 202
     assert api.queue.enqueued[-1].hex == out["id"].replace("-", "")
@@ -106,18 +106,8 @@ async def test_quarantine_pending_error_and_infected(api: Api) -> None:
     assert not [k for k in api.private.blobs if k.startswith(f"events/{eid}/quote/")]
 
 
-async def test_an_infected_replacement_poster_blocks_approval(api: Api) -> None:
-    event = await api.approved_ready_event()
-    eid = event["id"]
-    out = (await api.upload_poster("editor", eid, data=png_bytes())).json()
-    assert await api.process_poster(out["id"], signature="Eicar-Test-Signature") == "infected"
-    guards = (await api.request("editor", "GET", f"/api/events/{eid}/guards/T04")).json()
-    assert "image_required" in [r["code"] for r in guards["reasons"]]
-    assert (await api.fire("editor", eid, "T04")).status_code == 422
-
-
 async def test_exif_gps_is_gone_from_download_preview_and_derivatives(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     out = (
         await upload(
             api,
@@ -148,7 +138,7 @@ async def test_exif_gps_is_gone_from_download_preview_and_derivatives(api: Api) 
 
 
 async def test_documents_have_no_preview(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     out = (await upload(api, "organizer-fsi", eid, "quote", "a.pdf", samples.pdf_bytes())).json()
     assert await api.process_poster(out["id"]) == "clean"
     preview = await api.request("organizer-fsi", "GET", f"/api/attachments/{out['id']}/preview")
@@ -156,7 +146,7 @@ async def test_documents_have_no_preview(api: Api) -> None:
 
 
 async def test_replace_hides_the_old_file_only_after_a_clean_scan(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     first = (
         await upload(api, "organizer-fsi", eid, "howto_file", "v1.md", b"eins", visibility="team")
     ).json()
@@ -182,7 +172,7 @@ async def test_replace_hides_the_old_file_only_after_a_clean_scan(api: Api) -> N
 
 
 async def test_an_infected_replacement_keeps_the_old_file(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     first = (await upload(api, "organizer-fsi", eid, "quote", "a.pdf", samples.pdf_bytes())).json()
     second = (
         await api.request(
@@ -199,7 +189,7 @@ async def test_an_infected_replacement_keeps_the_old_file(api: Api) -> None:
 
 
 async def test_patch_validates_consent_visibility_and_social_posts(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     quote = (await upload(api, "organizer-fsi", eid, "quote", "a.pdf", samples.pdf_bytes())).json()
     shared = await upload(
         api, "organizer-fsi", eid, "quote", "b.pdf", samples.pdf_bytes(), visibility="shared"
@@ -250,8 +240,8 @@ async def test_patch_validates_consent_visibility_and_social_posts(api: Api) -> 
     assert ok.status_code == 200, ok.text
 
 
-async def test_retire_hides_a_file_but_not_the_published_poster(api: Api) -> None:
-    eid = await planning_event(api)
+async def test_retire_hides_a_file_and_a_retired_poster_leaves_the_feed(api: Api) -> None:
+    eid = await draft_event(api)
     out = (await upload(api, "organizer-fsi", eid, "other", "a.png", png_bytes())).json()
     assert (
         await api.request("organizer-fsi", "POST", f"/api/attachments/{out['id']}/retire")
@@ -259,23 +249,25 @@ async def test_retire_hides_a_file_but_not_the_published_poster(api: Api) -> Non
     assert (
         await api.request("organizer-fsi", "GET", f"/api/events/{eid}/attachments")
     ).json() == []
-    live = await api.approved_ready_event()
-    approved = await api.fire("editor", live["id"], "T04")
-    assert approved.status_code == 200
+    live = await published_event(api)
     poster = live["poster"]["id"]
-    blocked = await api.request("organizer-fsi", "POST", f"/api/attachments/{poster}/retire")
-    assert blocked.status_code == 409 and blocked.json()["code"] == "poster_in_use"
+    gone = await api.request("organizer-fsi", "POST", f"/api/attachments/{poster}/retire")
+    assert gone.status_code == 204
+    assert (await api.get("editor", live["id"]))["poster"] is None
+    item = (await api.request(None, "GET", "/api/public/feed/events")).json()["items"][0]
+    assert item["image"] is None
 
 
-async def test_closed_dossiers_take_no_attachments(api: Api) -> None:
-    eid = await planning_event(api)
-    await api.sql("UPDATE event SET state = 'archived' WHERE id = :i", i=eid)
-    closed = await upload(api, "organizer-fsi", eid, "other", "a.png", png_bytes())
-    assert closed.status_code == 409 and closed.json()["code"] == "dossier_closed"
+async def test_archived_dossiers_take_files_but_no_poster(api: Api) -> None:
+    eid = (await api.to_state("archived"))["id"]
+    open_ = await upload(api, "organizer-fsi", eid, "other", "a.png", png_bytes())
+    assert open_.status_code == 201
+    poster = await api.upload_poster("organizer-fsi", eid)
+    assert poster.status_code == 409 and poster.json()["code"] == "field_locked"
 
 
 async def test_the_database_nets_back_the_api(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     out = (await upload(api, "organizer-fsi", eid, "other", "a.png", png_bytes())).json()
     for statement in (
         "UPDATE attachment SET kind = 'quote', visibility = 'shared' WHERE id = :i",
@@ -292,7 +284,7 @@ async def test_the_database_nets_back_the_api(api: Api) -> None:
 
 
 async def test_the_poster_route_alias_still_works_and_lists(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     poster = await clean_poster(api, eid)
     listed = (await api.request("organizer-fsi", "GET", f"/api/events/{eid}/attachments")).json()
     assert [a["id"] for a in listed] == [poster["id"]] and listed[0]["hasPreview"] is True

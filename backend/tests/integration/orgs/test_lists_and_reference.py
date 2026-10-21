@@ -71,12 +71,12 @@ async def test_event_list_is_scoped_in_sql_sorted_and_paged(api: Api) -> None:
 async def test_event_list_filters(api: Api) -> None:
     first = await api.create_event(title="Kinoabend 100%")
     await api.create_event(title="Spieleabend", summary="Brettspiele")
-    await api.fire("organizer-fsi", first["id"], "T01")
+    await api.act("organizer-fsi", first["id"], "publish")
 
     def titles(response: object) -> list[str]:
         return [e["title"] for e in response.json()["items"]]  # type: ignore[attr-defined]
 
-    assert titles(await api.request("editor", "GET", "/api/events?state=planning")) == [
+    assert titles(await api.request("editor", "GET", "/api/events?state=published")) == [
         "Kinoabend 100%"
     ]
     assert titles(await api.request("editor", "GET", "/api/events?q=brett")) == ["Spieleabend"]
@@ -165,13 +165,13 @@ async def test_patch_validation(api: Api) -> None:
     assert set_null.json()["primaryCategory"] is None
 
 
-async def test_allowed_transitions_follow_state_and_role(api: Api) -> None:
+async def test_allowed_actions_follow_state_and_role(api: Api) -> None:
     event = await api.create_event()
     eid = event["id"]
-    assert event["allowedTransitions"] == ["T01", "T11"]
-    as_editor = (await api.request("editor", "GET", f"/api/events/{eid}")).json()
-    assert as_editor["allowedTransitions"] == ["T01", "T11"]
+    assert {"publish", "archive"} <= set(event["allowedActions"])
+    assert "unpublish" not in event["allowedActions"]
     as_viewer = (await api.request("viewer-fsi", "GET", f"/api/events/{eid}")).json()
-    assert as_viewer["allowedTransitions"] == []
-    planning = (await api.fire("organizer-fsi", eid, "T01")).json()
-    assert planning["allowedTransitions"] == ["T02", "T11"]
+    assert as_viewer["allowedActions"] == []
+    published = (await api.act("organizer-fsi", eid, "publish")).json()
+    assert {"unpublish", "archive", "cancel"} <= set(published["allowedActions"])
+    assert "publish" not in published["allowedActions"]

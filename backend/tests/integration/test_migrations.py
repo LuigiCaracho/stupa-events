@@ -13,7 +13,7 @@ pytestmark = pytest.mark.integration
 
 def test_single_head_with_short_revision_ids(alembic_cfg: Config) -> None:
     script = ScriptDirectory.from_config(alembic_cfg)
-    assert script.get_heads() == ["0006_archive_feed"]
+    assert script.get_heads() == ["0007_event_dossier"]
     assert all(len(rev.revision) <= 32 for rev in script.walk_revisions())
     assert script.get_base() == "0001_baseline"
 
@@ -79,9 +79,7 @@ def _reference_rows(url: str) -> dict[str, list]:
                 ),
                 "organization": list(
                     conn.execute(
-                        text(
-                            "SELECT id, slug, trusted, legacy_wp_ids FROM organization ORDER BY id"
-                        )
+                        text("SELECT id, slug, legacy_wp_ids FROM organization ORDER BY id")
                     )
                 ),
                 "venue": list(

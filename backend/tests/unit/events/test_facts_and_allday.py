@@ -1,28 +1,18 @@
-"""Facts profiles, the all-day rule and the location guard (pure functions)."""
+"""Facts profiles, the all-day rule and the location mark (pure functions)."""
 
 from __future__ import annotations
 
 from datetime import UTC, date, datetime
-from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
 from pydantic import ValidationError
 
-from app.modules.dossier.guard_data import GuardData
 from app.modules.events import allday, facts
-from app.modules.events.access import (
-    location_is_confirmed,
-    outcome_is_set,
-    snapshot_of,
-    snapshot_with,
-)
+from app.modules.events.access import location_is_confirmed
 from app.modules.events.models import Event
-from app.modules.pipeline import guards
-from app.modules.pipeline.snapshot import Snapshot
 from app.shared.errors import ValidationProblem
-from tests.unit.events.test_access_and_revisions import event
-from tests.unit.pipeline.support import NOW, actor, snap
+from tests.unit.events.test_access_and_revisions import NOW, event
 
 
 def test_facts_profiles_accept_their_keys_and_refuse_the_others() -> None:
@@ -48,7 +38,7 @@ def test_facts_profiles_accept_their_keys_and_refuse_the_others() -> None:
             facts.parse(profile, bad)
 
 
-def test_the_only_blockers_are_a_missing_age_limit_and_min_above_max() -> None:
+def test_the_only_incomplete_cases_are_a_missing_age_limit_and_min_above_max() -> None:
     assert facts.error_for("party", {}) == "facts.ageLimit"
     assert facts.error_for("party", {"ageLimit": 0}) is None
     assert facts.error_for("party", None) == "facts.ageLimit"
@@ -142,7 +132,7 @@ def test_resolve_switches_back_to_timed_with_both_instants() -> None:
     assert result["starts_on"] is None and result["ends_on"] is None and result["all_day"] is False
 
 
-def test_location_guard_cases() -> None:
+def test_location_mark_cases() -> None:
     venue = uuid4()
     assert location_is_confirmed(row(venue_id=venue, venue_text="x", location_precision="hidden"))
     assert location_is_confirmed(row(venue_text=None)) and location_is_confirmed(
@@ -158,60 +148,3 @@ def test_location_guard_cases() -> None:
     assert not location_is_confirmed(
         row(venue_text="Saal", location_precision="hidden", location_confirmed_at=NOW)
     )
-    blocked = guards.location_confirmed(snap(location_confirmed=False), actor("editor"), NOW)
-    assert [r.code for r in blocked] == ["location_unconfirmed"]
-    assert guards.location_confirmed(snap(), actor("editor"), NOW) == []
-
-
-def test_outcome_is_set_rules() -> None:
-    assert not outcome_is_set(row()) and not outcome_is_set(row(outcome={}))
-    assert not outcome_is_set(row(outcome={"attendance": 5}))
-    assert not outcome_is_set(row(outcome={"costsCents": 0}))
-    assert outcome_is_set(row(outcome={"attendance": 0, "costsCents": 0}))
-    assert outcome_is_set(row(outcome={"waived": True, "waivedReason": "Gute Gründe hier."}))
-    assert not outcome_is_set(row(outcome={"waived": True, "waivedReason": "kurz"}))
-    assert not outcome_is_set(row(outcome={"waived": True}))
-
-
-def test_snapshot_builders_set_m5_fields() -> None:
-    current = row(
-        venue_text="Saal",
-        outcome={"attendance": 1, "costsCents": 2},
-        all_day=True,
-        starts_on=date(2026, 1, 1),
-        ends_on=date(2026, 1, 1),
-        format_id=uuid4(),
-        facts={},
-    )
-    built = snapshot_of(current, None)
-    assert built.location_confirmed is False and built.outcome_set is True
-    assert (
-        built.all_day
-        and built.starts_on == date(2026, 1, 1)
-        and built.format_id == current.format_id
-    )
-    full = snapshot_with(
-        current,
-        None,
-        GuardData(
-            open_required_followup=2,
-            retrospective_filled=True,
-            howto_present=True,
-            required_profile="party",
-        ),
-        None,
-    )
-    assert full.open_required_followup == 2 and full.retrospective_filled is True
-    assert full.howto_verified is False and full.facts_error == "facts.ageLimit"
-    verified = snapshot_with(
-        row(howto_verified_at=NOW, facts={"ageLimit": 18}),
-        None,
-        GuardData(howto_present=True, required_profile="party"),
-        None,
-    )
-    assert verified.howto_verified is True and verified.facts_error is None
-    nothing_to_verify = snapshot_with(row(), None, GuardData(), None)
-    assert (
-        nothing_to_verify.howto_verified is True and nothing_to_verify.retrospective_filled is False
-    )
-    assert isinstance(nothing_to_verify, Snapshot) and SimpleNamespace

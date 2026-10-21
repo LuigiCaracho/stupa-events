@@ -8,21 +8,18 @@ from app.modules.notifications.kinds import KINDS, is_essential, is_known, kind_
 from app.modules.notifications.recipients import clean
 
 
-def test_notification_kinds_essential() -> None:
-    assert [k.key for k in KINDS if k.essential] == ["changes_requested"]
-    assert is_essential("changes_requested")
+def test_the_four_kinds_and_none_is_essential() -> None:
+    assert [k.key for k in KINDS] == ["comment_added", "published", "cancelled", "checklist_due"]
+    assert not [k.key for k in KINDS if k.essential]
     assert not is_essential("comment_added")
 
 
 def test_mail_channels() -> None:
     assert {k.key for k in KINDS if k.mail} == {
-        "review_requested",
-        "changes_requested",
         "comment_added",
-        "task_assigned",
+        "published",
+        "cancelled",
         "checklist_due",
-        "followup_reminder",
-        "auto_archived",
     }
 
 

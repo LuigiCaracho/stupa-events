@@ -50,18 +50,8 @@ def test_broken_or_hostile_templates_raise(
         render_mail(subject_i18n=subject, body_i18n=body, context=context)
 
 
-def test_kinds_m5() -> None:
-    assert set(NOTIFICATION_KINDS) == {
-        "review_requested",
-        "changes_requested",
-        "comment_added",
-        "comment_resolved",
-        "transition_done",
-        "task_assigned",
-        "checklist_due",
-        "followup_reminder",
-        "auto_archived",
-    }
+def test_kinds_m5b() -> None:
+    assert set(NOTIFICATION_KINDS) == {"comment_added", "published", "cancelled", "checklist_due"}
 
 
 async def test_pool_open_close_and_queue(monkeypatch: pytest.MonkeyPatch) -> None:

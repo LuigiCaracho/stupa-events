@@ -7,7 +7,7 @@ describe('TranslatePipe', () => {
   const pipe = (): TranslatePipe => TestBed.runInInjectionContext(() => new TranslatePipe());
 
   it('translates a key', () => {
-    expect(pipe().transform('nav.tasks')).toBe('Aufgaben');
+    expect(pipe().transform('nav.events')).toBe('Events');
   });
 
   it('interpolates parameters', () => {

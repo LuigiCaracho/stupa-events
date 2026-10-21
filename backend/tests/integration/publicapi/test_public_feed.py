@@ -19,20 +19,18 @@ SCHEMA = jsonschema_rs.validator_for(
 FEED = "/api/public/feed/events"
 
 
-async def go_live(api: Api, **over: object) -> dict:
-    ready = await api.approved_ready_event() if not over else await ready_with(api, **over)
-    await api.fire("editor", ready["id"], "T04")
-    return (await api.fire("editor", ready["id"], "T05")).json()
-
-
-async def ready_with(api: Api, user: str = "organizer-fsi", **over: object) -> dict:
+async def draft_with_poster(api: Api, user: str = "organizer-fsi", **over: object) -> dict:
     event = await api.create_event(user=user, **over)
-    eid = event["id"]
-    await api.fire(user, eid, "T01")
-    poster = await api.upload_poster(user, eid)
-    await api.process_poster(poster.json()["id"])
-    await api.fire(user, eid, "T02")
-    return (await api.request("editor", "GET", f"/api/events/{eid}")).json()
+    await api.with_poster(event["id"], user)
+    return await api.get("editor", event["id"])
+
+
+async def go_live(api: Api, user: str = "organizer-fsi", **over: object) -> dict:
+    event = await draft_with_poster(api, user, **over)
+    await api.confirm_location(event["id"])
+    published = await api.act(user, event["id"], "publish")
+    assert published.status_code == 200, published.text
+    return await api.get("editor", event["id"])
 
 
 async def test_public_feed_schema(api: Api) -> None:
@@ -51,13 +49,9 @@ async def test_public_feed_schema(api: Api) -> None:
     assert "access-control-allow-origin" not in response.headers
 
 
-async def test_only_published_events_with_image_or_exception_are_listed(api: Api) -> None:
-    drafts = [await api.create_event(title=f"Entwurf {n}") for n in range(2)]
-    await api.fire("organizer-fsi", drafts[1]["id"], "T01")
-    in_review = await ready_with(api, title="Zur Freigabe")
-    approved = await ready_with(api, title="Freigegeben")
-    await api.fire("editor", approved["id"], "T04")
-    assert in_review["state"] == "in_review"
+async def test_only_published_and_archived_events_are_listed(api: Api) -> None:
+    await api.create_event(title="Entwurf")
+    await draft_with_poster(api, title="Entwurf mit Bild")
     assert (await api.request(None, "GET", FEED)).json()["items"] == []
     live = await go_live(api, title="Veröffentlicht")
     items = (await api.request(None, "GET", FEED)).json()["items"]
@@ -72,43 +66,30 @@ async def test_dossier_data_never_reaches_the_feed(api: Api) -> None:
         "sub-org-fsi",
         "sub-editor",
         "createdBy",
-        "approvedBy",
-        "imageException",
+        "submittedBy",
         "rev",
         "hero",
     ):
         assert secret not in raw, secret
 
 
-async def test_exception_event_is_listed_without_image(api: Api) -> None:
+async def test_an_event_without_image_is_listed_with_image_null(api: Api) -> None:
     event = await api.create_event(title="Ohne Bild")
-    eid = event["id"]
-    await api.fire("organizer-fsi", eid, "T01")
-    await api.fire("organizer-fsi", eid, "T02")
-    await api.request(
-        "editor",
-        "POST",
-        f"/api/events/{eid}/image-exception",
-        json={"reason": "Hochschulveranstaltung"},
-    )
-    await api.fire("editor", eid, "T04")
-    await api.fire("editor", eid, "T05")
-    item = (await api.request(None, "GET", FEED)).json()["items"][0]
-    SCHEMA.validate((await api.request(None, "GET", FEED)).json())
-    assert item["image"] is None
+    await api.confirm_location(event["id"])
+    assert (await api.act("organizer-fsi", event["id"], "publish")).status_code == 200
+    response = await api.request(None, "GET", FEED)
+    SCHEMA.validate(response.json())
+    assert response.json()["items"][0]["image"] is None
 
 
 async def test_filters_order_limit(api: Api) -> None:
-    later = await ready_with(
+    await go_live(
         api, title="B später", startsAt=future(20).isoformat(), endsAt=future(20, 2).isoformat()
     )
-    sooner = await ready_with(
+    await go_live(
         api, title="A früher", startsAt=future(3).isoformat(), endsAt=future(3, 2).isoformat()
     )
-    makers = await ready_with(api, user="organizer-makers", org="makers", title="Makers")
-    for event in (later, sooner, makers):
-        await api.fire("editor", event["id"], "T04")
-        await api.fire("editor", event["id"], "T05")
+    await go_live(api, user="organizer-makers", org="makers", title="Makers")
     items = (await api.request(None, "GET", FEED)).json()["items"]
     assert [i["title"] for i in items] == ["A früher", "Makers", "B später"]
     assert len((await api.request(None, "GET", f"{FEED}?limit=1")).json()["items"]) == 1
@@ -139,20 +120,20 @@ async def test_etag_and_304(api: Api) -> None:
     )
     assert changed.status_code == 200
     async with api.maker() as session:
-        await session.execute(text("UPDATE event SET title = 'Geändert' WHERE state = 'live'"))
+        await session.execute(text("UPDATE event SET title = 'Geändert' WHERE state = 'published'"))
         await session.commit()
     after = await api.request(None, "GET", FEED, headers={"If-None-Match": etag})
     assert after.status_code == 200 and after.headers["etag"] != etag
 
 
-async def test_followup_and_archived_stay_public_via_the_view(api: Api) -> None:
+async def test_archived_stays_public_and_a_draft_leaves_via_the_view(api: Api) -> None:
     live = await go_live(api)
     async with api.maker() as session:
-        await session.execute(text("UPDATE event SET state = 'followup'"))
+        await session.execute(text("UPDATE event SET state = 'archived'"))
         await session.commit()
     assert len((await api.request(None, "GET", FEED)).json()["items"]) == 1
     async with api.maker() as session:
-        await session.execute(text("UPDATE event SET state = 'withdrawn'"))
+        await session.execute(text("UPDATE event SET state = 'draft'"))
         await session.commit()
     assert (await api.request(None, "GET", FEED)).json()["items"] == []
     assert live
@@ -175,11 +156,13 @@ async def test_media_route(api: Api) -> None:
 
 
 async def test_media_of_an_event_that_is_not_public_is_404(api: Api) -> None:
-    ready = await ready_with(api)
+    ready = await draft_with_poster(api)
     derivative = ready["poster"]["derivatives"]["card1200"]["id"]
     path = f"/api/public/media/{derivative}.webp"
     assert (await api.request(None, "GET", path)).status_code == 404
-    await api.fire("editor", ready["id"], "T04")
+    await api.act("organizer-fsi", ready["id"], "publish")
+    assert (await api.request(None, "GET", path)).status_code == 200
+    await api.act("organizer-fsi", ready["id"], "unpublish")
     assert (await api.request(None, "GET", path)).status_code == 404
 
 
@@ -188,7 +171,6 @@ async def test_a_replaced_poster_gets_a_new_media_id(api: Api) -> None:
 
     event = await api.create_event()
     eid = event["id"]
-    await api.fire("organizer-fsi", eid, "T01")
     ids = []
     for color in ("#aa0000", "#00aa00"):
         poster = (await api.upload_poster("organizer-fsi", eid, data=png_bytes(color=color))).json()
@@ -200,7 +182,7 @@ async def test_a_replaced_poster_gets_a_new_media_id(api: Api) -> None:
 async def test_cancel_and_postpone_stay_in_the_feed_with_their_status(api: Api) -> None:
     live = await go_live(api)
     eid = live["id"]
-    cancelled = await api.action(
+    cancelled = await api.act(
         "organizer-fsi", eid, "cancel", reason="Intern", publicReasonCode="weather"
     )
     assert cancelled.status_code == 200
@@ -212,11 +194,11 @@ async def test_cancel_and_postpone_stay_in_the_feed_with_their_status(api: Api) 
         "text": None,
     }
     assert "Intern" not in json.dumps(body)
-    await api.action("editor", eid, "reinstate", reason="Doch")
-    await api.action("editor", eid, "postpone", reason="Verschoben", publicReasonCode="room")
+    await api.act("editor", eid, "reinstate", reason="Doch")
+    await api.act("editor", eid, "postpone", reason="Verschoben", publicReasonCode="room")
     item = (await api.request(None, "GET", FEED)).json()["items"][0]
     assert item["status"] == "postponed" and item["statusReason"]["code"] == "room"
-    taken = await api.fire("editor", eid, "T07", note="Offline")
+    taken = await api.act("editor", eid, "unpublish")
     assert taken.status_code == 200
     assert (await api.request(None, "GET", FEED)).json()["items"] == []
 

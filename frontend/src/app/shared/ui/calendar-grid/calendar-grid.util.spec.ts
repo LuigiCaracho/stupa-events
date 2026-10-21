@@ -19,7 +19,7 @@ const entry = (over: Partial<GridEntry>): GridEntry => ({
   startsOn: '2026-10-29',
   endsOn: '2026-10-29',
   allDay: false,
-  state: 'live',
+  state: 'published',
   publicStatus: 'scheduled',
   organization: { short: 'FSI', colorToken: 'petrol' },
   ...over,

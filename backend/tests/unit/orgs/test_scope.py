@@ -25,7 +25,7 @@ async def test_org_ids_for_is_none_for_a_global_right_else_the_role_orgs() -> No
     assert await scope.org_ids_for(fake_session(), editor, "event.create") is None
     organizer = make_principal("events-fsi-organizer", "events-makers-viewer")
     ids = await scope.org_ids_for(
-        fake_session(result(("fsi", fsi), ("makers", uuid4()))), organizer, "event.submit"
+        fake_session(result(("fsi", fsi), ("makers", uuid4()))), organizer, "event.publish"
     )
     assert ids == {fsi}
     nobody = make_principal()
@@ -47,7 +47,6 @@ def test_only_submitters_are_restricted_to_their_own_dossiers() -> None:
     for group, restricted in [
         ("events-fsi-submitter", True),
         ("events-fsi-organizer", False),
-        ("events-fsi-approver", False),
         ("events-editor", False),
     ]:
         principal = make_principal(group)

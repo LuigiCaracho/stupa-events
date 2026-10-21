@@ -125,7 +125,7 @@ async def test_master_howto_scaffold_copy_and_verification(api: Api) -> None:
     )
     twice = await api.request("organizer-fsi", "POST", "/api/formats/caipi-night/howto", json={})
     assert twice.status_code == 409 and twice.json()["code"] == "already_exists"
-    plain = await api.to_state("planning")
+    plain = await api.to_state("draft")
     no_howto = await api.request("organizer-fsi", "POST", url, json={"fromEventId": plain["id"]})
     assert no_howto.status_code == 422 and no_howto.json()["code"] == "no_howto"
     stranger = await api.request("organizer-makers", "POST", url, json={"fromEventId": eid})
@@ -195,7 +195,7 @@ async def test_new_edition_clones_the_newest_template_or_builds_from_the_default
     assert fresh.status_code == 201, fresh.text
     body = fresh.json()
     event = body["event"]
-    assert body["report"] == [] and event["state"] == "idea" and event["title"] == "FSI LAN-Party"
+    assert body["report"] == [] and event["state"] == "draft" and event["title"] == "FSI LAN-Party"
     assert event["format"]["slug"] == "fsi-lan-party"
     assert event["primaryCategory"]["slug"] == "lanparty"
     assert event["checklistRecomputed"] > 0
@@ -265,7 +265,7 @@ async def test_save_as_format(api: Api) -> None:
         "organizer-fsi", "POST", f"/api/events/{eid}/save-as-format", json=body
     )
     assert again.status_code == 409 and again.json()["code"] == "already_in_format"
-    other = await api.to_state("planning", title="Zweiter")
+    other = await api.to_state("draft", title="Zweiter")
     taken = await api.request(
         "organizer-fsi", "POST", f"/api/events/{other['id']}/save-as-format", json=body
     )
@@ -280,14 +280,8 @@ async def test_save_as_format(api: Api) -> None:
         201,
     )
     assert override["defaults"]["durationMinutes"] == 90 and override["masterHowto"] is None
-    proposal = (
-        await api.request(
-            "member",
-            "POST",
-            "/api/events",
-            json={"title": "Vorschlag", "startsAt": future().isoformat()},
-        )
-    ).json()
+    proposal = await api.create_event(title="Altlast")
+    await api.sql("UPDATE event SET organization_id = NULL WHERE id = :e", e=proposal["id"])
     no_org = await api.request(
         "editor",
         "POST",
@@ -295,7 +289,7 @@ async def test_save_as_format(api: Api) -> None:
         json={"slug": "v", "title": "V"},
     )
     assert no_org.status_code == 422 and no_org.json()["code"] == "organization_required"
-    third = await api.to_state("planning", title="Dritter")
+    third = await api.to_state("draft", title="Dritter")
     denied = await api.request(
         "organizer-makers",
         "POST",

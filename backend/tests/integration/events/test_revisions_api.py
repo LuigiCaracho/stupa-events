@@ -10,48 +10,45 @@ pytestmark = pytest.mark.integration
 
 
 async def test_the_list_is_newest_first_with_changed_fields(api: Api) -> None:
-    event = await api.to_state("planning")
+    event = await api.create_event()
     eid = event["id"]
     await api.patch("organizer-fsi", eid, summary="Neu gefasst", venueText="Aula")
+    await api.act("organizer-fsi", eid, "publish")
     response = await api.request("organizer-fsi", "GET", f"/api/events/{eid}/revisions")
     page = response.json()
     assert response.status_code == 200 and page["total"] == 3
     revs = page["items"]
     assert [r["rev"] for r in revs] == [3, 2, 1]
-    assert set(revs[0]["changedFields"]) == {"summary", "venueText"}
-    assert revs[0]["fieldClass"] == "critical" and revs[0]["actorType"] == "human"
+    assert "state" in revs[0]["changedFields"] and "slug" in revs[0]["changedFields"]
+    assert set(revs[1]["changedFields"]) == {"summary", "venueText"}
+    assert revs[0]["actorType"] == "human" and "fieldClass" not in revs[0]
     assert revs[0]["actor"]["sub"] == "sub-org-fsi"
-    assert set(revs[1]["changedFields"]) == {"state"}
     assert revs[2]["changedFields"] == []
     assert "snapshot" not in revs[0]
 
 
-async def test_filter_by_class_and_paging(api: Api) -> None:
-    event = await api.to_state("planning")
+async def test_paging(api: Api) -> None:
+    event = await api.create_event()
     eid = event["id"]
     await api.patch("organizer-fsi", eid, summary="Text")
-    text = (
-        await api.request("editor", "GET", f"/api/events/{eid}/revisions?fieldClass=text")
-    ).json()
-    assert [r["rev"] for r in text["items"]] == [3]
+    await api.patch("organizer-fsi", eid, summary="Zweiter Text")
     page = (
         await api.request("editor", "GET", f"/api/events/{eid}/revisions?limit=1&offset=1")
     ).json()
     assert page["total"] == 3 and [r["rev"] for r in page["items"]] == [2]
-    bad = await api.request("editor", "GET", f"/api/events/{eid}/revisions?fieldClass=nope")
-    assert bad.status_code == 422
 
 
 async def test_the_detail_has_a_camel_case_snapshot(api: Api) -> None:
-    event = await api.to_state("planning")
+    event = await api.create_event()
     eid = event["id"]
+    await api.act("organizer-fsi", eid, "publish")
     detail = await api.request("organizer-fsi", "GET", f"/api/events/{eid}/revisions/1")
     body = detail.json()
     assert detail.status_code == 200 and body["rev"] == 1
     assert body["snapshot"]["title"] == event["title"] and "startsAt" in body["snapshot"]
-    assert body["snapshot"]["state"] == "idea"
+    assert body["snapshot"]["state"] == "draft"
     second = (await api.request("organizer-fsi", "GET", f"/api/events/{eid}/revisions/2")).json()
-    assert second["changedFields"] == ["state"]
+    assert "state" in second["changedFields"]
 
 
 async def test_missing_revisions_and_foreign_dossiers_are_404(api: Api) -> None:
@@ -69,11 +66,11 @@ async def test_missing_revisions_and_foreign_dossiers_are_404(api: Api) -> None:
 async def test_the_worker_revision_names_the_system_actor(api: Api) -> None:
     from datetime import datetime, timedelta
 
-    from worker.advance import advance_states
+    from worker.advance import archive_ended
 
-    event = await api.to_state("live")
+    event = await api.to_state("published")
     ends = datetime.fromisoformat(event["endsAt"]) + timedelta(hours=13)
-    await advance_states({"advance_sessionmaker": api.maker, "redis": api.pool}, now=ends)
+    await archive_ended({"advance_sessionmaker": api.maker, "redis": api.pool}, now=ends)
     page = (await api.request("editor", "GET", f"/api/events/{event['id']}/revisions")).json()
     assert page["items"][0]["actorType"] == "system"
-    assert page["items"][0]["actor"]["sub"] == "system:advance_states"
+    assert page["items"][0]["actor"]["sub"] == "system:archive_ended"

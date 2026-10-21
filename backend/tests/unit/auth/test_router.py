@@ -191,9 +191,7 @@ def test_me_lists_roles_permissions_and_organizations(
     principal.email, principal.display_name = "a@b.de", "Ada"
     client.app.dependency_overrides[get_current_principal] = lambda: principal  # type: ignore[attr-defined]
     expires = datetime.now(UTC) + timedelta(days=3)
-    org = SimpleNamespace(
-        id=FSI_ID, slug="fsi", name="Fachschaft Informatik", short="FSI", trusted=False
-    )
+    org = SimpleNamespace(id=FSI_ID, slug="fsi", name="Fachschaft Informatik", short="FSI")
     state["db"] = fake_session(
         result(SimpleNamespace(sid="sid-1", expires_at=expires)), result(org)
     )
@@ -209,10 +207,9 @@ def test_me_lists_roles_permissions_and_organizations(
             "organizationId": str(FSI_ID),
             "name": "Fachschaft Informatik",
             "short": "FSI",
-            "trusted": False,
         }
     ]
-    assert "event.submit" in body["permissions"] and "event.approve" in body["permissions"]
+    assert "event.publish" in body["permissions"] and "event.restore" in body["permissions"]
     assert body["groups"] == ["events-editor", "events-fsi-organizer"]
     assert any("ev_session" in c for c in response.headers.get_list("set-cookie"))
 

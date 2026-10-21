@@ -1,24 +1,23 @@
 import { controlFor, focusField } from './focus-field';
 
 describe('focus field', () => {
-  it('maps fix actions and fields to the form control', () => {
-    expect(controlFor('change_date', null)).toBe('startDate');
-    expect(controlFor('set_end', null)).toBe('endDate');
-    expect(controlFor('pick_venue', 'venue_text')).toBe('venueId');
-    expect(controlFor('mark_cancellation', null)).toBe('title');
-    expect(controlFor('fill_field', 'ends_at')).toBe('endDate');
-    expect(controlFor('fill_field', 'primary_category_id')).toBe('primaryCategoryId');
-    expect(controlFor('fill_field', 'organizationId')).toBe('title');
-    expect(controlFor('fill_field', null)).toBe('title');
+  it('maps the field of a hint to the form control', () => {
+    expect(controlFor('starts_at')).toBe('startDate');
+    expect(controlFor('endsAt')).toBe('endDate');
+    expect(controlFor('venue')).toBe('venueId');
+    expect(controlFor('category')).toBe('primaryCategoryId');
+    expect(controlFor('primary_category_id')).toBe('primaryCategoryId');
+    expect(controlFor('summary')).toBe('summary');
+    expect(controlFor(null)).toBe('title');
   });
 
   it('focuses the first control of the field and reports a miss', () => {
     const root = document.createElement('div');
     root.innerHTML = '<app-input formcontrolname="summary"><input id="s"></app-input>';
     document.body.append(root);
-    expect(focusField(root, 'fill_field', 'summary')).toBe(true);
+    expect(focusField(root, 'summary')).toBe(true);
     expect(document.activeElement?.id).toBe('s');
-    expect(focusField(root, 'fill_field', 'title')).toBe(false);
+    expect(focusField(root, 'title')).toBe(false);
     root.remove();
   });
 });

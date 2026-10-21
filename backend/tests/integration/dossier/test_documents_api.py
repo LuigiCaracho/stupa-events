@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from tests._support.factories import png_bytes
-from tests.integration.dossier.helpers import planning_event
+from tests.integration.dossier.helpers import draft_event
 from tests.integration.events.harness import Api
 
 pytestmark = pytest.mark.integration
@@ -31,7 +31,7 @@ async def create_doc(api: Api, eid: str, user: str = "organizer-fsi", **over: ob
 
 
 async def test_create_read_and_the_single_howto(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     created = await create_doc(api, eid)
     assert created.status_code == 201 and created.headers["etag"] == '"1"'
     doc = created.json()
@@ -48,7 +48,7 @@ async def test_create_read_and_the_single_howto(api: Api) -> None:
 
 
 async def test_put_needs_if_match_conflicts_with_current_and_noops(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     doc = (await create_doc(api, eid)).json()
     url = f"/api/documents/{doc['id']}"
     body = {"bodyMd": "# Eins\n\nzwei\ndrei\n", "changeNote": "drei"}
@@ -70,7 +70,7 @@ async def test_put_needs_if_match_conflicts_with_current_and_noops(api: Api) -> 
 
 
 async def test_revisions_are_append_only_and_diffable(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     doc = (await create_doc(api, eid)).json()
     url = f"/api/documents/{doc['id']}"
     await api.request(
@@ -100,7 +100,7 @@ async def test_revisions_are_append_only_and_diffable(api: Api) -> None:
 
 
 async def test_autosave_keeps_a_draft_without_a_revision(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     doc = (await create_doc(api, eid)).json()
     url = f"/api/documents/{doc['id']}/draft"
     assert (await api.request("organizer-fsi", "GET", url)).status_code == 204
@@ -127,7 +127,7 @@ def corpus() -> list[str]:
 
 
 async def test_document_body_stored_verbatim(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     doc = (await create_doc(api, eid, bodyMd="")).json()
     url = f"/api/documents/{doc['id']}"
     rev = 1
@@ -149,7 +149,7 @@ async def test_document_body_stored_verbatim(api: Api) -> None:
 
 
 async def test_images_in_texts_are_recorded_and_never_removed(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     image = await api.request(
         "organizer-fsi",
         "POST",

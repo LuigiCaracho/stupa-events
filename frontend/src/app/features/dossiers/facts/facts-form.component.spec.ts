@@ -5,7 +5,7 @@ import { ToastService } from '@stupa-makers/ui-kit';
 import { of } from 'rxjs';
 import { runAxe } from '../../../../testing/a11y';
 import { makeEvent } from '../../../../testing/event-fixtures';
-import { FollowupApi } from '../api/followup-api.service';
+import { OutcomeApi } from '../api/outcome-api.service';
 import type { EventDto, RequiredProfile } from '../api/event.models';
 import { FactsFormComponent } from './facts-form.component';
 
@@ -19,7 +19,7 @@ async function setup(event: EventDto, canEdit = true, putFacts = jest.fn(() => o
   const changed = jest.fn();
   const view = await render(FactsFormComponent, {
     inputs: { event, canEdit },
-    providers: [{ provide: FollowupApi, useValue: { putFacts } }],
+    providers: [{ provide: OutcomeApi, useValue: { putFacts } }],
     on: { changed },
   });
   await view.fixture.whenStable();

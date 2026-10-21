@@ -1,19 +1,23 @@
 import { provideRouter } from '@angular/router';
-import { render, screen, within } from '@testing-library/angular';
+import { render, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { runAxe } from '../../../../testing/a11y';
 import { makeEvent } from '../../../../testing/event-fixtures';
-import type { EventDto } from '../api/event.models';
+import type { EventAction, EventDto } from '../api/event.models';
 import { DossierHeadComponent, type HeadCommand } from './dossier-head.component';
 
-async function setup(event: EventDto, actions: string[] = []) {
+async function setup(event: EventDto, inputs: { howtoUnverified?: boolean; busy?: boolean } = {}) {
   const commands: HeadCommand[] = [];
   const view = await render(DossierHeadComponent, {
-    inputs: { event, actions },
+    inputs: { event, ...inputs },
     on: { command: (c: HeadCommand) => commands.push(c) },
+    providers: [provideRouter([])],
   });
   return { view, commands };
 }
+
+const withActions = (allowedActions: EventAction[], over: Partial<EventDto> = {}) =>
+  makeEvent({ allowedActions, ...over });
 
 async function menuLabels(): Promise<string[]> {
   await userEvent.click(screen.getByRole('button', { name: 'Mehr' }));
@@ -21,103 +25,65 @@ async function menuLabels(): Promise<string[]> {
 }
 
 describe('DossierHeadComponent', () => {
-  it('shows title, state, time and organization', async () => {
+  it('shows title, state, time, organization, venue and category', async () => {
     await setup(makeEvent());
     expect(screen.getByRole('heading', { level: 1, name: 'Movienight' })).toBeInTheDocument();
-    expect(screen.getByText('Planung', { selector: 'app-status-text' })).toBeInTheDocument();
+    expect(screen.getByText('Entwurf', { selector: 'app-status-text' })).toBeInTheDocument();
     expect(screen.getByText('Fachschaft Informatik')).toBeInTheDocument();
     expect(screen.getByText(/19:00 – .*22:00/)).toBeInTheDocument();
+    expect(screen.getByText('Kinosaal 9-133')).toBeInTheDocument();
+    expect(screen.getByText('Kino')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Alle Events' })).toHaveAttribute('href', '/dossiers');
   });
 
-  it('marks the current state in the bar of the main path', async () => {
-    await setup(makeEvent({ state: 'in_review' }));
-    const steps = screen.getByRole('list', { name: 'Stand in der Pipeline' });
-    const labels = within(steps)
-      .getAllByRole('listitem')
-      .map((li) => li.textContent?.trim());
-    expect(labels).toEqual([
-      'Idee',
-      'Planung',
-      'Freigabe angefragt',
-      'Freigegeben',
-      'Veröffentlicht',
-      'Nachbereitung',
-    ]);
-    expect(within(steps).getByText('Freigabe angefragt')).toHaveAttribute('aria-current', 'step');
-  });
-
-  it('shows no bar for an archived or withdrawn dossier', async () => {
-    await setup(makeEvent({ state: 'withdrawn', allowedTransitions: [] }));
-    expect(screen.queryByRole('list', { name: 'Stand in der Pipeline' })).not.toBeInTheDocument();
-  });
-
-  it('says "Ohne Organisation" for a proposal', async () => {
+  it('says "Ohne Organisation" for an old draft without one', async () => {
     await setup(makeEvent({ organization: null }));
     expect(screen.getByText('Ohne Organisation')).toBeInTheDocument();
   });
 
   it.each([
-    ['idea', 'T01', 'Planung starten'],
-    ['planning', 'T02', 'Freigabe anfragen'],
-    ['in_review', 'T04', 'Freigeben'],
-    ['approved', 'T05', 'Veröffentlichen'],
-    ['followup', 'T09', 'Nachbereitung abschließen'],
-  ] as const)(
-    'puts %s on the primary button %s when the server allows it',
-    async (state, id, label) => {
-      const { commands } = await setup(makeEvent({ state, allowedTransitions: [id] }));
-      await userEvent.click(screen.getByRole('button', { name: label }));
-      expect(commands).toEqual([{ kind: 'transition', id }]);
-    },
-  );
-
-  it('shows no primary button when the server does not allow the transition', async () => {
-    await setup(makeEvent({ state: 'in_review', allowedTransitions: ['T03'] }));
-    expect(screen.queryByRole('button', { name: 'Freigeben' })).not.toBeInTheDocument();
+    ['publish', 'Veröffentlichen'],
+    ['unpublish', 'Zurückziehen'],
+    ['cancel', 'Absagen'],
+    ['postpone', 'Verschieben'],
+    ['reinstate', 'Wieder ansetzen'],
+    ['archive', 'Archivieren'],
+    ['restore', 'Wiederherstellen'],
+    ['clone', 'Neu aus diesem Event'],
+  ] as const)('puts the action %s on the button "%s" and sends it', async (action, label) => {
+    const { commands } = await setup(withActions([action]));
+    await userEvent.click(screen.getByRole('button', { name: label }));
+    expect(commands).toEqual([action]);
   });
 
-  it('lists the other transitions and the actions in the menu and runs them', async () => {
-    const { commands } = await setup(
-      makeEvent({ state: 'live', allowedTransitions: ['T07', 'T08'], publicStatus: 'cancelled' }),
-      [
-        'cancel',
-        'postpone',
-        'reinstate',
-        'confirm-flyer',
-        'image-exception',
-        'assign-organization',
-        'revert-revision',
-      ],
-    );
-    expect(await menuLabels()).toEqual([
-      'Absagen oder verschieben',
-      'Absage zurücknehmen',
-      'Flyer geprüft',
-      'Ausnahme ohne Bild',
-      'Organisation zuweisen',
-      'Offline nehmen',
-    ]);
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Offline nehmen' }));
-    expect(commands).toEqual([{ kind: 'transition', id: 'T07' }]);
+  it('shows exactly the actions the server lists, in the order of the bar', async () => {
+    await setup(withActions(['archive', 'cancel', 'unpublish', 'revert-revision', 'verify-howto']));
+    const names = screen
+      .getAllByRole('button')
+      .map((b) => b.textContent?.trim())
+      .filter(Boolean);
+    expect(names).toEqual(['Zurückziehen', 'Absagen', 'Archivieren']);
+    expect(screen.getByRole('group', { name: 'Aktionen' })).toBeInTheDocument();
   });
 
-  it('runs an action of the menu', async () => {
-    const { commands } = await setup(makeEvent({ state: 'live', allowedTransitions: [] }), [
-      'cancel',
-    ]);
-    await menuLabels();
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Absagen oder verschieben' }));
-    expect(commands).toEqual([{ kind: 'action', name: 'cancel' }]);
-  });
-
-  it('offers the reinstatement only for a cancelled or postponed event', async () => {
-    await setup(makeEvent({ state: 'live', allowedTransitions: [] }), ['reinstate']);
+  it('shows no bar and no menu when nothing is allowed', async () => {
+    await setup(withActions([], { state: 'archived' }));
+    expect(screen.queryByRole('group', { name: 'Aktionen' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Mehr' })).not.toBeInTheDocument();
   });
 
-  it('shows no menu when nothing is possible', async () => {
-    await setup(makeEvent({ state: 'archived', allowedTransitions: [] }));
-    expect(screen.queryByRole('button', { name: 'Mehr' })).not.toBeInTheDocument();
+  it('waits while a call runs', async () => {
+    await setup(withActions(['publish']), { busy: true });
+    expect(screen.getByRole('button', { name: 'Veröffentlichen' })).toBeDisabled();
+  });
+
+  it('keeps "Als Format speichern" and "Ort bestätigen" in the menu', async () => {
+    const { commands } = await setup(withActions(['save-as-format', 'confirm-location']));
+    expect(await menuLabels()).toEqual(['Ort bestätigen', 'Als Format speichern']);
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Als Format speichern' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Mehr' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Ort bestätigen' }));
+    expect(commands).toEqual(['save-as-format', 'confirm-location']);
   });
 
   it.each([
@@ -127,61 +93,33 @@ describe('DossierHeadComponent', () => {
       'Abgesagt · Krankheit · Wir holen es nach',
     ],
     ['postponed' as const, { code: 'none' as const, text: null }, 'Verschoben'],
-  ])(
-    'writes the public status %s with its reason as text',
-    async (publicStatus, publicReason, text) => {
-      await setup(makeEvent({ state: 'live', publicStatus, publicReason, allowedTransitions: [] }));
-      expect(screen.getByText(text)).toBeInTheDocument();
-    },
-  );
+  ])('writes the public status %s with its reason as text', async (publicStatus, publicReason, text) => {
+    await setup(makeEvent({ state: 'published', publicStatus, publicReason }));
+    expect(screen.getByText(text)).toBeInTheDocument();
+  });
 
-  it('has no axe violations with the menu open', async () => {
-    const { view } = await setup(makeEvent({ allowedTransitions: ['T02', 'T11'] }));
-    await userEvent.click(screen.getByRole('button', { name: 'Mehr' }));
-    expect(within(document.body).getByRole('menu')).toBeInTheDocument();
+  it('links the format and warns in text when the archived howto is unverified', async () => {
+    const { view } = await setup(
+      makeEvent({ state: 'archived', format: { slug: 'movienight', title: 'Movienight' } }),
+      { howtoUnverified: true },
+    );
+    expect(screen.getByRole('link', { name: 'Movienight' })).toHaveAttribute(
+      'href',
+      '/formate/movienight',
+    );
+    expect(screen.getByText('Anleitung ungeprüft')).toBeInTheDocument();
     expect(await runAxe(view.container)).toHaveNoViolations();
   });
 
-  describe('M5', () => {
-    it('lists "Neu aus diesem Event", "Als Format speichern" and "Ort bestätigen" for the actions the server allows', async () => {
-      const { commands } = await setup(
-        makeEvent({ state: 'archived', allowedTransitions: [] }),
-        ['clone', 'save-as-format', 'confirm-location'],
-      );
-      expect(await menuLabels()).toEqual(['Ort bestätigen', 'Neu aus diesem Event', 'Als Format speichern']);
-      await userEvent.click(screen.getByRole('menuitem', { name: 'Neu aus diesem Event' }));
-      expect(commands).toEqual([{ kind: 'action', name: 'clone' }]);
-    });
+  it('shows no warning when the howto is checked', async () => {
+    await setup(makeEvent({ state: 'archived' }));
+    expect(screen.queryByText('Anleitung ungeprüft')).not.toBeInTheDocument();
+  });
 
-    it('sends save-as-format and confirm-location as commands', async () => {
-      const { commands } = await setup(makeEvent({ allowedTransitions: [] }), ['save-as-format', 'confirm-location']);
-      await userEvent.click(screen.getByRole('button', { name: 'Mehr' }));
-      await userEvent.click(screen.getByRole('menuitem', { name: 'Als Format speichern' }));
-      await userEvent.click(screen.getByRole('button', { name: 'Mehr' }));
-      await userEvent.click(screen.getByRole('menuitem', { name: 'Ort bestätigen' }));
-      expect(commands).toEqual([
-        { kind: 'action', name: 'save-as-format' },
-        { kind: 'action', name: 'confirm-location' },
-      ]);
-    });
-
-    it('links the format and warns in text when the archived howto is unverified', async () => {
-      const view = await render(DossierHeadComponent, {
-        inputs: {
-          event: makeEvent({ state: 'archived', allowedTransitions: [], format: { slug: 'movienight', title: 'Movienight' } }),
-          actions: [],
-          howtoUnverified: true,
-        },
-        providers: [provideRouter([])],
-      });
-      expect(screen.getByRole('link', { name: 'Movienight' })).toHaveAttribute('href', '/formate/movienight');
-      expect(screen.getByText('Anleitung ungeprüft')).toBeInTheDocument();
-      expect(await runAxe(view.container)).toHaveNoViolations();
-    });
-
-    it('shows no warning when the howto is checked', async () => {
-      await setup(makeEvent({ state: 'archived', allowedTransitions: [] }));
-      expect(screen.queryByText('Anleitung ungeprüft')).not.toBeInTheDocument();
-    });
+  it('has no axe violations with the menu open', async () => {
+    const { view } = await setup(withActions(['publish', 'save-as-format']));
+    await userEvent.click(screen.getByRole('button', { name: 'Mehr' }));
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+    expect(await runAxe(view.container)).toHaveNoViolations();
   });
 });

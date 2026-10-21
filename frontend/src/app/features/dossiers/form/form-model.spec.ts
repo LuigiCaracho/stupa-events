@@ -20,9 +20,9 @@ describe('form model', () => {
     expect(value).toMatchObject({ summary: 'Neu', venueId: '', primaryCategoryId: 'c2' });
   });
 
-  it('lists every field as editable in idea and planning and none elsewhere without a server list', () => {
-    expect(editableFields(makeEvent({ state: 'planning' }))).toContain('startsAt');
-    expect(editableFields(makeEvent({ state: 'live' }))).toEqual([]);
+  it('takes the editable fields from the server and nothing else', () => {
+    expect(editableFields(makeEvent())).toContain('startsAt');
+    expect(editableFields(makeEvent({ state: 'archived', editableFields: [] }))).toEqual([]);
     expect(editableFields(makeEvent({ editableFields: ['summary'] }))).toEqual(['summary']);
   });
 
@@ -38,7 +38,7 @@ describe('form model', () => {
   });
 
   it('ignores a change of a locked field', () => {
-    const live = makeEvent({ state: 'live', editableFields: ['summary'] });
+    const live = makeEvent({ state: 'published', editableFields: ['summary'] });
     const value = { ...valueOf(live), summary: 'Korrektur', title: 'Hack', startTime: '23:00' };
     expect(diff(live, value)).toEqual({ summary: 'Korrektur' });
   });

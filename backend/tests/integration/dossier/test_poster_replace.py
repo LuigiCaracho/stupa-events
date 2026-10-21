@@ -5,18 +5,18 @@ from __future__ import annotations
 import pytest
 
 from tests._support.factories import png_bytes
-from tests.integration.dossier.helpers import live_event
+from tests.integration.dossier.helpers import published_event
 from tests.integration.events.harness import Api
 
 pytestmark = pytest.mark.integration
 
 
 async def test_poster_replace_live_swaps_after_scan_and_derivatives(api: Api) -> None:
-    live = await live_event(api)
+    live = await published_event(api)
     eid, old = live["id"], live["poster"]["id"]
     seq_before = (await api.sql("SELECT public_seq FROM event"))[0][0]
     revisions_before = (await api.sql("SELECT count(*) FROM event_revision"))[0][0]
-    forbidden = await api.upload_poster("organizer-fsi", eid, data=png_bytes(1500, 900))
+    forbidden = await api.upload_poster("submitter-fsi", eid, data=png_bytes(1500, 900))
     assert forbidden.status_code == 403
     response = await api.upload_poster("editor", eid, data=png_bytes(1500, 900))
     assert response.status_code == 201, response.text
@@ -32,11 +32,9 @@ async def test_poster_replace_live_swaps_after_scan_and_derivatives(api: Api) ->
     assert {r[0]: r[1] for r in rows} == {old: True, new["id"]: False}
     assert (await api.sql("SELECT public_seq FROM event"))[0][0] == seq_before + 1
     last = (
-        await api.sql(
-            "SELECT field_class, change_note, actor_id FROM event_revision ORDER BY id DESC LIMIT 1"
-        )
+        await api.sql("SELECT change_note, actor_id FROM event_revision ORDER BY id DESC LIMIT 1")
     )[0]
-    assert tuple(last) == ("critical", "Poster ersetzt", "system:promote_poster")
+    assert tuple(last) == ("Poster ersetzt", "system:promote_poster")
     assert (await api.sql("SELECT count(*) FROM event_revision"))[0][0] == revisions_before + 1
     feed = (await api.request(None, "GET", "/api/public/feed/events")).json()["items"]
     item = next(i for i in feed if i["id"] == eid)
@@ -44,12 +42,12 @@ async def test_poster_replace_live_swaps_after_scan_and_derivatives(api: Api) ->
 
 
 async def test_an_infected_replacement_leaves_the_published_poster_alone(api: Api) -> None:
-    live = await live_event(api)
+    live = await published_event(api)
     eid, old = live["id"], live["poster"]["id"]
     new = (await api.upload_poster("editor", eid, data=png_bytes(1500, 900))).json()
     assert await api.process_poster(new["id"], signature="Eicar-Test-Signature") == "infected"
     now = await api.get("editor", eid)
-    assert now["poster"]["id"] == old and now["state"] == "live"
+    assert now["poster"]["id"] == old and now["state"] == "published"
     listed = (await api.request("editor", "GET", f"/api/events/{eid}/attachments")).json()
     assert {a["id"]: a["scanStatus"] for a in listed} == {old: "clean", new["id"]: "infected"}
     feed = (await api.request(None, "GET", "/api/public/feed/events")).json()["items"]
@@ -57,7 +55,7 @@ async def test_an_infected_replacement_leaves_the_published_poster_alone(api: Ap
 
 
 async def test_the_promote_job_is_idempotent_and_ignores_stale_replacements(api: Api) -> None:
-    live = await live_event(api)
+    live = await published_event(api)
     eid = live["id"]
     first = (await api.upload_poster("editor", eid, data=png_bytes(1500, 900))).json()
     assert await api.process_poster(first["id"]) == "clean"
@@ -67,9 +65,10 @@ async def test_the_promote_job_is_idempotent_and_ignores_stale_replacements(api:
     assert (await api.sql("SELECT public_seq FROM event"))[0][0] == seq
 
 
-async def test_the_review_state_swaps_the_hero_at_once(api: Api) -> None:
-    event = await api.approved_ready_event()
+async def test_a_draft_swaps_the_hero_at_once(api: Api) -> None:
+    event = await api.create_event()
     eid = event["id"]
+    await api.with_poster(eid)
     new = (await api.upload_poster("editor", eid, data=png_bytes(1500, 900))).json()
     now = await api.get("editor", eid)
     assert now["poster"]["id"] == new["id"] and now["poster"]["scanStatus"] == "pending"

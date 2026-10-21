@@ -37,7 +37,7 @@ async def test_a_private_flag_on_a_venue_shows_in_the_feed_at_once(
         },
     )
     assert made.status_code == 201
-    await api.to_state("live", venueId=made.json()["id"])
+    await api.to_state("published", venueId=made.json()["id"])
     await rebuild_public_cache(ctx)
     assert (await feed_items(api))[0]["venue"]["address"] == "Parkweg 1"
     before = await cache.current_version(pool)
@@ -56,7 +56,7 @@ async def test_renaming_an_organization_or_category_shows_in_the_feed_at_once(
     ctx: dict[str, Any],
     pool: RealPool,
 ) -> None:
-    await api.to_state("live")
+    await api.to_state("published")
     await rebuild_public_cache(ctx)
     org_id = api.org_ids["fsi"]
     original = (await api.sql("SELECT name FROM organization WHERE slug = 'fsi'"))[0][0]

@@ -54,7 +54,7 @@ async def test_an_unreadable_origin_falls_back_to_the_previous_edition(api: Api)
         json={"startsAt": future(40).isoformat()},
     )
     made = clone.json()["event"]
-    await api.sql("UPDATE event SET state = 'live' WHERE id = :e", e=other)
+    await api.sql("UPDATE event SET state = 'draft' WHERE id = :e", e=other)
     last = await ok(
         await api.request("organizer-makers", "GET", f"/api/events/{made['id']}/last-time")
     )

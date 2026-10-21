@@ -25,12 +25,12 @@ async def feed(api: Api, **params: Any) -> dict:
     return body
 
 
-async def live_event(api: Api, **over: Any) -> dict:
-    return await api.to_state("live", **over)
+async def published_event(api: Api, **over: Any) -> dict:
+    return await api.to_state("published", **over)
 
 
 async def test_a_full_item_carries_every_v2_field(api: Api) -> None:
-    event = await live_event(
+    event = await published_event(
         api, costText="5 Euro", descriptionMd="**Fett** und [Link](https://a.example)"
     )
     await api.sql(
@@ -51,8 +51,8 @@ async def test_a_full_item_carries_every_v2_field(api: Api) -> None:
 
 async def test_the_parent_category_follows_the_main_one_and_filters_both(api: Api) -> None:
     fsi_category = api.category_ids["fachschaft-informatik-fsi"]
-    event = await live_event(api, primaryCategoryId=fsi_category)
-    other = await live_event(api)
+    event = await published_event(api, primaryCategoryId=fsi_category)
+    other = await published_event(api)
     item = next(i for i in (await feed(api))["items"] if i["id"] == event["id"])
     assert [c["slug"] for c in item["categories"]] == ["fachschaft-informatik-fsi", "fachschaft"]
     by_parent = await feed(api, category="fachschaft")
@@ -62,7 +62,7 @@ async def test_the_parent_category_follows_the_main_one_and_filters_both(api: Ap
 
 
 async def test_venue_rules_private_hidden_building_and_exact(api: Api) -> None:
-    event = await live_event(api)
+    event = await published_event(api)
     eid = event["id"]
     await api.sql(
         "INSERT INTO venue (slug, name, address, postcode, city, public_precision, is_private) "
@@ -92,7 +92,7 @@ async def test_venue_rules_private_hidden_building_and_exact(api: Api) -> None:
 async def test_cursor_paging_walks_every_item_once(api: Api) -> None:
     ids = []
     for i in range(5):
-        event = await live_event(
+        event = await published_event(
             api,
             title=f"Termin {i}",
             startsAt=future(10 + i).isoformat(),
@@ -116,11 +116,11 @@ async def test_cursor_paging_walks_every_item_once(api: Api) -> None:
 
 
 async def test_since_filters_by_update_time_and_demands_an_offset(api: Api) -> None:
-    old = await live_event(api, title="Alt")
+    old = await published_event(api, title="Alt")
     await api.sql(
         "UPDATE event SET updated_at = now() - interval '3 days' WHERE id = :e", e=old["id"]
     )
-    new = await live_event(api, title="Neu")
+    new = await published_event(api, title="Neu")
     since = (await api.sql("SELECT (now() - interval '1 day')::text"))[0][0]
     assert since
     body = await feed(api, since="2000-01-01T00:00:00Z")
@@ -141,8 +141,8 @@ async def test_since_filters_by_update_time_and_demands_an_offset(api: Api) -> N
 
 
 async def test_organization_filter_and_its_alias(api: Api) -> None:
-    mine = await live_event(api)
-    theirs = await api.to_state("live", user="organizer-makers", org="makers", title="Anders")
+    mine = await published_event(api)
+    theirs = await api.to_state("published", user="organizer-makers", org="makers", title="Anders")
     assert theirs
     for name in ("organization", "org"):
         body = await feed(api, **{name: "fsi"})
@@ -154,7 +154,7 @@ async def test_organization_filter_and_its_alias(api: Api) -> None:
 
 
 async def test_all_day_items_carry_their_days_and_the_feed_has_the_cache_headers(api: Api) -> None:
-    event = await api.to_state("live")
+    event = await api.to_state("published")
     await api.sql(
         "UPDATE event SET all_day = true, starts_on = date '2026-12-24', ends_on = date '2026-12-25', "
         "starts_at = timestamptz '2026-12-23 23:00+00', ends_at = timestamptz '2026-12-25 23:00+00' "

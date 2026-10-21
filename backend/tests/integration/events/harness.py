@@ -2,11 +2,10 @@
 
 `api` is an HTTP client on the real app with the real database (migrated testcontainer).
 A request names its user in the header `X-Test-User`; the fake login builds the principal
-through the real `rbac.resolve_principal`, so trust and group mapping behave as in
-production. The fixture writes a `group_mapping` row for every group of `USERS` (the group
-name alone grants nothing since M2); the approver rows are inserted without the API check
-so that the downgrade of an untrusted approver stays testable. Storage, scan queue and the Redis pool are fakes; `process_poster` runs the
-scan and the derive job of the worker in process.
+through the real `rbac.resolve_principal`, so the group mapping behaves as in production. The
+fixture writes a `group_mapping` row for every group of `USERS` (the group name alone grants
+nothing since M2). Storage, scan queue and the Redis pool are fakes; `process_poster` runs
+the scan and the derive job of the worker in process.
 """
 
 from __future__ import annotations
@@ -52,9 +51,7 @@ USERS: dict[str, tuple[str, tuple[str, ...]]] = {
     "submitter-fsi": ("sub-sub-fsi", ("events-fsi-submitter",)),
     "submitter2-fsi": ("sub-sub2-fsi", ("events-fsi-submitter",)),
     "viewer-fsi": ("sub-view-fsi", ("events-fsi-viewer",)),
-    "approver-fsi": ("sub-app-fsi", ("events-fsi-approver",)),
-    "approver-stupa": ("sub-app-stupa", ("events-stupa-approver",)),
-    "approver2-stupa": ("sub-app2-stupa", ("events-stupa-approver",)),
+    "organizer-stupa": ("sub-org-stupa", ("events-stupa-organizer",)),
     "organizer-makers": ("sub-org-makers", ("events-makers-organizer",)),
     "submitter-ekhg": ("sub-sub-ekhg", ("events-ekhg-submitter",)),
     "member": ("sub-member", ()),
@@ -123,7 +120,9 @@ def future(days: int = 14, hours: int = 0) -> datetime:
     return base.replace(minute=0, second=0, microsecond=0)
 
 
-MANDATORY_IF_MATCH = frozenset({"T04", "T05", "cancel", "postpone", "reinstate", "revert-revision"})
+LIFECYCLE = frozenset(
+    {"publish", "unpublish", "archive", "restore", "cancel", "postpone", "reinstate"}
+)
 
 
 @dataclass
@@ -176,35 +175,7 @@ class Api:
         assert response.status_code == 201, response.text
         return response.json()
 
-    async def _if_match(
-        self, event_id: str, name: str, without: bool, rev: int | None
-    ) -> dict[str, str]:
-        if without or name not in MANDATORY_IF_MATCH:
-            return {}
-        return {"If-Match": f'"{rev or (await self.get("editor", event_id))["rev"]}"'}
-
-    async def fire(
-        self,
-        user: str,
-        event_id: str,
-        transition: str,
-        *,
-        without_if_match: bool = False,
-        if_match_rev: int | None = None,
-        **body: Any,
-    ) -> Response:
-        if transition == "T04":
-            await self.confirm_location(event_id)
-        headers = await self._if_match(event_id, transition, without_if_match, if_match_rev)
-        return await self.request(
-            user,
-            "POST",
-            f"/api/events/{event_id}/transitions/{transition}",
-            json=body,
-            headers=headers,
-        )
-
-    async def action(
+    async def act(
         self,
         user: str,
         event_id: str,
@@ -214,13 +185,16 @@ class Api:
         if_match_rev: int | None = None,
         **body: Any,
     ) -> Response:
-        headers = await self._if_match(event_id, name, without_if_match, if_match_rev)
-        return await self.request(
-            user, "POST", f"/api/events/{event_id}/actions/{name}", json=body, headers=headers
-        )
+        """Call a lifecycle action (`publish` ...) or an action under `/actions/` with `If-Match`."""
+        path = f"/api/events/{event_id}/{name if name in LIFECYCLE else f'actions/{name}'}"
+        headers: dict[str, str] = {}
+        if not without_if_match:
+            rev = if_match_rev or (await self.get("editor", event_id))["rev"]
+            headers["If-Match"] = f'"{rev}"'
+        return await self.request(user, "POST", path, json=body, headers=headers)
 
     async def confirm_location(self, event_id: str) -> None:
-        """Confirm a free venue text as the editor, as T04 requires since M5 (no-op otherwise)."""
+        """Confirm a free venue text as the editor, so that it shows in the feed (no-op otherwise)."""
         event = await self.get("editor", event_id)
         if event["venueId"] is None and event["venueText"] and event["locationConfirmedAt"] is None:
             response = await self.request(
@@ -243,25 +217,19 @@ class Api:
         )
 
     async def to_state(self, state: str, *, user: str = "organizer-fsi", **over: Any) -> dict:
-        """Create a dossier in `fsi` and move it to `state` (exception instead of a poster).
+        """Create a dossier in `fsi` and move it to `state` (`draft`, `published`, `archived`).
 
-        `idea`, `planning`, `in_review`, `approved` and `live` go through the API; the
-        editor grants the image exception and approves. The result is read as the editor.
+        The location is confirmed first, so that a free venue text shows in the feed. The
+        result is read as the editor.
         """
+        assert state in {"draft", "published", "archived"}, state
         event = await self.create_event(user=user, **over)
         eid = event["id"]
-        steps = ["idea", "planning", "in_review", "approved", "live"]
-        if state in steps[1:]:
-            assert (await self.fire(user, eid, "T01")).status_code == 200
-        if state in steps[2:]:
-            granted = await self.action("editor", eid, "image-exception", reason="Test ohne Motiv")
-            assert granted.status_code == 200, granted.text
-            assert (await self.fire(user, eid, "T02")).status_code == 200
-        if state in steps[3:]:
-            approved = await self.fire("editor", eid, "T04")
-            assert approved.status_code == 200, approved.text
-        if state == "live":
-            assert (await self.fire("editor", eid, "T05")).status_code == 200
+        if state != "draft":
+            await self.confirm_location(eid)
+            assert (await self.act(user, eid, "publish")).status_code == 200
+        if state == "archived":
+            assert (await self.act("editor", eid, "archive")).status_code == 200
         return await self.get("editor", eid)
 
     async def sql(self, statement: str, **params: Any) -> list[Any]:
@@ -314,24 +282,12 @@ class Api:
             await build_preview(ctx, attachment_id)
         return verdict
 
-    async def add_open_comment(self, event_id: str, body: str = "Bitte prüfen") -> None:
-        """Leave an open root comment, as T03 (changes requested) needs one."""
-        await self.sql(
-            "INSERT INTO comment (event_id, author_sub, body_md) VALUES (:e, 'sub-editor', :b)",
-            e=event_id,
-            b=body,
-        )
-
-    async def approved_ready_event(self) -> dict:
-        """An event in `in_review` with a clean, derived poster."""
-        event = await self.create_event()
-        eid = event["id"]
-        assert (await self.fire("organizer-fsi", eid, "T01")).status_code == 200
-        poster = await self.upload_poster("organizer-fsi", eid)
+    async def with_poster(self, event_id: str, user: str = "organizer-fsi") -> dict:
+        """Upload a poster to the dossier and run the scan and derive jobs; return the row."""
+        poster = await self.upload_poster(user, event_id)
         assert poster.status_code == 201, poster.text
         assert await self.process_poster(poster.json()["id"]) == "clean"
-        assert (await self.fire("organizer-fsi", eid, "T02")).status_code == 200
-        return (await self.request("editor", "GET", f"/api/events/{eid}")).json()
+        return poster.json()
 
 
 @pytest.fixture(scope="session")

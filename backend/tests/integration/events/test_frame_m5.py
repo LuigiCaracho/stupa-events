@@ -11,53 +11,53 @@ from tests.integration.events.harness import Api, future
 pytestmark = pytest.mark.integration
 
 
-async def in_review(api: Api, **over: object) -> dict:
-    return await api.to_state("in_review", **over)
-
-
-async def test_an_unconfirmed_free_venue_text_blocks_t04(api: Api) -> None:
-    event = await in_review(api)
+async def test_an_unconfirmed_free_venue_text_publishes_but_stays_out_of_the_feed(
+    api: Api,
+) -> None:
+    event = await api.create_event()
     eid = event["id"]
-    refused = await api.request(
-        "editor",
-        "POST",
-        f"/api/events/{eid}/transitions/T04",
-        json={},
-        headers={"If-Match": f'"{event["rev"]}"'},
-    )
-    assert refused.status_code == 422 and refused.json()["code"] == "location_unconfirmed"
-    reason = refused.json()["reasons"][0]
-    assert reason["fixAction"] == "confirm_location" and reason["field"] == "venueId"
+    published = await api.act("organizer-fsi", eid, "publish")
+    assert published.status_code == 200
+    hints = (await api.request("organizer-fsi", "GET", f"/api/events/{eid}/hints")).json()
+    assert {"code": "location_unconfirmed", "severity": "warn", "field": "venueText"} in hints[
+        "items"
+    ]
+    item = (await api.request(None, "GET", "/api/public/feed/events")).json()["items"][0]
+    assert item["venueText"] is None and item["venue"] is None
     assert (await api.get("editor", eid))["locationPrecision"] == "hidden"
     confirmed = await api.request(
-        "editor", "POST", f"/api/events/{eid}/actions/confirm-location", json={"precision": "exact"}
+        "organizer-fsi",
+        "POST",
+        f"/api/events/{eid}/actions/confirm-location",
+        json={"precision": "exact"},
     )
     assert confirmed.status_code == 200
     body = confirmed.json()
     assert body["locationPrecision"] == "exact" and body["locationConfirmedAt"]
-    assert (await api.fire("editor", eid, "T04")).status_code == 200
+    shown = (await api.request(None, "GET", "/api/public/feed/events")).json()["items"][0]
+    assert shown["venueText"] == "Kinosaal 9-133"
 
 
 async def test_confirm_location_rules(api: Api) -> None:
-    event = await in_review(api)
+    event = await api.create_event()
     eid = event["id"]
     url = f"/api/events/{eid}/actions/confirm-location"
     hidden = await api.request("editor", "POST", url, json={"precision": "hidden"})
     assert hidden.status_code == 422
-    forbidden = await api.request("organizer-fsi", "POST", url, json={"precision": "exact"})
+    forbidden = await api.request("viewer-fsi", "POST", url, json={"precision": "exact"})
     assert forbidden.status_code == 403
-    stranger = await api.request("approver-stupa", "POST", url, json={"precision": "exact"})
+    stranger = await api.request("organizer-makers", "POST", url, json={"precision": "exact"})
     assert stranger.status_code == 404
     venue = await api.sql("SELECT id FROM venue WHERE NOT is_private LIMIT 1")
     await api.sql("UPDATE event SET venue_id = :v WHERE id = :e", v=venue[0][0], e=eid)
     no_text = await api.request("editor", "POST", url, json={"precision": "exact"})
-    assert no_text.status_code == 409 and no_text.json()["code"] == "invalid_transition"
+    assert no_text.status_code == 409 and no_text.json()["code"] == "invalid_state"
     audit = await api.sql("SELECT data FROM audit_entry WHERE action = 'event_location_confirm'")
     assert audit == []
 
 
 async def test_changing_the_venue_text_resets_the_confirmation(api: Api) -> None:
-    event = await api.to_state("planning")
+    event = await api.create_event()
     eid = event["id"]
     await api.request(
         "editor",
@@ -71,8 +71,10 @@ async def test_changing_the_venue_text_resets_the_confirmation(api: Api) -> None
     assert patched.json()["locationConfirmedAt"] is None
 
 
-async def test_in_live_the_confirmation_raises_public_seq_and_the_view_follows(api: Api) -> None:
-    live = await api.to_state("live")
+async def test_when_published_the_confirmation_raises_public_seq_and_the_view_follows(
+    api: Api,
+) -> None:
+    live = await api.to_state("published")
     eid = live["id"]
     seq = (await api.sql("SELECT public_seq FROM event WHERE id = :e", e=eid))[0][0]
     shown = await api.request("editor", "GET", f"/api/events/{eid}")
@@ -109,25 +111,24 @@ async def test_facts_api(api: Api) -> None:
     assert ok.status_code == 200 and ok.json()["facts"] == {"ageLimit": 18, "capacity": 120}
     stale = await api.request("organizer-fsi", "PUT", url, json={"ageLimit": 18}, headers=headers)
     assert stale.status_code == 409 and stale.json()["code"] == "conflict"
-    reviewed = await api.to_state("in_review")
+    archived = await api.to_state("archived")
     locked = await api.request(
         "organizer-fsi",
         "PUT",
-        f"/api/events/{reviewed['id']}/facts",
+        f"/api/events/{archived['id']}/facts",
         json={"capacity": 1},
-        headers={"If-Match": f'"{reviewed["rev"]}"'},
+        headers={"If-Match": f'"{archived["rev"]}"'},
     )
     assert locked.status_code == 409 and locked.json()["code"] == "field_locked"
 
 
-async def test_a_party_without_an_age_limit_blocks_t02(api: Api) -> None:
+async def test_a_party_without_an_age_limit_is_a_hint_not_a_lock(api: Api) -> None:
     event = await api.create_event(primaryCategoryId=api.category_ids["party"])
     eid = event["id"]
-    assert (await api.fire("organizer-fsi", eid, "T01")).status_code == 200
-    await api.action("editor", eid, "image-exception", reason="Test ohne Motiv")
-    refused = await api.fire("organizer-fsi", eid, "T02")
-    assert refused.status_code == 422
-    assert "facts_invalid" in [r["code"] for r in refused.json()["reasons"]]
+    codes = lambda hints: [h["code"] for h in hints["items"]]  # noqa: E731
+    hints = (await api.request("organizer-fsi", "GET", f"/api/events/{eid}/hints")).json()
+    assert "facts_incomplete" in codes(hints)
+    assert (await api.act("organizer-fsi", eid, "publish")).status_code == 200
     rev = (await api.get("editor", eid))["rev"]
     await api.request(
         "organizer-fsi",
@@ -136,8 +137,8 @@ async def test_a_party_without_an_age_limit_blocks_t02(api: Api) -> None:
         json={"ageLimit": 16},
         headers={"If-Match": f'"{rev}"'},
     )
-    other = await api.fire("organizer-fsi", eid, "T02")
-    assert "facts_invalid" not in str(other.json())
+    hints = (await api.request("organizer-fsi", "GET", f"/api/events/{eid}/hints")).json()
+    assert "facts_incomplete" not in codes(hints)
 
 
 async def test_a_trip_needs_min_not_above_max_and_a_category_change_drops_foreign_keys(
@@ -154,8 +155,6 @@ async def test_a_trip_needs_min_not_above_max_and_a_category_change_drops_foreig
         headers={"If-Match": f'"{event["rev"]}"'},
     )
     assert ok.status_code == 200
-    guards = (await api.request("organizer-fsi", "GET", f"/api/events/{eid}/guards/T02")).json()
-    assert guards["reasons"] == [] or True
     moved = await api.patch("organizer-fsi", eid, primaryCategoryId=api.category_ids["kino"])
     assert moved.status_code == 200
     assert moved.json()["facts"] == {} and moved.json()["factsDropped"] == [
@@ -244,7 +243,7 @@ async def test_all_day_patch_rules(api: Api) -> None:
 
 
 async def test_calendar_view(api: Api) -> None:
-    mine = await api.to_state("planning", title="Eigener Termin")
+    mine = await api.create_event(title="Eigener Termin")
     other = await api.create_event(user="organizer-makers", org="makers", title="Fremder Termin")
     assert other["title"] == "Fremder Termin"
     window = {
@@ -262,10 +261,10 @@ async def test_calendar_view(api: Api) -> None:
     assert body["from"] == window["from"] and body["truncated"] is False
     everything = await api.request("editor", "GET", "/api/events", params=window)
     assert len(everything.json()["entries"]) == 2
-    withdrawn_hidden = await api.request(
-        "editor", "GET", "/api/events", params={**window, "state": "withdrawn"}
+    archived_only = await api.request(
+        "editor", "GET", "/api/events", params={**window, "state": "archived"}
     )
-    assert withdrawn_hidden.json()["entries"] == []
+    assert archived_only.json()["entries"] == []
 
 
 @pytest.mark.parametrize(

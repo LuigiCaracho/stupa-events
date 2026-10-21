@@ -1,4 +1,4 @@
-"""Follow-up: T09 guards, the outcome, verify-howto, the format hook and the fixture itself."""
+"""The documentation after the event: the archive worker, outcome, retrospective and the howto mark."""
 
 from __future__ import annotations
 
@@ -8,79 +8,23 @@ import pytest
 from httpx import Response
 
 from tests.integration.archive.fixture import archived_movienight, ok
-from tests.integration.dossier.helpers import seed_principals
 from tests.integration.events.harness import Api
-from worker.advance import advance_states
-from worker.followup import send_followup_reminders
+from worker.advance import archive_ended
 
 pytestmark = pytest.mark.integration
 
 
-async def test_the_movienight_fixture_archives_through_t09(api: Api) -> None:
-    eid = await archived_movienight(api)
-    event = await api.get("organizer-fsi", eid)
-    assert event["state"] == "archived" and event["outcome"]["attendance"] == 87
-    assert event["format"] == {"slug": "movienight", "title": "Movienight"}
-    assert event["howtoVerifiedAt"] is not None and event["howtoUnverified"] is False
-    fmt = await api.sql("SELECT last_verified_at FROM format WHERE slug = 'movienight'")
-    assert fmt[0][0] is not None
+def worker_ctx(api: Api) -> dict:
+    return {"advance_sessionmaker": api.maker, "redis": api.pool}
 
 
-async def followup_event(api: Api) -> dict:
-    """A live dossier of `fsi` moved to `followup` by the worker at a fixed clock."""
-    event = await api.to_state("live")
+async def ended_event(api: Api) -> dict:
+    return await api.to_state("published")
+
+
+async def after_end(api: Api, event: dict, hours: int = 13) -> str:
     ended = datetime.fromisoformat(event["endsAt"])
-    await advance_states(
-        {"advance_sessionmaker": api.maker, "redis": api.pool}, now=ended + timedelta(hours=13)
-    )
-    return await api.get("organizer-fsi", event["id"])
-
-
-async def test_t09_lists_every_open_part_in_order(api: Api) -> None:
-    event = await followup_event(api)
-    eid = event["id"]
-    await api.sql(
-        "INSERT INTO checklist_item (event_id, position, text, phase, required) "
-        "VALUES (:e, 'm', 'Abrechnung', 'followup', true)",
-        e=eid,
-    )
-    await api.sql(
-        "INSERT INTO document (event_id, kind, title, body_md) VALUES (:e, 'howto', 'A', 'x')",
-        e=eid,
-    )
-    guards = (await api.request("organizer-fsi", "GET", f"/api/events/{eid}/guards/T09")).json()
-    assert [r["code"] for r in guards["reasons"]] == [
-        "checklist_open",
-        "retrospective_missing",
-        "outcome_missing",
-        "howto_unverified",
-    ]
-    assert [r["fixAction"] for r in guards["reasons"]] == [
-        "open_checklist",
-        "fill_retrospective",
-        "fill_outcome",
-        "verify_howto",
-    ]
-    assert guards["reasons"][0]["field"] == "followup"
-    counts = (await api.request("organizer-fsi", "GET", f"/api/events/{eid}/dossier-counts")).json()
-    assert counts["followupOpen"] == 4
-
-
-async def test_a_dossier_without_a_howto_has_nothing_to_verify(api: Api) -> None:
-    event = await followup_event(api)
-    eid = event["id"]
-    await put_outcome(api, eid, {"attendance": 3, "costsCents": 0})
-    await ok(
-        await api.request(
-            "organizer-fsi",
-            "POST",
-            f"/api/events/{eid}/documents",
-            json={"kind": "retrospective", "bodyMd": "ok"},
-        ),
-        201,
-    )
-    archived = await api.fire("organizer-fsi", eid, "T09")
-    assert archived.status_code == 200 and archived.json()["howtoUnverified"] is False
+    return await archive_ended(worker_ctx(api), now=ended + timedelta(hours=hours))
 
 
 async def put_outcome(api: Api, eid: str, body: dict, user: str = "organizer-fsi") -> Response:
@@ -90,8 +34,47 @@ async def put_outcome(api: Api, eid: str, body: dict, user: str = "organizer-fsi
     )
 
 
+async def test_the_movienight_fixture_archives_through_the_worker(api: Api) -> None:
+    eid = await archived_movienight(api)
+    event = await api.get("organizer-fsi", eid)
+    assert event["state"] == "archived" and event["outcome"]["attendance"] == 87
+    assert event["format"] == {"slug": "movienight", "title": "Movienight"}
+    assert event["howtoVerifiedAt"] is not None and event["howtoUnverified"] is False
+    fmt = await api.sql("SELECT last_verified_at FROM format WHERE slug = 'movienight'")
+    assert fmt[0][0] is not None
+
+
+async def test_the_worker_archives_twelve_hours_after_the_end_and_not_before(api: Api) -> None:
+    event = await ended_event(api)
+    assert await after_end(api, event, hours=11) == "archived=0 failed=0"
+    assert (await api.get("editor", event["id"]))["state"] == "published"
+    assert await after_end(api, event, hours=13) == "archived=1 failed=0"
+    assert (await api.get("editor", event["id"]))["state"] == "archived"
+    assert await after_end(api, event, hours=14) == "archived=0 failed=0"
+
+
+async def test_the_worker_leaves_drafts_alone_and_archives_a_cancelled_event(api: Api) -> None:
+    draft = await api.create_event(title="Nie veröffentlicht")
+    cancelled = await api.to_state("published", title="Abgesagt")
+    await api.act("organizer-fsi", cancelled["id"], "cancel", reason="x", publicReasonCode="other")
+    assert await after_end(api, cancelled) == "archived=1 failed=0"
+    assert (await api.get("editor", draft["id"]))["state"] == "draft"
+    archived = await api.get("editor", cancelled["id"])
+    assert archived["state"] == "archived" and archived["publicStatus"] == "cancelled"
+
+
+async def test_the_worker_revision_and_status_name_the_system_actor(api: Api) -> None:
+    event = await ended_event(api)
+    await after_end(api, event)
+    status = await api.sql(
+        "SELECT transition_id, actor_type, from_state, to_state FROM event_status_event "
+        "ORDER BY id DESC LIMIT 1"
+    )
+    assert status == [("archive", "system", "published", "archived")]
+
+
 async def test_outcome_rules(api: Api) -> None:
-    event = await followup_event(api)
+    event = await ended_event(api)
     eid = event["id"]
     no_header = await api.request("organizer-fsi", "PUT", f"/api/events/{eid}/outcome", json={})
     assert no_header.status_code == 428
@@ -100,197 +83,141 @@ async def test_outcome_rules(api: Api) -> None:
     )
     assert stale.status_code == 409 and stale.json()["code"] == "conflict"
     bare = await put_outcome(api, eid, {"waived": True})
-    assert bare.status_code == 422 and bare.json()["code"] == "waiver_reason_required"
-    short = await put_outcome(api, eid, {"waived": True, "waivedReason": "kurz"})
-    assert short.status_code == 422
+    assert bare.status_code == 200 and bare.json()["outcome"]["waivedReason"] is None
+    long_reason = await put_outcome(api, eid, {"waived": True, "waivedReason": "x" * 301})
+    assert long_reason.status_code == 422
     zero = await put_outcome(api, eid, {"attendance": 0, "costsCents": 0})
     assert zero.status_code == 200 and zero.json()["outcome"]["attendance"] == 0
     waived = await put_outcome(
         api, eid, {"attendance": 9, "waived": True, "waivedReason": "Zahlen wurden nicht erfasst."}
     )
     assert waived.json()["outcome"]["attendance"] is None and waived.json()["outcome"]["waived"]
-    viewer = await put_outcome(api, eid, {}, user="viewer-fsi")
-    assert viewer.status_code == 403
-    stranger = await put_outcome(api, eid, {}, user="organizer-makers")
-    assert stranger.status_code == 404
+    assert (await put_outcome(api, eid, {}, user="viewer-fsi")).status_code == 403
+    assert (await put_outcome(api, eid, {}, user="organizer-makers")).status_code == 404
     audit = await api.sql("SELECT data FROM audit_entry WHERE action = 'event_outcome'")
     assert audit and "attendance" not in str(audit)
 
 
-async def test_the_outcome_is_locked_before_the_end_and_in_planning(api: Api) -> None:
-    planning = await api.to_state("planning")
-    refused = await put_outcome(api, planning["id"], {"attendance": 1, "costsCents": 0})
-    assert refused.status_code == 409 and refused.json()["code"] == "field_locked"
-    live = await api.to_state("live")
-    early = await put_outcome(api, live["id"], {"attendance": 1, "costsCents": 0})
-    assert early.status_code == 409 and early.json()["code"] == "field_locked"
+async def test_the_outcome_is_open_in_every_state(api: Api) -> None:
+    draft = await api.create_event()
+    assert (
+        await put_outcome(api, draft["id"], {"attendance": 1, "costsCents": 0})
+    ).status_code == 200
+    archived = await api.to_state("archived")
+    late = await put_outcome(api, archived["id"], {"attendance": 5, "costsCents": 10})
+    assert late.status_code == 200 and late.json()["state"] == "archived"
 
 
-async def test_the_retrospective_is_one_document_with_defaults(api: Api) -> None:
-    event = await followup_event(api)
+async def test_the_retrospective_is_one_document_with_defaults_in_every_state(api: Api) -> None:
+    event = await api.to_state("archived")
     eid = event["id"]
+    path = f"/api/events/{eid}/documents"
     created = await ok(
         await api.request(
-            "organizer-fsi",
-            "POST",
-            f"/api/events/{eid}/documents",
-            json={"kind": "retrospective", "bodyMd": "Gut."},
+            "organizer-fsi", "POST", path, json={"kind": "retrospective", "bodyMd": "Gut."}
         ),
         201,
     )
     assert created["title"] == "Rückblick" and created["visibility"] == "org"
     assert created["carryOver"] is False
     again = await api.request(
-        "organizer-fsi",
-        "POST",
-        f"/api/events/{eid}/documents",
-        json={"kind": "retrospective", "bodyMd": "Nochmal."},
+        "organizer-fsi", "POST", path, json={"kind": "retrospective", "bodyMd": "Nochmal."}
     )
     assert again.status_code == 409 and again.json()["code"] == "already_exists"
-    early = await api.to_state("planning")
-    refused = await api.request(
+    early = await api.create_event()
+    first = await api.request(
         "organizer-fsi",
         "POST",
         f"/api/events/{early['id']}/documents",
-        json={"kind": "retrospective", "bodyMd": "zu früh"},
+        json={"kind": "retrospective", "bodyMd": "vorab"},
     )
-    assert refused.status_code == 409 and refused.json()["code"] == "field_locked"
+    assert first.status_code == 201
 
 
-async def test_verify_howto_is_idempotent_reversible_and_dates_the_format_when_archived(
+async def test_the_archive_stays_open_for_the_documentation_but_not_for_the_frame(
     api: Api,
 ) -> None:
-    event = await followup_event(api)
+    event = await api.to_state("archived")
+    eid = event["id"]
+    note = await api.request(
+        "organizer-fsi",
+        "POST",
+        f"/api/events/{eid}/documents",
+        json={"kind": "notes", "title": "Nachtrag", "bodyMd": "Hausmeister war pünktlich."},
+    )
+    assert note.status_code == 201
+    comment = await api.request(
+        "organizer-fsi", "POST", f"/api/events/{eid}/comments", json={"bodyMd": "Danke"}
+    )
+    assert comment.status_code == 201
+    item = await api.request(
+        "organizer-fsi",
+        "POST",
+        f"/api/events/{eid}/checklist/items",
+        json={"text": "Abrechnung", "phase": "followup"},
+    )
+    assert item.status_code == 201
+    quote = await api.request(
+        "organizer-fsi",
+        "POST",
+        f"/api/events/{eid}/quotes",
+        json={"grp": "Technik", "vendor": "Licht GmbH", "amountCents": 100},
+    )
+    assert quote.status_code == 201
+    locked = await api.patch("organizer-fsi", eid, title="Neu")
+    assert locked.status_code == 409 and locked.json()["code"] == "field_locked"
+    status = await api.act("organizer-fsi", eid, "cancel", reason="x", publicReasonCode="other")
+    assert status.status_code == 409 and status.json()["code"] == "invalid_state"
+
+
+async def test_verify_howto_is_idempotent_reversible_and_dates_the_format(api: Api) -> None:
+    event = await ended_event(api)
     eid = event["id"]
     await api.sql(
         "INSERT INTO document (event_id, kind, title, body_md) VALUES (:e, 'howto', 'A', 'x')",
         e=eid,
     )
     await api.sql("UPDATE event SET format_id = (SELECT id FROM format WHERE slug = 'movienight')")
-    first = await ok(
-        await api.request("organizer-fsi", "POST", f"/api/events/{eid}/actions/verify-howto")
-    )
-    second = await ok(
-        await api.request("organizer-fsi", "POST", f"/api/events/{eid}/actions/verify-howto")
-    )
+    url = f"/api/events/{eid}/actions/verify-howto"
+    first = await ok(await api.request("organizer-fsi", "POST", url))
+    second = await ok(await api.request("organizer-fsi", "POST", url))
     assert first["howtoVerifiedAt"] == second["howtoVerifiedAt"] and first["rev"] == second["rev"]
     doc = await api.sql("SELECT verified_by FROM document WHERE event_id = :e", e=eid)
     assert doc[0][0] == "sub-org-fsi"
-    undone = await ok(
-        await api.request("organizer-fsi", "DELETE", f"/api/events/{eid}/actions/verify-howto")
-    )
+    undone = await ok(await api.request("organizer-fsi", "DELETE", url))
     assert undone["howtoVerifiedAt"] is None
-    again = await ok(
-        await api.request("organizer-fsi", "DELETE", f"/api/events/{eid}/actions/verify-howto")
-    )
+    again = await ok(await api.request("organizer-fsi", "DELETE", url))
     assert again["rev"] == undone["rev"]
-    assert (await api.sql("SELECT last_verified_at FROM format WHERE slug = 'movienight'"))[0][
-        0
-    ] is None
-    await put_outcome(api, eid, {"attendance": 1, "costsCents": 1})
-    await ok(
-        await api.request(
-            "organizer-fsi",
-            "POST",
-            f"/api/events/{eid}/documents",
-            json={"kind": "retrospective", "bodyMd": "x"},
-        ),
-        201,
-    )
-    refused = await api.fire("organizer-fsi", eid, "T09")
-    assert refused.json()["code"] == "howto_unverified"
-    await api.sql("UPDATE event SET state = 'archived' WHERE id = :e", e=eid)
-    late = await ok(
-        await api.request("organizer-fsi", "POST", f"/api/events/{eid}/actions/verify-howto")
-    )
-    assert late["howtoUnverified"] is False
+    await ok(await api.request("organizer-fsi", "POST", url))
     assert (await api.sql("SELECT last_verified_at FROM format WHERE slug = 'movienight'"))[0][
         0
     ] is not None
-    locked = await api.request("organizer-fsi", "DELETE", f"/api/events/{eid}/actions/verify-howto")
-    assert locked.status_code == 409 and locked.json()["code"] == "dossier_closed"
-    early = await api.to_state("planning")
+    await after_end(api, event)
+    locked = await api.request("organizer-fsi", "DELETE", url)
+    assert locked.status_code == 409 and locked.json()["code"] == "invalid_state"
+    early = await api.create_event()
     wrong_state = await api.request(
         "organizer-fsi", "POST", f"/api/events/{early['id']}/actions/verify-howto"
     )
     assert wrong_state.status_code == 409
-    submitter = await api.request("viewer-fsi", "POST", f"/api/events/{eid}/actions/verify-howto")
-    assert submitter.status_code == 403
+    assert (await api.request("viewer-fsi", "POST", url)).status_code == 403
 
 
-async def test_t09_dates_the_format_and_its_master_howto(api: Api) -> None:
-    eid = await archived_movienight(api)
-    row = await api.sql("SELECT last_verified_by FROM format WHERE slug = 'movienight'")
-    assert row == [("sub-org-fsi",)]
-    assert eid
-
-
-async def test_t09b_archives_after_thirty_days_with_the_mark_and_the_mail(api: Api) -> None:
-    await seed_principals(api)
-    event = await followup_event(api)
-    eid = event["id"]
-    await api.sql(
-        "INSERT INTO document (event_id, kind, title, body_md) VALUES (:e, 'howto', 'A', 'x')",
-        e=eid,
-    )
+async def test_archiving_dates_nothing_by_itself(api: Api) -> None:
+    event = await ended_event(api)
     await api.sql("UPDATE event SET format_id = (SELECT id FROM format WHERE slug = 'movienight')")
-    entered = (await api.sql("SELECT max(at) FROM event_status_event WHERE to_state = 'followup'"))[
-        0
-    ][0]
-    later = entered + timedelta(days=31)
-    result = await advance_states({"advance_sessionmaker": api.maker, "redis": api.pool}, now=later)
-    assert "archived=1" in result
-    archived = await api.get("organizer-fsi", eid)
-    assert archived["state"] == "archived" and archived["howtoUnverified"] is True
+    await after_end(api, event)
+    archived = await api.get("organizer-fsi", event["id"])
+    assert archived["state"] == "archived"
     assert (await api.sql("SELECT last_verified_at FROM format WHERE slug = 'movienight'"))[0][
         0
     ] is None
-    kinds = await api.sql("SELECT kind, params FROM notification WHERE kind = 'auto_archived'")
-    assert kinds and kinds[0][1]["howtoUnverified"] is True
-    assert set(kinds[0][1]["missing"]) == {"retrospective", "outcome", "howto"}
-    sent = [job for job in api.pool.jobs if job[0] == "send_mail"]
-    assert sent and "Anleitung" in str(sent[-1])
-
-
-async def test_t08b_archives_imported_dossiers_without_the_follow_up(api: Api) -> None:
-    event = await api.to_state("live")
-    await api.sql("UPDATE event SET origin_kind = 'imported' WHERE id = :e", e=event["id"])
-    ended = datetime.fromisoformat(event["endsAt"])
-    result = await advance_states(
-        {"advance_sessionmaker": api.maker, "redis": api.pool}, now=ended + timedelta(hours=13)
-    )
-    assert "archived=1" in result
-
-
-async def test_one_reminder_per_entry_and_a_new_one_after_t10(api: Api) -> None:
-    await seed_principals(api)
-    event = await followup_event(api)
-    eid = event["id"]
-    ctx = {"redis": api.pool, "followup_sessionmaker": api.maker}
-    entered = (await api.sql("SELECT max(at) FROM event_status_event WHERE to_state = 'followup'"))[
-        0
-    ][0]
-    assert "events=0" in await send_followup_reminders(ctx, now=entered + timedelta(days=6))
-    first = await send_followup_reminders(ctx, now=entered + timedelta(days=7, hours=1))
-    assert "events=1" in first and "mails=1" in first
-    second = await send_followup_reminders(ctx, now=entered + timedelta(days=8))
-    assert "mails=0" in second
-    rows = await api.sql("SELECT count(*) FROM notification WHERE kind = 'followup_reminder'")
-    assert rows == [(1,)]
-    await api.sql("UPDATE event SET state = 'archived' WHERE id = :e", e=eid)
-    reopened = await api.fire("editor", eid, "T10", note="Noch etwas nachtragen")
-    assert reopened.json()["state"] == "followup"
-    again = (await api.sql("SELECT max(at) FROM event_status_event WHERE to_state = 'followup'"))[
-        0
-    ][0]
-    assert "mails=1" in await send_followup_reminders(ctx, now=again + timedelta(days=7, hours=1))
-    assert "skipped" in await send_followup_reminders({"redis": None}, now=again)
 
 
 async def test_a_foreign_edition_does_not_date_the_master_of_another_organization(
     api: Api,
 ) -> None:
-    event = await followup_event(api)
+    event = await ended_event(api)
     eid = event["id"]
     await api.sql(
         "INSERT INTO document (event_id, kind, title, body_md) VALUES (:e, 'howto', 'A', 'x')",
@@ -308,3 +235,23 @@ async def test_a_foreign_edition_does_not_date_the_master_of_another_organizatio
     assert done["howtoVerifiedAt"] is not None
     rows = await api.sql("SELECT last_verified_at FROM format WHERE slug = 'movienight'")
     assert rows[0][0] is None
+
+
+async def test_the_worker_skips_vanished_and_changed_dossiers_and_survives_a_failure(
+    api: Api, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from uuid import UUID, uuid4
+
+    import worker.advance as advance
+
+    maker = api.maker
+    assert await advance.archive_one(maker, api.pool, uuid4()) == "skipped"
+    draft = await api.create_event()
+    assert await advance.archive_one(maker, api.pool, UUID(draft["id"])) == "skipped"
+    event = await ended_event(api)
+
+    async def broken(*_args: object) -> str:
+        raise RuntimeError("down")
+
+    monkeypatch.setattr(advance, "archive_one", broken)
+    assert await after_end(api, event) == "archived=0 failed=1"

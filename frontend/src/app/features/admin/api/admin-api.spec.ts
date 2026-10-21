@@ -26,10 +26,10 @@ describe('admin API services', () => {
       slug: 'a',
       name: 'A',
     });
-    api.updateOrganization('o1', { trusted: true }).subscribe();
+    api.updateOrganization('o1', { active: false }).subscribe();
     expect(
       http.expectOne({ method: 'PATCH', url: '/api/admin/organizations/o1' }).request.body,
-    ).toEqual({ trusted: true });
+    ).toEqual({ active: false });
     api.organizations().subscribe();
     http.expectOne('/api/admin/organizations').flush([]);
     api.venues().subscribe();

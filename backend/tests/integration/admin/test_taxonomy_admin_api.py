@@ -20,7 +20,7 @@ async def test_organization_create_patch_and_list(api: Api) -> None:
     made = await api.request("editor", "POST", ORGS, json=org(instagram=["@neu.gruppe"]))
     assert made.status_code == 201
     row = made.json()
-    assert row["trusted"] is False and row["active"] is True and row["instagram"] == ["neu.gruppe"]
+    assert "trusted" not in row and row["active"] is True and row["instagram"] == ["neu.gruppe"]
     patched = await api.request(
         "editor",
         "PATCH",
@@ -84,36 +84,6 @@ async def test_unknown_references_and_values_are_422(api: Api) -> None:
     assert selfparent.json()["code"] == "organization_cycle"
     badhandle = await api.request("editor", "POST", ORGS, json=org("x1", instagram=["no way"]))
     assert badhandle.status_code == 422
-
-
-async def test_trusted_needs_the_mapping_right(api: Api) -> None:
-    refused = await api.request("editor", "POST", ORGS, json=org(trusted=True))
-    assert refused.status_code == 403
-    allowed = await api.request("editor", "POST", ORGS, json=org(trusted=False))
-    assert allowed.status_code == 201
-    uid = allowed.json()["id"]
-    assert (
-        await api.request("editor", "PATCH", f"{ORGS}/{uid}", json={"trusted": True})
-    ).status_code == 403
-    same = await api.request(
-        "editor", "PATCH", f"{ORGS}/{uid}", json={"trusted": False, "short": "N2"}
-    )
-    assert same.status_code == 200
-    done = await api.request("admin", "PATCH", f"{ORGS}/{uid}", json={"trusted": True})
-    assert done.status_code == 200 and done.json()["trusted"] is True
-    async with api.maker() as session:
-        audits = (
-            await session.execute(
-                text(
-                    "SELECT target_type, data FROM audit_entry "
-                    "WHERE action = 'role_mapping_change' AND target_id = :t"
-                ),
-                {"t": uid},
-            )
-        ).all()
-    assert [(a.target_type, a.data) for a in audits] == [("organization", {"trusted": True})]
-    created_trusted = await api.request("admin", "POST", ORGS, json=org("vertraut", trusted=True))
-    assert created_trusted.status_code == 201 and created_trusted.json()["trusted"] is True
 
 
 async def test_category_tree_cycle_and_patch(api: Api) -> None:

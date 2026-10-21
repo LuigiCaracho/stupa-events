@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 
-from app.modules.pipeline.actions import (
+from app.modules.events.postcommit import (
     FEED_VERSION_KEY,
     REBUILD_JOB,
     REBUILD_JOB_ID,

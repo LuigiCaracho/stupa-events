@@ -30,10 +30,8 @@ async def _people(api: Api, session: Any) -> None:
     await add_principal(session, "sub-editor", ("events-editor",))
     await add_principal(session, "sub-editor-2", ("events-editor",))
     await add_principal(session, "sub-stranger", ("events-stupa",))
-    approver = await add_principal(session, "sub-app-fsi")
     organizer = await add_principal(session, "sub-org-fsi")
     submitter = await add_principal(session, "sub-sub-fsi")
-    await add_member(session, approver, fsi, "approver")
     await add_member(session, organizer, fsi, "organizer")
     await add_member(session, submitter, fsi, "submitter")
     other = await add_principal(session, "sub-org-makers")
@@ -46,12 +44,13 @@ async def test_notification_fanout(api: Api) -> None:
         await _people(api, session)
         row = await load_event(session, event["id"])
         who = lambda kind, actor=None: recipients_for(session, kind, row, actor)  # noqa: E731
-        assert set(await who("review_requested")) == {"sub-app-fsi", "sub-editor", "sub-editor-2"}
-        assert set(await who("changes_requested")) == {row.created_by, "sub-org-fsi"}
-        assert set(await who("comment_added")) >= {"sub-app-fsi", "sub-org-fsi", row.created_by}
+        published = set(await who("published"))
+        assert published >= {"sub-editor", "sub-editor-2", "sub-org-fsi", "sub-sub-fsi"}
+        assert "sub-stranger" not in published and "sub-org-makers" not in published
+        assert set(await who("cancelled")) >= {row.created_by, "sub-org-fsi"}
+        assert set(await who("comment_added")) >= {"sub-org-fsi", row.created_by}
         assert "sub-org-makers" not in await who("comment_added")
-        assert row.created_by not in await who("transition_done", row.created_by)
-        assert "sub-stranger" not in await who("review_requested")
+        assert row.created_by not in await who("published", row.created_by)
 
 
 async def test_recipients_without_organization(api: Api) -> None:
@@ -60,7 +59,7 @@ async def test_recipients_without_organization(api: Api) -> None:
         await _people(api, session)
         row = await load_event(session, event["id"])
         row.organization_id = None
-        assert set(await recipients_for(session, "review_requested", row, None)) == {
+        assert set(await recipients_for(session, "published", row, None)) == {
             "sub-editor",
             "sub-editor-2",
         }
@@ -94,7 +93,7 @@ async def test_mail_requires_redis(api: Api, caplog: pytest.LogCaptureFixture) -
         await add_principal(session, "sub-editor", ("events-editor",), "lena@example.org")
         row = await load_event(session, event["id"])
         pending = await notify_event(
-            session, "review_requested", row, {"actorName": "Ada"}, actor_sub="sub-someone"
+            session, "published", row, {"actorName": "Ada"}, actor_sub="sub-someone"
         )
         await session.commit()
     assert len(pending) == 1
@@ -127,10 +126,10 @@ async def test_actor_gets_nothing_and_no_email_means_no_mail(api: Api) -> None:
         await session.execute(text("UPDATE principal SET email = NULL WHERE sub = 'sub-a'"))
         pending = await notify(
             session,
-            "task_assigned",
+            "comment_added",
             ["sub-a", "sub-me"],
             row,
-            {"itemText": "X"},
+            {"actorName": "Ada"},
             None,
             actor_sub="sub-me",
         )

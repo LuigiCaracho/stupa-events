@@ -18,8 +18,8 @@ def test_has_in_org_and_scope_helpers() -> None:
         permissions={"library.read"},
         org_roles={"fsi": frozenset({"organizer"})},
     )
-    assert principal.has_in_org("event.submit", "fsi") is True
-    assert principal.has_in_org("event.submit", "makers") is False
+    assert principal.has_in_org("event.publish", "fsi") is True
+    assert principal.has_in_org("event.publish", "makers") is False
     assert principal.has_in_org("library.read", "makers") is True
     capped = Principal(sub="s", roles=["admin"], scope_permissions=frozenset({"library.read"}))
     assert capped.has_in_org("event.edit", "fsi") is False

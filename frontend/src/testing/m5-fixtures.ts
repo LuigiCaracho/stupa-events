@@ -186,7 +186,7 @@ export function makeCalendarEntry(over: Partial<CalendarEntry> = {}): CalendarEn
     allDay: false,
     startsOn: '2026-10-20',
     endsOn: '2026-10-20',
-    state: 'live',
+    state: 'published',
     publicStatus: 'scheduled',
     organization: { slug: 'fsi', short: 'FSI', colorToken: 'petrol' },
     category: null,

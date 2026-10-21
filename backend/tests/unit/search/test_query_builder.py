@@ -66,7 +66,7 @@ def test_filters_become_bound_conditions() -> None:
 def test_the_template_mode_orders_by_format_freshness_and_clonable_states() -> None:
     built = query.build("events", READER, Filters(clonable=True), [], 10, 0, order="template")
     text = sql_of(built.page)
-    assert "fmt_verified_at DESC NULLS LAST" in text and "('live', 'followup')" in text
+    assert "fmt_verified_at DESC NULLS LAST" in text and "e.state = 'published'" in text
     assert "WHERE true" not in text or "true" in text
 
 

@@ -8,33 +8,23 @@ from tests.integration.events.harness import Api, future
 
 pytestmark = pytest.mark.integration
 
-OPS = ("read", "listed", "create", "propose", "patch", "T01", "T02", "T04", "poster", "exception")
-ALL_OK = dict(read=200, listed=True, create=201, propose=201, patch=200, T01=200, T02=200, T04=200)
-ALL_OK |= dict(poster=201, exception=200)
-NO_WRITE = dict(
-    read=200, listed=True, create=404, propose=201, patch=403, T01=403, T02=403, T04=403
-)
-NO_WRITE |= dict(poster=403, exception=403)
-FOREIGN_WITH_GATE = dict(
-    read=404, listed=False, create=404, propose=201, patch=404, T01=404, T02=404
-)
-FOREIGN_WITH_GATE |= dict(T04=404, poster=404, exception=403)
-NO_ORG = dict(read=404, listed=False, create=404, propose=201, patch=403, T01=404, T02=404, T04=404)
-NO_ORG |= dict(poster=403, exception=403)
-ORGANIZER = ALL_OK | dict(T04=403, exception=403)
+OPS = ("read", "listed", "create", "patch", "publish", "archive", "poster")
+ALL_OK = dict(read=200, listed=True, create=201, patch=200, publish=200, archive=200, poster=201)
+NO_WRITE = dict(read=200, listed=True, create=404, patch=403, publish=403, archive=403, poster=403)
+FOREIGN = dict(read=404, listed=False, create=404, patch=404, publish=404, archive=404, poster=404)
+NO_RIGHT = FOREIGN | dict(publish=403, archive=403)
+NO_ORG = NO_RIGHT | dict(patch=403, poster=403)
 
-# Role x relation to the fsi dossier x operation, exact (PLAN 5.5, contract M2 6.2).
+# Role x relation to the fsi dossier x operation, exact (PLAN 5.5, contract M5b 4.2).
 MATRIX: dict[str, dict[str, int | bool]] = {
     "admin": ALL_OK,
     "editor": ALL_OK,
     "stupa": NO_WRITE,
-    "organizer-fsi": ORGANIZER,
-    "approver-fsi": ORGANIZER,
+    "organizer-fsi": ALL_OK,
     "submitter-fsi": NO_WRITE | dict(create=201),
     "viewer-fsi": NO_WRITE,
-    "organizer-makers": FOREIGN_WITH_GATE,
-    "approver-stupa": FOREIGN_WITH_GATE,
-    "submitter-ekhg": FOREIGN_WITH_GATE,
+    "organizer-makers": FOREIGN,
+    "submitter-ekhg": NO_RIGHT,
     "member": NO_ORG,
     "nobody": NO_ORG,
 }
@@ -49,59 +39,23 @@ def body(api: Api, org: str = "fsi") -> dict[str, object]:
     }
 
 
-def proposal_body() -> dict[str, object]:
-    return {"title": "Vorschlag", "startsAt": future().isoformat()}
-
-
-async def event_in(api: Api, state: str, title: str) -> dict:
-    """An event made by the organizer, moved to `planning` or `in_review` (with exception)."""
-    event = await api.create_event(user="organizer-fsi", title=title)
-    eid = event["id"]
-    if state == "idea":
-        return event
-    await api.fire("organizer-fsi", eid, "T01")
-    if state == "in_review":
-        await api.request(
-            "editor",
-            "POST",
-            f"/api/events/{eid}/image-exception",
-            json={"reason": "Test ohne Motiv"},
-        )
-        await api.fire("organizer-fsi", eid, "T02")
-    return (await api.request("editor", "GET", f"/api/events/{eid}")).json()
-
-
 async def observed(api: Api, user: str) -> dict[str, int | bool]:
     """Run every operation of `OPS` as `user` on fresh fsi dossiers; return the outcomes."""
-    idea = {n: await event_in(api, "idea", f"Idee {n}") for n in ("a", "b", "c", "d")}
-    planning = await event_in(api, "planning", "Zur Einreichung")
-    review = await event_in(api, "in_review", "Zur Freigabe")
-    a = idea["a"]
+    drafts = {n: await api.create_event(user="organizer-fsi", title=f"Idee {n}") for n in "abcd"}
+    a = drafts["a"]
     listing = (await api.request(user, "GET", "/api/events")).json()["items"]
     return {
         "read": (await api.request(user, "GET", f"/api/events/{a['id']}")).status_code,
         "listed": a["id"] in [e["id"] for e in listing],
         "create": (await api.request(user, "POST", "/api/events", json=body(api))).status_code,
-        "propose": (
-            await api.request(user, "POST", "/api/events", json=proposal_body())
-        ).status_code,
         "patch": (
             await api.request(
                 user, "PATCH", f"/api/events/{a['id']}", json={"rev": a["rev"], "summary": "neu"}
             )
         ).status_code,
-        "T01": (await api.fire(user, idea["b"]["id"], "T01")).status_code,
-        "T02": (await api.fire(user, planning["id"], "T02")).status_code,
-        "T04": (await api.fire(user, review["id"], "T04")).status_code,
-        "poster": (await api.upload_poster(user, idea["c"]["id"])).status_code,
-        "exception": (
-            await api.request(
-                user,
-                "POST",
-                f"/api/events/{idea['d']['id']}/image-exception",
-                json={"reason": "Test ohne Motiv"},
-            )
-        ).status_code,
+        "publish": (await api.act(user, drafts["b"]["id"], "publish")).status_code,
+        "archive": (await api.act(user, drafts["d"]["id"], "archive")).status_code,
+        "poster": (await api.upload_poster(user, drafts["c"]["id"])).status_code,
     }
 
 
@@ -115,7 +69,6 @@ async def test_a_foreign_dossier_does_not_exist_for_the_caller(api: Api, user: s
     eid = (await api.create_event(user="organizer-fsi"))["id"]
     for url in (
         f"/api/events/{eid}",
-        f"/api/events/{eid}/guards/T01",
         f"/api/events/{eid}/poster/file",
         f"/api/events/{eid}/revisions",
     ):
@@ -124,14 +77,11 @@ async def test_a_foreign_dossier_does_not_exist_for_the_caller(api: Api, user: s
         assert response.json()["code"] == "not_found"
 
 
-async def test_the_partner_account_gets_404_on_foreign_dossiers_and_guards(api: Api) -> None:
+async def test_a_foreign_organizer_gets_404_and_a_partner_without_the_right_403(api: Api) -> None:
     eid = (await api.create_event(user="organizer-fsi"))["id"]
-    for transition in ("T01", "T02", "T04", "T05"):
-        assert (await api.fire("submitter-ekhg", eid, transition)).status_code == 404
-        guards = await api.request(
-            "submitter-ekhg", "GET", f"/api/events/{eid}/guards/{transition}"
-        )
-        assert guards.status_code == 404
+    for action in ("publish", "unpublish", "archive", "cancel"):
+        assert (await api.act("organizer-makers", eid, action, if_match_rev=1)).status_code == 404
+        assert (await api.act("submitter-ekhg", eid, action, if_match_rev=1)).status_code == 403
     own = await api.create_event(user="submitter-ekhg", org="ekhg", title="Partnerfest")
     listed = (await api.request("submitter-ekhg", "GET", "/api/events")).json()["items"]
     assert [e["id"] for e in listed] == [own["id"]]
@@ -142,12 +92,12 @@ async def test_create_in_a_foreign_organization_is_404_for_an_org_member(api: Ap
     assert response.status_code == 404 and response.json()["code"] == "not_found"
 
 
-async def test_a_viewer_creates_in_no_organization_but_may_propose(api: Api) -> None:
+async def test_a_viewer_creates_in_no_organization_and_a_dossier_needs_one(api: Api) -> None:
     for org in ("fsi", "makers"):
         response = await api.request("viewer-fsi", "POST", "/api/events", json=body(api, org))
         assert response.status_code == 404 and response.json()["code"] == "not_found"
-    proposal = await api.request("viewer-fsi", "POST", "/api/events", json=proposal_body())
-    assert proposal.status_code == 201 and proposal.json()["organization"] is None
+    bare = {"title": "Vorschlag", "startsAt": future().isoformat()}
+    assert (await api.request("viewer-fsi", "POST", "/api/events", json=bare)).status_code == 422
 
 
 async def test_unauthenticated_is_401_everywhere(api: Api) -> None:
@@ -169,32 +119,35 @@ async def test_submitter_works_on_own_dossiers_only(api: Api) -> None:
     assert (
         await api.request("submitter-fsi", "PATCH", f"/api/events/{theirs['id']}", json=patch)
     ).status_code == 403
-    assert (await api.fire("submitter-fsi", mine["id"], "T01")).status_code == 200
-    assert (await api.fire("submitter-fsi", theirs["id"], "T01")).status_code == 403
+    assert (await api.act("submitter-fsi", mine["id"], "publish")).status_code == 403
     assert (await api.upload_poster("submitter-fsi", theirs["id"])).status_code == 403
     assert (await api.upload_poster("submitter-fsi", mine["id"])).status_code == 201
-    assert (await api.fire("submitter-fsi", mine["id"], "T02")).status_code == 403
 
 
-async def test_untrusted_org_approver_cannot_approve_but_trusted_can(api: Api) -> None:
-    fsi = await api.approved_ready_event()
-    assert (await api.fire("approver-fsi", fsi["id"], "T04")).status_code == 403
-    stupa = await api.create_event(user="editor", org="stupa", title="STUPA Sitzung")
-    await api.fire("editor", stupa["id"], "T01")
-    await api.upload_poster("editor", stupa["id"])
-    await api.request(
-        "editor",
-        "POST",
-        f"/api/events/{stupa['id']}/image-exception",
-        json={"reason": "Sitzung ohne Motiv"},
-    )
-    await api.fire("editor", stupa["id"], "T02")
-    assert (await api.fire("approver-stupa", stupa["id"], "T04")).status_code == 200
+async def test_a_publish_policy_can_bind_publishing_to_the_editorial_team(api: Api) -> None:
+    from app.settings import get_settings
+    from tests._support.factories import make_settings
+
+    app = api.client._transport.app  # type: ignore[attr-defined]
+    app.dependency_overrides[get_settings] = lambda: make_settings(publish_requires_editor=True)
+    mine = await api.create_event(user="organizer-fsi")
+    refused = await api.act("organizer-fsi", mine["id"], "publish")
+    assert refused.status_code == 403
+    assert (await api.act("editor", mine["id"], "publish")).status_code == 200
 
 
 async def test_group_mapping_row_grants_a_role(api: Api) -> None:
-    await api.add_user("mapped", {"Campus-Gruppe": ("approver", "makers")})
+    await api.add_user("mapped", {"Campus-Gruppe": ("organizer", "makers")})
     made = await api.request("mapped", "POST", "/api/events", json=body(api, "makers"))
     assert made.status_code == 201
     unmapped = await api.request("organizer-fsi", "POST", "/api/events", json=body(api, "makers"))
     assert unmapped.status_code == 404
+
+
+async def test_a_reader_of_the_dossier_who_publishes_elsewhere_gets_403_not_404(api: Api) -> None:
+    await api.add_user(
+        "split", {"makers-team": ("organizer", "makers"), "fsi-readers": ("viewer", "fsi")}
+    )
+    eid = (await api.create_event(user="organizer-fsi"))["id"]
+    refused = await api.act("split", eid, "publish")
+    assert refused.status_code == 403

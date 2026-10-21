@@ -33,11 +33,9 @@ async def upload(
     )
 
 
-async def planning_event(api: Api, user: str = "organizer-fsi", **over: Any) -> str:
-    """Create a dossier in `planning`; return its id."""
-    event = await api.create_event(user=user, **over)
-    assert (await api.fire(user, event["id"], "T01")).status_code == 200
-    return event["id"]
+async def draft_event(api: Api, user: str = "organizer-fsi", **over: Any) -> str:
+    """Create a dossier in `draft`; return its id."""
+    return (await api.create_event(user=user, **over))["id"]
 
 
 async def clean_poster(api: Api, event_id: str, user: str = "organizer-fsi") -> dict:
@@ -48,11 +46,12 @@ async def clean_poster(api: Api, event_id: str, user: str = "organizer-fsi") -> 
     return out.json()
 
 
-async def live_event(api: Api) -> dict:
-    """A dossier in `live` with a clean poster."""
-    event = await api.approved_ready_event()
-    assert (await api.fire("editor", event["id"], "T04")).status_code == 200
-    assert (await api.fire("editor", event["id"], "T05")).status_code == 200
+async def published_event(api: Api) -> dict:
+    """A published dossier with a clean poster."""
+    event = await api.create_event()
+    await api.with_poster(event["id"])
+    await api.confirm_location(event["id"])
+    assert (await api.act("organizer-fsi", event["id"], "publish")).status_code == 200
     return await api.get("editor", event["id"])
 
 

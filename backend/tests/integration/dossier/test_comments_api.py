@@ -6,7 +6,7 @@ import pytest
 
 from tests._support import samples
 from tests._support.factories import png_bytes
-from tests.integration.dossier.helpers import planning_event, seed_principals, upload
+from tests.integration.dossier.helpers import draft_event, published_event, seed_principals, upload
 from tests.integration.events.harness import Api
 
 pytestmark = pytest.mark.integration
@@ -18,8 +18,8 @@ async def comment(api: Api, eid: str, user: str = "editor", **over: object):  # 
 
 
 async def test_anchor_validation(api: Api) -> None:
-    eid = await planning_event(api)
-    other = await planning_event(api)
+    eid = await draft_event(api)
+    other = await draft_event(api)
     doc = (
         await api.request(
             "organizer-fsi",
@@ -67,7 +67,7 @@ async def test_anchor_validation(api: Api) -> None:
 
 async def test_replies_resolve_and_reopen(api: Api) -> None:
     await seed_principals(api)
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     root = (await comment(api, eid, user="organizer-fsi", anchor={"field": "title"})).json()
     reply = await comment(api, eid, user="editor", parentId=root["id"])
     assert reply.status_code == 201 and reply.json()["anchor"] is None
@@ -94,11 +94,11 @@ async def test_replies_resolve_and_reopen(api: Api) -> None:
     not_root = await api.request("editor", "POST", f"/api/comments/{reply.json()['id']}/resolve")
     assert not_root.status_code == 409 and not_root.json()["code"] == "not_a_root"
     kinds = [r[0] for r in await api.sql("SELECT kind FROM notification ORDER BY created_at")]
-    assert kinds.count("comment_added") >= 1 and kinds.count("comment_resolved") == 1
+    assert kinds.count("comment_added") >= 1 and "comment_resolved" not in kinds
 
 
 async def test_comments_are_append_only_in_the_database(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     made = (await comment(api, eid)).json()
     with pytest.raises(Exception, match="append-only"):
         await api.sql("UPDATE comment SET body_md = 'x' WHERE id = :i", i=made["id"])
@@ -107,62 +107,33 @@ async def test_comments_are_append_only_in_the_database(api: Api) -> None:
     await api.sql("UPDATE comment SET resolved_by = 'x' WHERE id = :i", i=made["id"])
 
 
-async def test_t03_requires_an_open_root_comment(api: Api) -> None:
-    event = await api.approved_ready_event()
-    eid = event["id"]
-    blocked = await api.fire("editor", eid, "T03", note="Bitte ändern")
-    assert blocked.status_code == 422 and blocked.json()["code"] == "open_comment_required"
-    made = (await comment(api, eid)).json()
-    assert (await api.fire("editor", eid, "T03", note="Bitte ändern")).status_code == 200
-    kinds = [r[0] for r in await api.sql("SELECT kind FROM notification")]
-    assert "changes_requested" in kinds
-    resolved = await api.request("editor", "POST", f"/api/comments/{made['id']}/resolve")
-    assert resolved.status_code == 200
-
-
-async def test_an_open_poster_question_blocks_t04_until_it_is_resolved(api: Api) -> None:
-    event = await api.approved_ready_event()
-    eid = event["id"]
-    question = (await comment(api, eid, anchor={"field": "hero"})).json()
-    report = (await api.request("editor", "GET", f"/api/events/{eid}/guards/T04")).json()
-    assert "open_comment_on_hero" in [r["code"] for r in report["reasons"]]
-    blocked = await api.fire("editor", eid, "T04")
-    assert blocked.status_code == 422 and blocked.json()["code"] == "open_comment_on_hero"
-    fresh = (await api.upload_poster("editor", eid, data=png_bytes(1400, 900))).json()
-    assert await api.process_poster(fresh["id"]) == "clean"
-    again = await api.fire("editor", eid, "T04")
-    assert again.status_code == 422 and again.json()["code"] == "open_comment_on_hero"
-    await api.request("editor", "POST", f"/api/comments/{question['id']}/resolve")
-    assert (await api.fire("editor", eid, "T04")).status_code == 200
+async def test_open_comments_never_block_publishing(api: Api) -> None:
+    eid = await draft_event(api)
+    await comment(api, eid, anchor={"field": "hero"})
+    assert (await api.act("organizer-fsi", eid, "publish")).status_code == 200
 
 
 async def test_a_question_on_a_poster_file_survives_the_replacement(api: Api) -> None:
-    event = await api.approved_ready_event()
+    event = await published_event(api)
     eid, first = event["id"], event["poster"]["id"]
-    await comment(api, eid, anchor={"attachmentId": first})
+    made = await comment(api, eid, anchor={"attachmentId": first})
+    assert made.status_code == 201
     fresh = (await api.upload_poster("editor", eid, data=png_bytes(1400, 900))).json()
     assert await api.process_poster(fresh["id"]) == "clean"
-    report = (await api.request("editor", "GET", f"/api/events/{eid}/guards/T04")).json()
-    assert "open_comment_on_hero" in [r["code"] for r in report["reasons"]]
+    threads = (await api.request("editor", "GET", f"/api/events/{eid}/comments")).json()
+    assert [t["anchor"]["attachmentId"] for t in threads] == [first]
 
 
-async def test_transitions_notify_the_right_people(api: Api) -> None:
+async def test_publishing_and_comments_notify_the_right_people(api: Api) -> None:
     await seed_principals(api)
-    event = await api.approved_ready_event()
+    event = await api.create_event()
+    await api.act("organizer-fsi", event["id"], "publish")
     rows = [tuple(r) for r in await api.sql("SELECT recipient_sub, kind FROM notification")]
-    assert ("sub-editor", "review_requested") in rows
-    assert all(sub != "sub-org-fsi" for sub, _ in rows)
-    await api.fire("editor", event["id"], "T04")
-    after = [tuple(r) for r in await api.sql("SELECT recipient_sub, kind FROM notification")]
-    assert ("sub-org-fsi", "transition_done") in after
-    assert (
-        await api.sql(
-            "SELECT count(*) FROM notification WHERE recipient_sub = 'sub-editor' AND kind = 'transition_done'"
-        )
-    )[0][0] == 0
+    assert ("sub-editor", "published") in rows
+    assert all(sub != "sub-org-fsi" for sub, kind in rows if kind == "published")
 
 
 async def test_a_pdf_in_a_comment_anchor_is_not_a_poster_target(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     pdf = (await upload(api, "organizer-fsi", eid, "other", "a.pdf", samples.pdf_bytes())).json()
     assert (await comment(api, eid, anchor={"attachmentId": pdf["id"]})).status_code == 201

@@ -27,7 +27,7 @@ describe('AdoptDialogComponent', () => {
   it('asks for your open dossiers only', async () => {
     const { api } = await setup();
     expect(api.listCards).toHaveBeenCalledWith(
-      expect.objectContaining({ mine: true, state: ['idea', 'planning', 'in_review', 'approved', 'live', 'followup'] }),
+      expect.objectContaining({ mine: true, state: ['draft', 'published'] }),
     );
     expect(screen.getByRole('dialog', { name: 'In Dossier übernehmen' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Übernehmen' })).toBeDisabled();

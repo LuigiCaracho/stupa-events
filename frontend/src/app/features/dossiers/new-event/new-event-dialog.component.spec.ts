@@ -4,23 +4,19 @@ import { render, screen } from '@testing-library/angular';
 import { ToastService } from '@stupa-makers/ui-kit';
 import userEvent from '@testing-library/user-event';
 import { of, throwError } from 'rxjs';
-import { AuthService } from '@core/auth/auth.service';
 import { runAxe } from '../../../../testing/a11y';
 import { EventsApi } from '../api/events-api.service';
-import { FSI, fakeApi, fakeAuth, makeEvent } from '../../../../testing/event-fixtures';
+import { FSI, fakeApi, makeEvent } from '../../../../testing/event-fixtures';
 import { NewEventDialogComponent } from './new-event-dialog.component';
 
 const MAKERS = { id: 'org-makers', slug: 'makers', name: 'MAKERS', short: 'MKR' };
 
 describe('NewEventDialogComponent', () => {
-  async function setup(api = fakeApi(), auth = fakeAuth()) {
+  async function setup(api = fakeApi()) {
     const created = jest.fn();
     const closed = jest.fn();
     const view = await render(NewEventDialogComponent, {
-      providers: [
-        { provide: EventsApi, useValue: api },
-        { provide: AuthService, useValue: auth },
-      ],
+      providers: [{ provide: EventsApi, useValue: api }],
       on: { created, closed },
     });
     await view.fixture.whenStable();
@@ -46,15 +42,7 @@ describe('NewEventDialogComponent', () => {
   }
 
   it('validates title, start and organization before it posts', async () => {
-    const { api } = await setup(
-      fakeApi({ organizations: jest.fn(() => of([FSI, MAKERS])) }),
-      fakeAuth({
-        organizations: () => [
-          { slug: 'fsi', role: 'organizer' },
-          { slug: 'makers', role: 'organizer' },
-        ],
-      }),
-    );
+    const { api } = await setup(fakeApi({ organizations: jest.fn(() => of([FSI, MAKERS])) }));
     await userEvent.click(screen.getByRole('button', { name: 'Anlegen' }));
     expect(api.create).not.toHaveBeenCalled();
     expect(screen.getByText('Titel fehlt.')).toBeInTheDocument();
@@ -73,14 +61,16 @@ describe('NewEventDialogComponent', () => {
       allDay: false,
       organizationId: 'org-fsi',
     });
-    expect(created).toHaveBeenCalledWith(makeEvent({ state: 'idea' }));
+    expect(created).toHaveBeenCalledWith(makeEvent({ state: 'draft' }));
   });
 
-  it('offers only the own organizations unless the principal reads all', async () => {
-    const api = fakeApi({ organizations: jest.fn(() => of([FSI, MAKERS])) });
-    await setup(api, fakeAuth({ organizations: () => [{ slug: 'makers', role: 'organizer' }] }));
+  it('offers the organizations the server lists as creatable', async () => {
+    await setup(fakeApi({ organizations: jest.fn(() => of([FSI, MAKERS])) }));
     await userEvent.click(screen.getByRole('combobox', { name: /Organisation/ }));
-    expect(screen.getAllByRole('option').map((o) => o.textContent?.trim())).toEqual(['MAKERS']);
+    expect(screen.getAllByRole('option').map((o) => o.textContent?.trim())).toEqual([
+      'Fachschaft Informatik',
+      'MAKERS',
+    ]);
   });
 
   it('offers the category tree with children indented under their parent', async () => {
@@ -131,41 +121,12 @@ describe('NewEventDialogComponent', () => {
     expect(toasts()).toEqual(['Für diese Organisation darfst du keine Events anlegen.']);
   });
 
-  it('shows a proposal without organization when the principal has none', async () => {
-    const { api, created } = await setup(
-      fakeApi({ organizations: jest.fn(() => of([])) }),
-      fakeAuth({ organizations: () => [] }),
-    );
-    expect(screen.getByRole('dialog', { name: 'Event vorschlagen' })).toBeInTheDocument();
-    const field = screen.getByLabelText('Organisation');
-    expect(field).toBeDisabled();
-    expect(field).toHaveValue('Vorschlag, ohne Organisation');
-    expect(
-      screen.getByText('Du kannst bis zu 5 Vorschläge gleichzeitig offen haben.'),
-    ).toBeInTheDocument();
-    await fillRequired();
-    await userEvent.click(screen.getByRole('button', { name: 'Anlegen' }));
-    expect(api.create).toHaveBeenCalledWith(
-      expect.not.objectContaining({ organizationId: expect.anything() }),
-    );
-    expect(created).toHaveBeenCalled();
-  });
-
-  it('tells about the quota of five open proposals', async () => {
-    const quota = new HttpErrorResponse({
-      status: 422,
-      error: { status: 422, code: 'proposal_quota_exceeded' },
-    });
-    const { toasts } = await setup(
-      fakeApi({
-        organizations: jest.fn(() => of([])),
-        create: jest.fn(() => throwError(() => quota)),
-      }),
-      fakeAuth({ organizations: () => [] }),
-    );
-    await fillRequired();
-    await userEvent.click(screen.getByRole('button', { name: 'Anlegen' }));
-    expect(toasts()[0]).toContain('Du hast schon 5 offene Vorschläge.');
+  it('says so and does not offer to create when the person has no organization', async () => {
+    const { api } = await setup(fakeApi({ organizations: jest.fn(() => of([])) }));
+    expect(screen.getByRole('dialog', { name: 'Neues Event' })).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('keine Organisation freigeschaltet');
+    expect(screen.getByRole('button', { name: 'Anlegen' })).toBeDisabled();
+    expect(api.create).not.toHaveBeenCalled();
   });
 
   it('closes from the cancel button and has no axe violations', async () => {
@@ -178,10 +139,7 @@ describe('NewEventDialogComponent', () => {
   it('offers the second tab "Aus Vorlage" and asks the page to switch', async () => {
     const switchToTemplate = jest.fn();
     await render(NewEventDialogComponent, {
-      providers: [
-        { provide: EventsApi, useValue: fakeApi() },
-        { provide: AuthService, useValue: fakeAuth() },
-      ],
+      providers: [{ provide: EventsApi, useValue: fakeApi() }],
       on: { switchToTemplate },
     });
     expect(screen.getByRole('radio', { name: 'Neu' })).toBeChecked();

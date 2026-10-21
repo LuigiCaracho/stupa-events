@@ -31,7 +31,7 @@ function fakeArchive(over: Record<string, unknown> = {}) {
       of({ items: [makeTemplate(), otherOrg], total: 2, limit: 50, offset: 0 }),
     ),
     clonePreview: jest.fn(() => of(makePreview())),
-    clone: jest.fn(() => of({ event: makeEvent({ id: 'new-1', state: 'idea' }), report: [] })),
+    clone: jest.fn(() => of({ event: makeEvent({ id: 'new-1', state: 'draft' }), report: [] })),
     ...over,
   };
 }

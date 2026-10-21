@@ -1,4 +1,4 @@
-"""Membership sync with a fake database: add, remove, downgrade, idempotence, inactive people."""
+"""Membership sync with a fake database: add, remove, idempotence, inactive people."""
 
 from __future__ import annotations
 
@@ -19,16 +19,13 @@ PERSON = uuid4()
 class SyncDb:
     """Holds the `membership` rows in memory; mappings arrive through the patched loader."""
 
-    def __init__(self, mappings: list[tuple[str, str, str | None, bool]]) -> None:
+    def __init__(self, mappings: list[tuple[str, str, str | None]]) -> None:
         self.mappings = mappings
         self.held: set[tuple[UUID, str]] = set()
 
-    def rows(self) -> list[tuple[str, UUID | None, str | None, bool | None, str]]:
+    def rows(self) -> list[tuple[str, UUID | None, str | None, str]]:
         ids = {"fsi": FSI, "makers": MAKERS}
-        return [
-            (role, ids.get(slug or ""), slug, trusted if slug else None, group)
-            for group, role, slug, trusted in self.mappings
-        ]
+        return [(role, ids.get(slug or ""), slug, group) for group, role, slug in self.mappings]
 
     async def execute(self, statement: Any) -> Any:
         sql = str(statement)
@@ -70,10 +67,10 @@ def _person(groups: list[str], *, active: bool = True) -> Any:
 
 
 MAPPINGS = [
-    ("g-fsi-org", "organizer", "fsi", False),
-    ("g-fsi-app", "approver", "fsi", False),
-    ("g-makers-app", "approver", "makers", True),
-    ("g-editor", "editor", None, False),
+    ("g-fsi-org", "organizer", "fsi"),
+    ("g-fsi-sub", "submitter", "fsi"),
+    ("g-makers-sub", "submitter", "makers"),
+    ("g-editor", "editor", None),
 ]
 
 
@@ -100,10 +97,12 @@ async def test_removing_the_group_removes_the_membership(audits: list[dict[str, 
     assert [a["data"]["change"] for a in audits] == ["added", "removed"]
 
 
-async def test_an_untrusted_approver_is_stored_as_organizer(audits: list[dict[str, Any]]) -> None:
+async def test_groups_of_two_organizations_give_two_memberships(
+    audits: list[dict[str, Any]],
+) -> None:
     db = SyncDb(MAPPINGS)
-    await membership_sync.sync_principal_memberships(db, _person(["g-fsi-app", "g-makers-app"]))
-    assert db.held == {(FSI, "organizer"), (MAKERS, "approver")}
+    await membership_sync.sync_principal_memberships(db, _person(["g-fsi-sub", "g-makers-sub"]))
+    assert db.held == {(FSI, "submitter"), (MAKERS, "submitter")}
 
 
 async def test_a_second_run_changes_nothing(audits: list[dict[str, Any]]) -> None:
@@ -115,18 +114,10 @@ async def test_a_second_run_changes_nothing(audits: list[dict[str, Any]]) -> Non
     assert audits == [] and db.held == {(FSI, "organizer")}
 
 
-async def test_two_groups_of_an_untrusted_org_collapse_to_organizer(
-    audits: list[dict[str, Any]],
-) -> None:
+async def test_two_groups_of_one_org_keep_both_roles(audits: list[dict[str, Any]]) -> None:
     db = SyncDb(MAPPINGS)
-    await membership_sync.sync_principal_memberships(db, _person(["g-fsi-org", "g-fsi-app"]))
-    assert db.held == {(FSI, "organizer")}
-
-
-async def test_two_groups_of_a_trusted_org_keep_both_roles(audits: list[dict[str, Any]]) -> None:
-    db = SyncDb([*MAPPINGS, ("g-makers-org", "organizer", "makers", True)])
-    await membership_sync.sync_principal_memberships(db, _person(["g-makers-org", "g-makers-app"]))
-    assert db.held == {(MAKERS, "organizer"), (MAKERS, "approver")}
+    await membership_sync.sync_principal_memberships(db, _person(["g-fsi-org", "g-fsi-sub"]))
+    assert db.held == {(FSI, "organizer"), (FSI, "submitter")}
 
 
 async def test_a_deactivated_person_holds_nothing(audits: list[dict[str, Any]]) -> None:
@@ -139,7 +130,7 @@ async def test_a_deactivated_person_holds_nothing(audits: list[dict[str, Any]]) 
 
 
 async def test_the_reserved_namespace_has_no_effect(audits: list[dict[str, Any]]) -> None:
-    mappings = [("events-system:g-fsi-org", "organizer", "fsi", False), *MAPPINGS]
+    mappings = [("events-system:g-fsi-org", "organizer", "fsi"), *MAPPINGS]
     db = SyncDb(mappings)
     assert not await membership_sync.sync_principal_memberships(
         db, _person(["events-system:g-fsi-org"])

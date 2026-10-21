@@ -29,33 +29,23 @@ async function setup(signedIn = true) {
 }
 
 describe('BottomBarComponent', () => {
-  it('shows Aufgaben, Pipeline, Kalender and Archiv with their paths, then Mehr and the bell', async () => {
+  it('shows Events, Archiv, Formate and Bibliothek with their paths, then Mehr and the bell', async () => {
     await setup();
     const bar = screen.getByRole('navigation', { name: 'Hauptnavigation' });
     const labels = Array.from(bar.querySelectorAll('.bb__label')).map((l) => l.textContent?.trim());
-    expect(labels).toEqual(['Aufgaben', 'Pipeline', 'Kalender', 'Archiv', 'Mehr', 'Meldungen']);
-    expect(within(bar).getByRole('link', { name: 'Aufgaben' })).toHaveAttribute('href', '/aufgaben');
-    expect(within(bar).getByRole('link', { name: 'Kalender' })).toHaveAttribute('href', '/kalender');
+    expect(labels).toEqual(['Events', 'Archiv', 'Formate', 'Bibliothek', 'Mehr', 'Meldungen']);
+    expect(within(bar).getByRole('link', { name: 'Events' })).toHaveAttribute('href', '/dossiers');
+    expect(within(bar).getByRole('link', { name: 'Formate' })).toHaveAttribute('href', '/formate');
     expect(within(bar).getByRole('link', { name: 'Archiv' })).toHaveAttribute('href', '/archiv');
   });
 
-  it('opens a sheet with Dossiers, Formate, Bibliothek and Konto behind "Mehr"', async () => {
+  it('opens a sheet with Konto behind "Mehr"', async () => {
     await setup();
     await userEvent.click(screen.getByRole('button', { name: 'Mehr' }));
     const sheet = await screen.findByRole('dialog', { name: 'Mehr' });
     const links = within(sheet).getAllByRole('link');
-    expect(links.map((l) => l.textContent?.trim())).toEqual([
-      'Dossiers',
-      'Formate',
-      'Bibliothek',
-      'Konto',
-    ]);
-    expect(links.map((l) => l.getAttribute('href'))).toEqual([
-      '/dossiers',
-      '/formate',
-      '/bibliothek',
-      '/konto',
-    ]);
+    expect(links.map((l) => l.textContent?.trim())).toEqual(['Konto']);
+    expect(links.map((l) => l.getAttribute('href'))).toEqual(['/konto']);
     await userEvent.click(within(sheet).getByRole('button', { name: 'Schließen' }));
     expect(screen.queryByRole('dialog', { name: 'Mehr' })).not.toBeInTheDocument();
   });

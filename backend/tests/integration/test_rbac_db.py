@@ -25,16 +25,9 @@ SECRET = "test-session-secret"
 
 @pytest_asyncio.fixture
 async def org_tables(engine: Engine, session: AsyncSession) -> AsyncIterator[None]:
-    """Make `fsi` untrusted and `makers` trusted and start from an empty mapping table."""
+    """Start from an empty mapping table."""
     with engine.begin() as conn:
         conn.execute(text("DELETE FROM group_mapping"))
-        updated = conn.execute(
-            text(
-                "UPDATE organization SET trusted = (slug = 'makers') "
-                "WHERE slug IN ('fsi', 'makers')"
-            )
-        ).rowcount
-        assert updated == 2
     yield
     await session.rollback()
     with engine.begin() as conn:
@@ -59,21 +52,21 @@ async def _principal(session: AsyncSession, groups: list[str], **fields: object)
     return row
 
 
-async def test_mappings_and_trust_resolve_against_the_real_tables(
+async def test_mappings_resolve_against_the_real_tables(
     session: AsyncSession, org_tables: None
 ) -> None:
-    await _map(session, "events-fsi-approver", "approver", "fsi")
-    await _map(session, "events-makers-approver", "approver", "makers")
+    await _map(session, "events-fsi-organizer", "organizer", "fsi")
+    await _map(session, "events-makers-submitter", "submitter", "makers")
     await _map(session, "events-editor", "editor")
     row = await _principal(
-        session, ["events-fsi-approver", "events-makers-approver", "events-editor"]
+        session, ["events-fsi-organizer", "events-makers-submitter", "events-editor"]
     )
     principal = await rbac.resolve_principal(session, row, make_settings())
     assert principal.org_roles == {
         "fsi": frozenset({"organizer"}),
-        "makers": frozenset({"approver"}),
+        "makers": frozenset({"submitter"}),
     }
-    assert principal.has("event.approve") is True
+    assert principal.has_in_org("event.publish", "fsi") is True
     assert principal.roles == ["editor", "member"]
     assert set(principal.org_ids) == {"fsi", "makers"}
 
@@ -132,9 +125,9 @@ async def test_me_with_a_real_session_cookie(api: httpx.AsyncClient, session: As
     response = await api.get("/api/auth/me", cookies={"ev_session": cookie})
     assert response.status_code == 200
     body = response.json()
-    assert [
-        (o["slug"], o["role"], o["name"], o["short"], o["trusted"]) for o in body["organizations"]
-    ] == [("fsi", "organizer", "Fachschaft Informatik", "FSI", False)]
+    assert [(o["slug"], o["role"], o["name"], o["short"]) for o in body["organizations"]] == [
+        ("fsi", "organizer", "Fachschaft Informatik", "FSI")
+    ]
     assert body["roles"] == ["member"]
     assert body["groups"] == ["events-fsi-organizer"]
     forged = await api.get("/api/auth/me", cookies={"ev_session": "forged"})

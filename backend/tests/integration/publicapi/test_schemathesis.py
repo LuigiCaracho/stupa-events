@@ -70,7 +70,7 @@ def public_operations(api: Api) -> list[Any]:
 
 async def test_schemathesis(api: Api) -> None:
     await archived_movienight(api)
-    await api.to_state("live", title="Zweiter Termin")
+    await api.to_state("published", title="Zweiter Termin")
     operations = public_operations(api)
     assert {op.path for op in operations} == {
         "/api/public/feed/events",

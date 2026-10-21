@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { of, throwError } from 'rxjs';
 import { runAxe } from '../../../../testing/a11y';
 import { makeEvent } from '../../../../testing/event-fixtures';
-import { FollowupApi } from '../api/followup-api.service';
+import { OutcomeApi } from '../api/outcome-api.service';
 import { LocationDialogComponent } from './location-dialog.component';
 
 async function setup(confirmLocation = jest.fn(() => of(makeEvent({ rev: 4, locationPrecision: 'building' })))) {
@@ -12,7 +12,7 @@ async function setup(confirmLocation = jest.fn(() => of(makeEvent({ rev: 4, loca
   const closed = jest.fn();
   const view = await render(LocationDialogComponent, {
     inputs: { event: makeEvent({ venueText: 'Kinosaal 9-133' }) },
-    providers: [{ provide: FollowupApi, useValue: { confirmLocation } }],
+    providers: [{ provide: OutcomeApi, useValue: { confirmLocation } }],
     on: { confirmed, closed },
   });
   return { view, confirmLocation, confirmed, closed };

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from tests.integration.dossier.helpers import planning_event
+from tests.integration.dossier.helpers import draft_event
 from tests.integration.events.harness import Api
 
 pytestmark = pytest.mark.integration
@@ -21,7 +21,7 @@ async def save(api: Api, eid: str, doc: str = "new", user: str = "organizer-fsi"
 
 
 async def test_create_list_render_and_save_again(api: Api) -> None:
-    eid = await planning_event(api, venueText="Kinosaal 9-133")
+    eid = await draft_event(api, venueText="Kinosaal 9-133")
     created = await save(api, eid)
     assert created.status_code == 201, created.text
     tpl = created.json()
@@ -67,14 +67,14 @@ async def test_create_list_render_and_save_again(api: Api) -> None:
 
 
 async def test_a_venue_less_dossier_renders_an_empty_venue(api: Api) -> None:
-    eid = await planning_event(api, venueText="")
+    eid = await draft_event(api, venueText="")
     tpl = (await save(api, eid, bodyMd="Ort: [{{ venue.name }}]")).json()
     url = f"/api/events/{eid}/mail-templates/{tpl['id']}/render-preview"
     assert (await api.request("organizer-fsi", "POST", url, json={})).json()["body"] == "Ort: []"
 
 
 async def test_unknown_placeholders_statements_and_subject_lines_are_422(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     unknown = await save(api, eid, bodyMd="{{ event.raum }}")
     assert unknown.status_code == 422 and unknown.json()["code"] == "template_invalid"
     reason = unknown.json()["reasons"][0]
@@ -95,14 +95,14 @@ async def test_unknown_placeholders_statements_and_subject_lines_are_422(api: Ap
 
 
 async def test_rights_and_the_catalog(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     assert (await save(api, eid, user="viewer-fsi")).status_code == 403
     assert (await save(api, eid, user="organizer-makers")).status_code == 404
     tpl = (await save(api, eid)).json()
     other = await api.request(
         "organizer-fsi",
         "GET",
-        f"/api/events/{await planning_event(api)}/mail-templates/{tpl['id']}",
+        f"/api/events/{await draft_event(api)}/mail-templates/{tpl['id']}",
     )
     assert other.status_code == 404
     catalog = (await api.request("viewer-fsi", "GET", "/api/mail-template-placeholders")).json()
@@ -124,7 +124,7 @@ async def test_rights_and_the_catalog(api: Api) -> None:
 
 
 async def test_an_unsaved_template_previews_under_new(api: Api) -> None:
-    eid = await planning_event(api, venueText="Kinosaal 9-133")
+    eid = await draft_event(api, venueText="Kinosaal 9-133")
     url = f"/api/events/{eid}/mail-templates/new/render-preview"
     draft = {"subject": "Hallo {{ event.title }}", "bodyMd": "Im {{ venue.name }}"}
     rendered = await api.request("organizer-fsi", "POST", url, json=draft)

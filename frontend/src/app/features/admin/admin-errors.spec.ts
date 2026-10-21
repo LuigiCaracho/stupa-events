@@ -11,9 +11,7 @@ describe('adminErrors', () => {
       fields: { slug: 'Slug schon vergeben.' },
       message: null,
     });
-    expect(run({ status: 422, code: 'approver_requires_trusted' }).fields).toEqual({
-      role: 'Approver nur in vertrauten Organisationen.',
-    });
+    expect(run({ status: 422, code: 'implicit_role' }).fields).toHaveProperty('role');
   });
 
   it('turns a rule without a field into a message', () => {

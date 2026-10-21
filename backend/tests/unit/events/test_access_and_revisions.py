@@ -1,4 +1,4 @@
-"""Snapshot building and revision payloads from event rows."""
+"""Hint inputs from poster rows and revision payloads from event rows."""
 
 from __future__ import annotations
 
@@ -6,19 +6,17 @@ from datetime import UTC, datetime
 from types import SimpleNamespace
 from uuid import uuid4
 
-from app.modules.events.access import (
-    poster_snapshot,
-    snapshot_of,
-    valid_exception_reason,
-)
+from app.modules.events.hints_data import outcome_answered, poster_facts
 from app.modules.events.models import Event
 from app.modules.events.revisions import revision_payload
+
+NOW = datetime(2026, 11, 20, 12, tzinfo=UTC)
 
 
 def event(**over: object) -> Event:
     base = {
         "id": uuid4(),
-        "state": "planning",
+        "state": "draft",
         "title": "T",
         "summary": "S",
         "starts_at": datetime(2026, 11, 1, tzinfo=UTC),
@@ -27,8 +25,6 @@ def event(**over: object) -> Event:
         "primary_category_id": None,
         "venue_text": "Raum",
         "created_by": "me",
-        "submitted_by": None,
-        "image_exception": None,
         "hero_attachment_id": None,
         "public_status": "scheduled",
         "rev": 3,
@@ -43,39 +39,36 @@ def poster(**over: object) -> SimpleNamespace:
         "derivatives": {"thumb_400": {}},
         "alt_text": "a",
         "credit": "c",
-        "rights_basis": "own_work",
         "persons_depicted": False,
         "consent_note": None,
-        "created_at": None,
     }
     return SimpleNamespace(**{**base, **over})
 
 
-def test_exception_reason_needs_ten_characters() -> None:
-    assert valid_exception_reason(event()) is None
-    assert valid_exception_reason(event(image_exception={"reason": "short"})) is None
-    assert valid_exception_reason(
-        event(image_exception={"reason": " Hochschulveranstaltung "})
-    ) == ("Hochschulveranstaltung")
-    assert valid_exception_reason(event(image_exception={})) is None
+def test_poster_facts_ignore_retired_and_missing() -> None:
+    assert poster_facts(None) is None
+    assert poster_facts(poster(retired_at=datetime.now(UTC))) is None  # type: ignore[arg-type]
+    assert poster_facts(poster()).ready is True  # type: ignore[arg-type, union-attr]
+    assert poster_facts(poster(derivatives=None)).ready is False  # type: ignore[arg-type, union-attr]
+    assert poster_facts(poster(scan_status="pending")).ready is False  # type: ignore[arg-type, union-attr]
 
 
-def test_poster_snapshot_ignores_retired_and_missing() -> None:
-    assert poster_snapshot(None) is None
-    assert poster_snapshot(poster(retired_at=datetime.now(UTC))) is None  # type: ignore[arg-type]
-    assert poster_snapshot(poster()).usable is True  # type: ignore[arg-type, union-attr]
-    assert poster_snapshot(poster(derivatives=None)).usable is False  # type: ignore[arg-type, union-attr]
+def test_poster_consent_follows_the_depicted_persons() -> None:
+    open_consent = poster_facts(poster(persons_depicted=True))  # type: ignore[arg-type]
+    assert open_consent is not None and open_consent.consent_missing is True
+    given = poster_facts(poster(persons_depicted=True, consent_note="Einverständnis liegt vor"))  # type: ignore[arg-type]
+    assert given is not None and given.consent_missing is False
 
 
-def test_snapshot_of_carries_the_guard_inputs() -> None:
-    snapshot = snapshot_of(event(image_exception={"reason": "Hochschulveranstaltung"}), poster())  # type: ignore[arg-type]
-    assert (
-        snapshot.state == "planning" and snapshot.image_exception_reason == "Hochschulveranstaltung"
-    )
-    assert snapshot.poster is not None and snapshot.created_by == "me"
+def test_outcome_answered_by_a_figure_a_note_or_the_waiver() -> None:
+    assert not outcome_answered(None) and not outcome_answered({})
+    assert not outcome_answered({"waived": False, "attendance": None})
+    assert outcome_answered({"attendance": 0}) and outcome_answered({"notes": "Lief gut"})
+    assert outcome_answered({"costsCents": 5}) and outcome_answered({"waived": True})
 
 
 def test_revision_payload_is_json_ready() -> None:
     payload = revision_payload(event())
     assert payload["starts_at"] == "2026-11-01T00:00:00+00:00"
     assert isinstance(payload["id"], str) and payload["rev"] == 3
+    assert "image_exception" not in payload and "submitted_by" not in payload

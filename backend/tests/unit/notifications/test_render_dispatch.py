@@ -7,7 +7,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.modules.notifications.kinds import KINDS
+from app.modules.notifications.kinds import KINDS, Kind
 from app.modules.notifications.mail import MailMessage
 from app.modules.notifications.render import absolute_link, render_system_mail
 from app.modules.notifications.service import PendingMail, _switch, dispatch_mails, event_link
@@ -20,9 +20,6 @@ _CTX = {
     "due": "05.07.2026",
     "link": "https://x.test/dossiers/1",
     "prefs_link": "https://x.test/konto",
-    "days": 7,
-    "missing": "Rückblick, Ergebnis",
-    "howto_unverified": True,
 }
 
 
@@ -43,9 +40,9 @@ def test_missing_variable_fails_loudly() -> None:
 def test_links() -> None:
     assert absolute_link("https://x.test/", "/konto") == "https://x.test/konto"
     eid = uuid4()
-    assert event_link("comment_added", eid) == f"/dossiers/{eid}/verlauf"
-    assert event_link("task_assigned", eid).endswith("/checkliste")
-    assert event_link("review_requested", eid) == f"/dossiers/{eid}"
+    assert event_link("comment_added", eid) == f"/dossiers/{eid}#verlauf"
+    assert event_link("checklist_due", eid) == f"/dossiers/{eid}#checkliste"
+    assert event_link("published", eid) == f"/dossiers/{eid}"
 
 
 class _Pref:
@@ -55,8 +52,8 @@ class _Pref:
 
 def test_prefs_respected_and_essential_forced() -> None:
     comment = next(k for k in KINDS if k.key == "comment_added")
-    essential = next(k for k in KINDS if k.key == "changes_requested")
-    resolved = next(k for k in KINDS if k.key == "comment_resolved")
+    essential = Kind("fixed", mail=True, essential=True)
+    resolved = Kind("quiet", mail=False)
     assert _switch(comment, None) == (True, True)
     assert _switch(comment, _Pref(False, True)) == (False, True)  # type: ignore[arg-type]
     assert _switch(comment, _Pref(True, False)) == (True, False)  # type: ignore[arg-type]
@@ -132,11 +129,3 @@ async def test_a_failed_enqueue_releases_the_claim_so_a_retry_can_send() -> None
     pool.fail = False
     await dispatch_mails(pool, [item])
     assert [j[0] for j in pool.jobs] == ["send_mail"]
-
-
-def test_followup_reminder_with_nothing_missing_asks_only_for_the_close() -> None:
-    _, text, html = render_system_mail("followup_reminder", {**_CTX, "missing": ""})
-    for body in (text, html):
-        assert "Es fehlt noch" not in body
-        assert "nur noch das Abschließen" in body
-        assert "auch wenn noch etwas fehlt" not in body

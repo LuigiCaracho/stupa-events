@@ -10,7 +10,7 @@ const entry = (over: Partial<GridEntry> = {}): GridEntry => ({
   startsOn: '2026-10-29',
   endsOn: '2026-10-29',
   allDay: false,
-  state: 'live',
+  state: 'published',
   publicStatus: 'scheduled',
   organization: { short: 'FSI', colorToken: 'petrol' },
   ...over,
@@ -25,15 +25,18 @@ describe('CalendarEntryComponent', () => {
     expect(screen.queryByText('Idee')).not.toBeInTheDocument();
   });
 
-  it('writes the state as text for everything but live and approved, and the cancellation first', async () => {
-    const view = await render(CalendarEntryComponent, { inputs: { entry: entry({ state: 'planning' }) } });
-    expect(screen.getByText('Planung')).toBeInTheDocument();
-    view.fixture.componentRef.setInput('entry', entry({ state: 'live', publicStatus: 'cancelled' }));
+  it('writes the state as text for everything but published, and the cancellation first', async () => {
+    const view = await render(CalendarEntryComponent, { inputs: { entry: entry({ state: 'draft' }) } });
+    expect(screen.getByText('Entwurf')).toBeInTheDocument();
+    view.fixture.componentRef.setInput('entry', entry({ state: 'archived' }));
+    view.fixture.detectChanges();
+    expect(screen.getByText('Archiv')).toBeInTheDocument();
+    view.fixture.componentRef.setInput('entry', entry({ state: 'published', publicStatus: 'cancelled' }));
     view.fixture.detectChanges();
     expect(screen.getByText('Abgesagt')).toBeInTheDocument();
-    view.fixture.componentRef.setInput('entry', entry({ state: 'approved' }));
+    view.fixture.componentRef.setInput('entry', entry({ state: 'published' }));
     view.fixture.detectChanges();
-    expect(screen.queryByText('Planung')).not.toBeInTheDocument();
+    expect(screen.queryByText('Entwurf')).not.toBeInTheDocument();
     expect(screen.queryByText('Abgesagt')).not.toBeInTheDocument();
   });
 

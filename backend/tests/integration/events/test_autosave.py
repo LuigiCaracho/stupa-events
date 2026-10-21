@@ -35,7 +35,7 @@ async def counts(api: Api, eid: str) -> tuple:
 
 
 async def test_a_draft_changes_nothing_about_the_dossier(api: Api) -> None:
-    event = await api.to_state("planning")
+    event = await api.create_event()
     eid = event["id"]
     before = await counts(api, eid)
     response = await put(api, "organizer-fsi", eid, event["rev"], {"summary": "Halber Sat"})
@@ -53,7 +53,7 @@ async def test_a_draft_changes_nothing_about_the_dossier(api: Api) -> None:
 
 
 async def test_a_stale_if_match_is_409_with_the_current_dossier(api: Api) -> None:
-    event = await api.to_state("planning")
+    event = await api.create_event()
     await api.patch("organizer-fsi", event["id"], summary="Schneller")
     stale = await put(api, "organizer-fsi", event["id"], event["rev"], {"summary": "x"})
     assert stale.status_code == 409 and stale.json()["code"] == "conflict"
@@ -61,21 +61,25 @@ async def test_a_stale_if_match_is_409_with_the_current_dossier(api: Api) -> Non
     assert stale.json()["currentRev"] == event["rev"] + 1
 
 
-async def test_critical_fields_cannot_be_parked_in_live(api: Api) -> None:
-    event = await api.to_state("live")
-    refused = await put(api, "organizer-fsi", event["id"], event["rev"], {"title": "Neu"})
+async def test_nothing_can_be_parked_in_the_archive(api: Api) -> None:
+    event = await api.to_state("archived")
+    refused = await put(api, "editor", event["id"], event["rev"], {"title": "Neu"})
     assert refused.status_code == 409 and refused.json()["code"] == "field_locked"
-    text = await put(api, "organizer-fsi", event["id"], event["rev"], {"summary": "Neu"})
-    assert text.status_code == 200
-    editor = await put(api, "editor", event["id"], event["rev"], {"title": "Neu"})
-    assert editor.status_code == 200
+
+
+async def test_a_published_dossier_takes_drafts_from_those_who_may_publish(api: Api) -> None:
+    event = await api.to_state("published")
+    organizer = await put(api, "organizer-fsi", event["id"], event["rev"], {"title": "Neu"})
+    assert organizer.status_code == 200
+    viewer = await put(api, "viewer-fsi", event["id"], event["rev"], {"title": "Neu"})
+    assert viewer.status_code == 403
 
 
 async def test_the_draft_belongs_to_its_author(api: Api) -> None:
-    event = await api.to_state("planning")
+    event = await api.create_event()
     eid = event["id"]
     await put(api, "organizer-fsi", eid, event["rev"], {"summary": "Meins"})
-    for user in ("editor", "admin", "approver-fsi"):
+    for user in ("editor", "admin", "submitter-fsi"):
         got = await api.request(user, "GET", f"/api/events/{eid}/draft")
         assert got.status_code == 204, user
     other = await put(api, "editor", eid, event["rev"], {"summary": "Deins"})
@@ -91,7 +95,7 @@ async def test_the_draft_belongs_to_its_author(api: Api) -> None:
 
 
 async def test_a_successful_patch_removes_the_draft(api: Api) -> None:
-    event = await api.to_state("planning")
+    event = await api.create_event()
     eid = event["id"]
     await put(api, "organizer-fsi", eid, event["rev"], {"summary": "Entwurf"})
     done = await api.patch("organizer-fsi", eid, summary="Gespeichert")
@@ -108,7 +112,7 @@ async def test_a_successful_patch_removes_the_draft(api: Api) -> None:
 
 
 async def test_preconditions_and_limits(api: Api) -> None:
-    event = await api.to_state("planning")
+    event = await api.create_event()
     eid = event["id"]
     assert (await put(api, "organizer-fsi", eid, None, {"summary": "x"})).status_code == 428
     assert (
@@ -124,7 +128,7 @@ async def test_preconditions_and_limits(api: Api) -> None:
     assert mismatch.status_code == 422
     huge = b'{"fields": {"descriptionMd": "' + b"x" * 70000 + b'"}}'
     assert (await put(api, "organizer-fsi", eid, event["rev"], {}, raw=huge)).status_code == 413
-    unknown = await put(api, "organizer-fsi", eid, event["rev"], {"state": "live"})
+    unknown = await put(api, "organizer-fsi", eid, event["rev"], {"state": "published"})
     assert unknown.status_code == 422
     star = await api.request(
         "organizer-fsi",
@@ -137,7 +141,7 @@ async def test_preconditions_and_limits(api: Api) -> None:
 
 
 async def test_rights_and_visibility_of_drafts(api: Api) -> None:
-    event = await api.to_state("planning")
+    event = await api.create_event()
     eid = event["id"]
     assert (await put(api, "viewer-fsi", eid, event["rev"], {"summary": "x"})).status_code == 403
     assert (
@@ -157,7 +161,7 @@ async def test_every_event_answer_carries_the_etag(api: Api) -> None:
     eid = event["id"]
     for method, url, kw in (
         ("GET", f"/api/events/{eid}", {}),
-        ("POST", f"/api/events/{eid}/transitions/T01", {"json": {}}),
+        ("POST", f"/api/events/{eid}/publish", {"json": {}, "headers": {"If-Match": '"1"'}}),
         ("PATCH", f"/api/events/{eid}", {"json": {"rev": 2, "summary": "x"}}),
     ):
         response = await api.request("organizer-fsi", method, url, **kw)
@@ -179,7 +183,7 @@ async def test_every_event_answer_carries_the_etag(api: Api) -> None:
 async def test_purge_removes_old_drafts_only(api: Api) -> None:
     from worker.advance import purge_drafts
 
-    event = await api.to_state("planning")
+    event = await api.create_event()
     eid = event["id"]
     await put(api, "organizer-fsi", eid, event["rev"], {"summary": "alt"})
     await put(api, "editor", eid, event["rev"], {"summary": "neu"})

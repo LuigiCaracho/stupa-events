@@ -40,7 +40,7 @@ def strip_time(body: bytes) -> dict:
 async def three_events(api: Api) -> list[dict]:
     return [
         await api.to_state(
-            "live",
+            "published",
             title=f"Termin {i}",
             startsAt=future(10 + i).isoformat(),
             endsAt=future(10 + i, 2).isoformat(),
@@ -80,12 +80,12 @@ async def test_a_fresh_snapshot_is_what_the_api_serves(api: Api, ctx: dict[str, 
 
 
 async def test_invalidate_rebuilds(api: Api, ctx: dict[str, Any], pool: RealPool) -> None:
-    first = await api.to_state("live", title="Erster")
+    first = await api.to_state("published", title="Erster")
     await rebuild_public_cache(ctx)
     etag_one = (await get(api, "/api/public/feed/events")).headers["etag"]
     pool.jobs.clear()
-    second = await api.to_state("approved", title="Zweiter")
-    live = await api.fire("editor", second["id"], "T05")
+    second = await api.to_state("draft", title="Zweiter")
+    live = await api.act("editor", second["id"], "publish")
     assert live.status_code == 200
     assert ("rebuild_public_cache", {"_job_id": "public_cache"}) in pool.jobs
     stale = await get(api, "/api/public/feed/events")
@@ -123,7 +123,7 @@ async def test_an_old_snapshot_is_not_served(api: Api, ctx: dict[str, Any], pool
 
 
 async def test_redis_down_falls_back_live(api: Api) -> None:
-    await api.to_state("live")
+    await api.to_state("published")
     api.app.state.arq_pool = BrokenPool()
     feed = await get(api, "/api/public/feed/events")
     assert feed.status_code == 200 and len(feed.json()["items"]) == 1
@@ -149,9 +149,9 @@ async def test_the_job_skips_without_redis(ctx: dict[str, Any]) -> None:
 async def test_poster_promotion_bumps_the_version_and_queues_a_rebuild(
     api: Api, ctx: dict[str, Any], pool: RealPool
 ) -> None:
-    from tests.integration.dossier.helpers import clean_poster, live_event
+    from tests.integration.dossier.helpers import clean_poster, published_event
 
-    event = await live_event(api)
+    event = await published_event(api)
     await rebuild_public_cache(ctx)
     pool.jobs.clear()
     before = await cache.current_version(pool)

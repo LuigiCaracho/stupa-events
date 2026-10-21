@@ -10,7 +10,7 @@ from __future__ import annotations
 import pytest
 
 from tests._support.samples import pdf_bytes
-from tests.integration.dossier.helpers import planning_event, seed_principals
+from tests.integration.dossier.helpers import draft_event, seed_principals
 from tests.integration.events.harness import Api
 
 pytestmark = pytest.mark.integration
@@ -44,7 +44,7 @@ async def test_template_by_category_and_the_generic_fallback(api: Api) -> None:
         c=kino,
     )
     try:
-        own = await apply(api, await planning_event(api))
+        own = await apply(api, await draft_event(api))
         assert own["template"]["slug"] == "kino-own"
     finally:
         await api.sql("DELETE FROM checklist_template WHERE slug = 'kino-own'")
@@ -52,7 +52,7 @@ async def test_template_by_category_and_the_generic_fallback(api: Api) -> None:
     assert (await apply(api, bare))["template"]["slug"] == "generic"
     await api.sql("UPDATE checklist_template SET profile = NULL WHERE slug = 'meeting'")
     try:
-        meeting = await planning_event(api, primaryCategoryId=api.category_ids["sitzung"])
+        meeting = await draft_event(api, primaryCategoryId=api.category_ids["sitzung"])
         assert (await apply(api, meeting))["template"]["slug"] == "generic"
     finally:
         await api.sql("UPDATE checklist_template SET profile = 'meeting' WHERE slug = 'meeting'")
@@ -68,7 +68,7 @@ async def test_a_broken_mail_template_keeps_the_inbox_row(
         raise TemplateRenderError("boom")
 
     await seed_principals(api)
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     monkeypatch.setattr(service, "render_system_mail", broken)
     made = await api.request("editor", "POST", f"/api/events/{eid}/comments", json={"bodyMd": "?"})
     assert made.status_code == 201
@@ -81,7 +81,7 @@ async def test_a_broken_mail_template_keeps_the_inbox_row(
 
 async def test_item_edits_assignees_waivers_and_positions(api: Api) -> None:
     await seed_principals(api)
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     item = await add_item(api, eid)
     edited = await patch(api, item["id"], text=" Neu ", phase="live", required=True)
     assert edited.status_code == 200
@@ -107,7 +107,7 @@ async def test_item_edits_assignees_waivers_and_positions(api: Api) -> None:
 
 
 async def test_foreign_items_and_comments_are_not_found(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     item = await add_item(api, eid)
     assert (await patch(api, item["id"], user="organizer-makers", text="x")).status_code == 404
     listed = await api.request("organizer-fsi", "GET", f"/api/events/{eid}/comments")
@@ -121,7 +121,7 @@ async def test_foreign_items_and_comments_are_not_found(api: Api) -> None:
     )
     assert foreign.status_code == 404
     stupa_side = await api.request(
-        "approver-stupa", "POST", f"/api/events/{eid}/comments", json={"bodyMd": "Hallo"}
+        "organizer-makers", "POST", f"/api/events/{eid}/comments", json={"bodyMd": "Hallo"}
     )
     assert stupa_side.status_code in {403, 404}
     nobody = "00000000-0000-4000-8000-000000000000"
@@ -138,10 +138,10 @@ async def test_foreign_items_and_comments_are_not_found(api: Api) -> None:
     assert unknown_parent.status_code == 404
 
 
-async def test_social_posts_need_an_image_with_rights_and_rescans_need_an_approver(
+async def test_social_posts_need_an_image_with_rights_and_rescans_need_a_publisher(
     api: Api,
 ) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     url = f"/api/events/{eid}/attachments"
     pdf = await api.request(
         "organizer-fsi",
@@ -163,4 +163,4 @@ async def test_social_posts_need_an_image_with_rights_and_rescans_need_an_approv
     assert (await api.request("organizer-fsi", "POST", retire)).status_code == 204
     await api.sql("UPDATE attachment SET scan_status = 'error' WHERE id = :i", i=pdf.json()["id"])
     rescan = f"/api/attachments/{pdf.json()['id']}/rescan"
-    assert (await api.request("organizer-fsi", "POST", rescan)).status_code == 403
+    assert (await api.request("submitter-fsi", "POST", rescan)).status_code == 403

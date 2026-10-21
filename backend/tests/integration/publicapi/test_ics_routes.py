@@ -19,7 +19,7 @@ def uids(body: bytes) -> list[str]:
 
 
 async def test_all_ics_has_the_headers_and_one_event_per_public_dossier(api: Api) -> None:
-    one = await api.to_state("live")
+    one = await api.to_state("published")
     response = await ics(api, "/ics/all.ics")
     assert response.status_code == 200
     assert response.headers["content-type"] == "text/calendar; charset=utf-8"
@@ -38,9 +38,9 @@ async def test_all_ics_has_the_headers_and_one_event_per_public_dossier(api: Api
 
 async def test_category_calendars_include_children_and_ignore_inactive_flags(api: Api) -> None:
     fsi = await api.to_state(
-        "live", primaryCategoryId=api.category_ids["fachschaft-informatik-fsi"]
+        "published", primaryCategoryId=api.category_ids["fachschaft-informatik-fsi"]
     )
-    kino = await api.to_state("live", title="Kino")
+    kino = await api.to_state("published", title="Kino")
     parent = await ics(api, "/ics/k/fachschaft.ics")
     assert uids(parent.content) == [fsi["id"]]
     child = await ics(api, "/ics/k/fachschaft-informatik-fsi.ics")
@@ -66,8 +66,8 @@ async def test_unknown_or_malformed_slugs_are_404_problem_json(api: Api, slug: s
 
 
 async def test_cancellations_and_postponements_stay_in_the_calendar(api: Api) -> None:
-    event = await api.to_state("live")
-    cancelled = await api.action(
+    event = await api.to_state("published")
+    cancelled = await api.act(
         "editor",
         event["id"],
         "cancel",
@@ -81,16 +81,16 @@ async def test_cancellations_and_postponements_stay_in_the_calendar(api: Api) ->
     assert "Saal weg" in body and "Hausmeister" not in body
 
 
-async def test_withdrawn_and_draft_dossiers_are_not_in_the_calendar(api: Api) -> None:
-    await api.to_state("approved")
+async def test_draft_dossiers_are_not_in_the_calendar(api: Api) -> None:
+    await api.to_state("draft")
     await api.create_event(title="Entwurf")
     assert uids((await ics(api, "/ics/all.ics")).content) == []
 
 
 async def test_postpone_with_a_new_date_keeps_the_uid_and_raises_the_sequence(api: Api) -> None:
-    event = await api.to_state("live")
+    event = await api.to_state("published")
     first = (await ics(api, "/ics/all.ics")).content
-    moved = await api.action(
+    moved = await api.act(
         "editor",
         event["id"],
         "postpone",
@@ -108,9 +108,9 @@ async def test_postpone_with_a_new_date_keeps_the_uid_and_raises_the_sequence(ap
 
 
 async def test_the_window_keeps_three_months_back_and_twelve_ahead(api: Api) -> None:
-    old = await api.to_state("live", title="Lange her")
-    far = await api.to_state("live", title="Sehr weit")
-    near = await api.to_state("live", title="Gerade vorbei")
+    old = await api.to_state("published", title="Lange her")
+    far = await api.to_state("published", title="Sehr weit")
+    near = await api.to_state("published", title="Gerade vorbei")
     await api.sql(
         "UPDATE event SET starts_at = now() - interval '200 days', ends_at = now() - interval '199 days' WHERE id = :e",
         e=old["id"],
@@ -127,7 +127,7 @@ async def test_the_window_keeps_three_months_back_and_twelve_ahead(api: Api) -> 
 
 
 async def test_if_none_match_with_another_validator_gets_the_calendar(api: Api) -> None:
-    await api.to_state("live")
+    await api.to_state("published")
     other = await ics(api, "/ics/all.ics", headers={"If-None-Match": '"nope"'})
     assert other.status_code == 200 and other.content
     wildcard = await ics(api, "/ics/all.ics", headers={"If-None-Match": "*"})
@@ -136,7 +136,7 @@ async def test_if_none_match_with_another_validator_gets_the_calendar(api: Api) 
 
 @pytest.mark.parametrize("path", ["/ics/all.ics", "/ics/k/kino.ics", "/api/public/feed/events"])
 async def test_head_answers_like_get_without_a_body(api: Api, path: str) -> None:
-    await api.to_state("live")
+    await api.to_state("published")
     got = await api.request(None, "GET", path)
     head = await api.request(None, "HEAD", path)
     assert head.status_code == 200 and head.content == b""

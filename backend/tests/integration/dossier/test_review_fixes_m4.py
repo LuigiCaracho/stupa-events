@@ -15,7 +15,7 @@ from app.modules.notifications.recipients import recipients_for
 from tests._support import samples
 from tests._support.factories import png_bytes
 from tests._support.memory_storage import MemoryStorage
-from tests.integration.dossier.helpers import planning_event, seed_principals, upload
+from tests.integration.dossier.helpers import draft_event, seed_principals, upload
 from tests.integration.events.harness import Api
 from tests.integration.notifications.conftest import add_member, add_principal, load_event
 
@@ -43,7 +43,7 @@ async def refs_of(api: Api, image_id: str) -> set[tuple[str, str]]:
 async def test_a_comment_image_is_referenced_and_survives_the_gc(
     api: Api, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     image_id, path = await new_image(api)
     response = await api.request(
         "editor", "POST", f"/api/events/{eid}/comments", json={"bodyMd": f"Siehe ![x]({path})"}
@@ -84,7 +84,7 @@ async def test_new_dossiers_and_event_drafts_reference_their_images(api: Api) ->
 
 
 async def test_a_mail_template_is_not_writable_through_the_generic_route(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     created = await api.request(
         "organizer-fsi",
         "PUT",
@@ -103,7 +103,7 @@ async def test_a_mail_template_is_not_writable_through_the_generic_route(api: Ap
 
 
 async def test_the_document_put_has_a_body_cap(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     doc = (
         await api.request(
             "organizer-fsi",
@@ -126,7 +126,7 @@ async def test_required_template_items_stay_required_and_viewers_are_no_assignee
     api: Api,
 ) -> None:
     await seed_principals(api)
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     await api.request(
         "organizer-fsi", "POST", f"/api/events/{eid}/checklist/apply-template", json={}
     )
@@ -164,7 +164,7 @@ async def test_required_template_items_stay_required_and_viewers_are_no_assignee
 async def test_a_stuck_scan_can_be_repeated_and_a_dead_queue_does_not_fail_the_upload(
     api: Api, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
 
     async def broken(attachment_id: UUID) -> None:
         raise ConnectionError("redis down")
@@ -186,7 +186,7 @@ async def test_requeue_stale_scans_picks_up_old_pending_rows(api: Api) -> None:
     from tests.integration.events.harness import FakePool
     from worker.scan import requeue_stale_scans
 
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     old = (await upload(api, "organizer-fsi", eid, "quote", "a.pdf", samples.pdf_bytes())).json()
     await upload(api, "organizer-fsi", eid, "quote", "b.pdf", samples.pdf_bytes())
     await api.sql(
@@ -203,7 +203,7 @@ async def test_requeue_stale_scans_picks_up_old_pending_rows(api: Api) -> None:
 async def test_a_replacement_decides_the_depicted_persons_and_a_rename_keeps_the_extension(
     api: Api,
 ) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     first = (
         await upload(
             api,
@@ -246,7 +246,7 @@ async def test_a_replacement_decides_the_depicted_persons_and_a_rename_keeps_the
 
 
 async def test_parallel_selections_in_one_group_never_break_the_unique_index(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     ids = []
     for vendor in ("A", "B", "C"):
         row = await api.request(
@@ -265,7 +265,7 @@ async def test_parallel_selections_in_one_group_never_break_the_unique_index(api
 
 async def test_comment_added_only_reaches_people_who_still_read_the_dossier(api: Api) -> None:
     await seed_principals(api)
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     for _ in range(2):
         await api.request(
             "organizer-makers", "POST", f"/api/events/{eid}/comments", json={"bodyMd": "x"}
@@ -291,26 +291,30 @@ async def test_comment_added_only_reaches_people_who_still_read_the_dossier(api:
         assert "sub-gone" not in after
 
 
-async def test_prefs_flag_kinds_without_mail_and_item_text_stays_out_of_params(api: Api) -> None:
+async def test_prefs_offer_the_four_kinds_and_item_text_stays_out_of_params(api: Api) -> None:
     prefs = (await api.request("organizer-fsi", "GET", "/api/account/notification-prefs")).json()
     flags = {p["kind"]: p["mailAvailable"] for p in prefs["items"]}
-    assert flags["comment_added"] is True and flags["comment_resolved"] is False
-    assert next(p for p in prefs["items"] if p["kind"] == "comment_resolved")["mail"] is False
+    assert flags == {
+        "comment_added": True,
+        "published": True,
+        "cancelled": True,
+        "checklist_due": True,
+    }
     await seed_principals(api)
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     await api.request(
         "organizer-fsi",
         "POST",
         f"/api/events/{eid}/checklist/items",
         json={"text": "Geheimer Text", "phase": "live", "assigneeSub": "sub-sub-fsi"},
     )
-    rows = await api.sql("SELECT params::text FROM notification WHERE kind = 'task_assigned'")
-    assert rows and "Geheimer" not in rows[0][0]
+    rows = await api.sql("SELECT params::text FROM notification")
+    assert all("Geheimer" not in row[0] for row in rows)
 
 
 async def test_comment_threads_on_a_restricted_file_are_hidden_from_others(api: Api) -> None:
     await seed_principals(api)
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     quote = (await upload(api, "organizer-fsi", eid, "quote", "a.pdf", samples.pdf_bytes())).json()
     posted = await api.request(
         "organizer-fsi",

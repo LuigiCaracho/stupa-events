@@ -31,7 +31,7 @@ def test_contract_defaults() -> None:
     assert s.arq_queue_name == "events"
     assert s.csrf_cookie_name == "XSRF-TOKEN"
     assert s.csrf_header_name == "X-XSRF-TOKEN"
-    assert s.editor_four_eyes is False
+    assert s.publish_requires_editor is False
     assert not hasattr(s, "magic_link_secret")
 
 

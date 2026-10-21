@@ -107,11 +107,11 @@ def gated() -> TestClient:
     app.dependency_overrides[get_settings] = lambda: make_settings()
     router = APIRouter()
 
-    @router.get("/g/perm", dependencies=[Depends(deps.require_principal("event.submit"))])
+    @router.get("/g/perm", dependencies=[Depends(deps.require_principal("event.publish"))])
     def perm() -> str:
         return "ok"
 
-    @router.get("/g/any", dependencies=[Depends(deps.require_any_permission("event.approve", "x"))])
+    @router.get("/g/any", dependencies=[Depends(deps.require_any_permission("event.publish", "x"))])
     def any_perm() -> str:
         return "ok"
 
@@ -119,7 +119,7 @@ def gated() -> TestClient:
     def scope() -> str:
         return "ok"
 
-    @router.get("/g/scope-no", dependencies=[Depends(deps.require_any_scope("event.submit"))])
+    @router.get("/g/scope-no", dependencies=[Depends(deps.require_any_scope("event.publish"))])
     def scope_no() -> str:
         return "ok"
 
@@ -162,8 +162,8 @@ def test_every_gate_answers_401_without_a_session(path: str) -> None:
     app = create_app(make_settings())
     router = APIRouter()
     gates = {
-        "/g/perm": deps.require_principal("event.submit"),
-        "/g/any": deps.require_any_permission("event.submit"),
+        "/g/perm": deps.require_principal("event.publish"),
+        "/g/any": deps.require_any_permission("event.publish"),
         "/g/scope": deps.require_any_scope("event.create"),
         "/g/group": deps.require_group("g"),
         "/g/open": deps.require_principal(),

@@ -23,7 +23,6 @@ from app.shared.permissions import (
         ("events-fsi-organizer", GroupGrant("organizer", "fsi")),
         ("events-fsi-submitter", GroupGrant("submitter", "fsi")),
         ("events-makers-organizer", GroupGrant("organizer", "makers")),
-        ("events-ekhg-approver", GroupGrant("approver", "ekhg")),
         ("events-a-b-viewer", GroupGrant("viewer", "a-b")),
     ],
 )
@@ -37,6 +36,7 @@ def test_parse_group_accepts_the_grammar(name: str, expected: GroupGrant) -> Non
         "events-system:admin",
         "events-system:events-editor",
         "events-fsi-boss",
+        "events-ekhg-approver",
         "events--organizer",
         "Events-fsi-organizer",
         "events-fsi-organizer ",
@@ -60,19 +60,20 @@ def test_every_role_permission_is_in_the_catalogue() -> None:
 
 
 def test_m1_rights_per_role() -> None:
-    assert "event.submit" not in permissions_of(["submitter"])
-    assert "event.submit" in permissions_of(["organizer"])
-    assert "event.approve" not in permissions_of(["organizer"])
-    assert "event.approve" in permissions_of(["approver"])
-    assert "event.image_exception" in permissions_of(["editor"])
-    assert "event.image_exception" not in permissions_of(["approver"])
+    assert "event.publish" not in permissions_of(["submitter"])
+    assert {"event.publish", "event.cancel"} <= permissions_of(["organizer"])
+    assert "event.restore" not in permissions_of(["organizer"])
+    assert {"event.restore", "event.publish", "event.read_all"} <= permissions_of(["editor"])
     assert not permissions_of(["viewer"]) & {"event.create", "event.edit"}
+    retired = {"event.submit", "event.approve", "event.image_exception", "event.assign_org"}
+    assert not retired & set(PERMISSION_CATALOGUE)
+    assert not set(permissions_of(["approver"]))
 
 
 def test_default_mappings_follow_the_group_proposal() -> None:
     from app.shared.permissions import default_mappings
 
-    rows = default_mappings([("fsi", False), ("stupa", True)])
+    rows = default_mappings(["fsi", "stupa"])
     groups = {(m.group, m.role, m.org) for m in rows}
     assert ("events-admin", "admin", None) in groups
     assert ("events-editor", "editor", None) in groups
@@ -80,9 +81,8 @@ def test_default_mappings_follow_the_group_proposal() -> None:
     assert {"events-fsi-viewer", "events-fsi-submitter", "events-fsi-organizer"} <= {
         g for g, _, _ in groups
     }
-    assert "events-fsi-approver" not in {g for g, _, _ in groups}
-    assert ("events-stupa-approver", "approver", "stupa") in groups
-    assert len(rows) == 3 + 3 + 4
+    assert not {g for g, _, _ in groups if g.endswith("-approver")}
+    assert len(rows) == 3 + 3 + 3
 
 
 def test_the_admin_role_maintains_venues() -> None:

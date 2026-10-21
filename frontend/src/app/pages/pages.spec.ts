@@ -25,11 +25,11 @@ function providers(location = createLocationMock()) {
 }
 
 describe('LoginComponent', () => {
-  it('starts the login and returns to the task page', async () => {
+  it('starts the login and returns to the event list', async () => {
     const location = createLocationMock();
     await render(LoginComponent, { providers: providers(location) });
     await userEvent.click(screen.getByRole('button', { name: 'Mit Hochschul-Login anmelden' }));
-    expect(location.assign).toHaveBeenCalledWith('/api/auth/login?returnTo=%2Faufgaben');
+    expect(location.assign).toHaveBeenCalledWith('/api/auth/login?returnTo=%2Fdossiers');
   });
 
   it('links to the public page', async () => {

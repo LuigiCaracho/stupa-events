@@ -9,8 +9,7 @@ import pytest
 from app.modules.admin.mappings import OrgFacts, validate_group, validate_mapping
 
 ORG = uuid4()
-TRUSTED = OrgFacts(trusted=True, active=True)
-PLAIN = OrgFacts(trusted=False, active=True)
+PLAIN = OrgFacts(active=True)
 
 
 @pytest.mark.parametrize(
@@ -22,8 +21,8 @@ PLAIN = OrgFacts(trusted=False, active=True)
         ("organizer", None, None, "organization_required"),
         ("viewer", None, None, "organization_required"),
         ("organizer", ORG, None, "unknown_organization"),
-        ("organizer", ORG, OrgFacts(trusted=True, active=False), "unknown_organization"),
-        ("approver", ORG, PLAIN, "approver_requires_trusted"),
+        ("organizer", ORG, OrgFacts(active=False), "unknown_organization"),
+        ("approver", ORG, PLAIN, "unknown_role"),
         ("root", None, None, "unknown_role"),
     ],
 )
@@ -41,7 +40,6 @@ def test_refusals(role: str, org_id: object, org: OrgFacts | None, code: str) ->
         ("viewer", ORG, PLAIN),
         ("submitter", ORG, PLAIN),
         ("organizer", ORG, PLAIN),
-        ("approver", ORG, TRUSTED),
     ],
 )
 def test_valid_pairs(role: str, org_id: object, org: OrgFacts | None) -> None:

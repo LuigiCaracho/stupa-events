@@ -24,7 +24,7 @@ describe('palette items', () => {
 
   it('finds the dossier of a URL', () => {
     expect(dossierIdOf('/dossiers/abc-1')).toBe('abc-1');
-    expect(dossierIdOf('/dossiers/abc-1/nachbereitung?x=1')).toBe('abc-1');
+    expect(dossierIdOf('/dossiers/abc-1?x=1')).toBe('abc-1');
     expect(dossierIdOf('/dossiers/neu')).toBeNull();
     expect(dossierIdOf('/dossiers')).toBeNull();
     expect(dossierIdOf('/archiv/abc')).toBeNull();

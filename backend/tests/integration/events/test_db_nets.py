@@ -1,4 +1,4 @@
-"""The database below the service: publish trigger, poster guard, append-only, grants."""
+"""The database below the service: checks, append-only history, the public view, grants."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ INSERT_EVENT = (
 )
 
 
-def new_event(engine: Engine, state: str = "in_review") -> str:
+def new_event(engine: Engine, state: str = "draft") -> str:
     with engine.begin() as conn:
         return str(conn.execute(text(INSERT_EVENT), {"state": state}).scalar_one())
 
@@ -26,104 +26,24 @@ def sqlstate(exc: DBAPIError) -> str | None:
     return getattr(exc.orig, "sqlstate", None) or getattr(exc.orig, "pgcode", None)
 
 
-@pytest.mark.parametrize("target", ["approved", "live"])
-def test_direct_sql_publish_rejected(engine: Engine, target: str) -> None:
+def test_the_old_states_are_not_valid_any_more(engine: Engine) -> None:
+    for state in ("idea", "planning", "in_review", "approved", "live", "followup", "withdrawn"):
+        with pytest.raises(DBAPIError) as caught:
+            new_event(engine, state)
+        assert sqlstate(caught.value) == "23514", state
+
+
+def test_a_draft_may_lack_the_organization_but_a_published_dossier_may_not(
+    engine: Engine,
+) -> None:
     event_id = new_event(engine)
+    with engine.begin() as conn:
+        conn.execute(
+            text("UPDATE event SET organization_id = NULL WHERE id = :id"), {"id": event_id}
+        )
     with pytest.raises(DBAPIError) as caught, engine.begin() as conn:
-        conn.execute(
-            text("UPDATE event SET state = :s WHERE id = :id"), {"s": target, "id": event_id}
-        )
+        conn.execute(text("UPDATE event SET state = 'published' WHERE id = :id"), {"id": event_id})
     assert sqlstate(caught.value) == "23514"
-    with engine.connect() as conn:
-        assert (
-            conn.execute(
-                text("SELECT state FROM event WHERE id = :id"), {"id": event_id}
-            ).scalar_one()
-            == "in_review"
-        )
-
-
-@pytest.mark.parametrize("target", ["approved", "live"])
-def test_direct_sql_insert_in_a_published_state_is_rejected(engine: Engine, target: str) -> None:
-    with pytest.raises(DBAPIError) as caught:
-        new_event(engine, target)
-    assert sqlstate(caught.value) == "23514"
-
-
-def test_a_short_exception_reason_does_not_count(engine: Engine) -> None:
-    event_id = new_event(engine)
-    with pytest.raises(DBAPIError), engine.begin() as conn:
-        conn.execute(
-            text(
-                "UPDATE event SET image_exception = '{\"reason\": \"kurz\"}', state = 'approved' WHERE id = :id"
-            ),
-            {"id": event_id},
-        )
-
-
-def test_a_valid_exception_lets_the_trigger_pass(engine: Engine) -> None:
-    event_id = new_event(engine)
-    with engine.begin() as conn:
-        conn.execute(
-            text(
-                'UPDATE event SET image_exception = \'{"reason": "Hochschulveranstaltung"}\', '
-                "state = 'live' WHERE id = :id"
-            ),
-            {"id": event_id},
-        )
-
-
-async def test_a_poster_that_is_not_ready_does_not_count_and_a_ready_one_does(
-    api: Api, engine: Engine
-) -> None:
-    event = await api.create_event()
-    eid = event["id"]
-    await api.fire("organizer-fsi", eid, "T01")
-    uploaded = await api.upload_poster("organizer-fsi", eid)
-    attachment = uploaded.json()["id"]
-    with pytest.raises(DBAPIError), engine.begin() as conn:
-        conn.execute(text("UPDATE event SET state = 'approved' WHERE id = :id"), {"id": eid})
-    await api.process_poster(attachment)
-    with engine.begin() as conn:
-        conn.execute(text("UPDATE event SET state = 'live' WHERE id = :id"), {"id": eid})
-
-
-async def test_the_poster_of_a_live_event_cannot_get_worse(api: Api, engine: Engine) -> None:
-    event = await api.approved_ready_event()
-    await api.fire("editor", event["id"], "T04")
-    attachment = event["poster"]["id"]
-    for statement in (
-        "UPDATE attachment SET scan_status = 'infected' WHERE id = :id",
-        "UPDATE attachment SET retired_at = now() WHERE id = :id",
-        "UPDATE attachment SET derivatives = NULL WHERE id = :id",
-        "UPDATE attachment SET rights_basis = 'unknown' WHERE id = :id",
-        "UPDATE attachment SET alt_text = '' WHERE id = :id",
-    ):
-        with pytest.raises(DBAPIError) as caught, engine.begin() as conn:
-            conn.execute(text(statement), {"id": attachment})
-        assert sqlstate(caught.value) == "23514", statement
-    with engine.begin() as conn:
-        conn.execute(
-            text("UPDATE attachment SET credit = 'Foto: Bea' WHERE id = :id"), {"id": attachment}
-        )
-
-
-async def test_the_poster_of_an_event_with_an_exception_may_change(
-    api: Api, engine: Engine
-) -> None:
-    event = await api.approved_ready_event()
-    await api.request(
-        "editor",
-        "POST",
-        f"/api/events/{event['id']}/image-exception",
-        json={"reason": "Ersatzmotiv fehlt"},
-    )
-    await api.fire("editor", event["id"], "T04")
-    with engine.begin() as conn:
-        conn.execute(
-            text("UPDATE attachment SET scan_status = 'error' WHERE id = :id"),
-            {"id": event["poster"]["id"]},
-        )
 
 
 @pytest.mark.parametrize("table", ["event_revision", "event_status_event"])
@@ -142,10 +62,7 @@ async def test_revisions_are_unique_per_event(api: Api, engine: Engine) -> None:
     event = await api.create_event()
     with pytest.raises(IntegrityError), engine.begin() as conn:
         conn.execute(
-            text(
-                "INSERT INTO event_revision (event_id, rev, field_class, snapshot) "
-                "VALUES (:id, 1, 'state', '{}')"
-            ),
+            text("INSERT INTO event_revision (event_id, rev, snapshot) VALUES (:id, 1, '{}')"),
             {"id": event["id"]},
         )
 
@@ -154,18 +71,19 @@ async def test_revisions_are_unique_per_event(api: Api, engine: Engine) -> None:
     "statement",
     [
         "UPDATE event SET ends_at = starts_at - interval '1 hour'",
-        "UPDATE event SET organization_id = NULL WHERE state <> 'idea'",
+        "UPDATE event SET organization_id = NULL WHERE state <> 'draft'",
         "UPDATE event SET all_day = true",
         "UPDATE event SET title = E'zwei\\nZeilen'",
         "UPDATE event SET summary = E'Injektion\\r\\nBEGIN:VALARM'",
         "UPDATE event SET venue_text = 'a' || chr(8232) || 'b'",
-        "UPDATE event SET state = 'published'",
+        "UPDATE event SET state = 'live'",
+        "UPDATE event SET tzid = 'UTC'",
         "UPDATE event SET rev = 0",
     ],
 )
 async def test_event_checks(api: Api, engine: Engine, statement: str) -> None:
-    event = await api.create_event()
-    await api.fire("organizer-fsi", event["id"], "T01")
+    event = await api.to_state("published")
+    assert event["state"] == "published"
     with pytest.raises(IntegrityError), engine.begin() as conn:
         conn.execute(text(statement))
 
@@ -202,9 +120,7 @@ async def test_db_grants_runtime_role(api: Api, app_engine: Engine) -> None:
     with app_engine.begin() as conn:
         conn.execute(text("UPDATE event SET summary = 'ok' WHERE id = :id"), {"id": event["id"]})
         conn.execute(
-            text(
-                "INSERT INTO event_revision (event_id, rev, field_class, snapshot) VALUES (:id, 99, 'text', '{}')"
-            ),
+            text("INSERT INTO event_revision (event_id, rev, snapshot) VALUES (:id, 99, '{}')"),
             {"id": event["id"]},
         )
     for statement in (
@@ -233,43 +149,38 @@ async def test_db_grants_public_role_reads_only_the_view(api: Api, public_engine
         conn.execute(text("DELETE FROM public_event_v"))
 
 
-async def test_a_poster_of_a_foreign_event_does_not_count(api: Api, engine: Engine) -> None:
-    donor = await api.approved_ready_event()
-    other = new_event(engine)
-    with pytest.raises(DBAPIError) as caught, engine.begin() as conn:
-        conn.execute(
-            text("UPDATE event SET hero_attachment_id = :a, state = 'approved' WHERE id = :id"),
-            {"a": donor["poster"]["id"], "id": other},
-        )
-    assert sqlstate(caught.value) == "23514"
-
-
-def test_a_poster_of_depicted_persons_needs_a_consent_note_in_the_database(engine: Engine) -> None:
-    event_id = new_event(engine, "idea")
+def test_a_poster_of_depicted_persons_needs_a_consent_note_to_reach_the_view(
+    engine: Engine,
+) -> None:
+    event_id = new_event(engine)
     with engine.begin() as conn:
         attachment = conn.execute(
             text(
                 "INSERT INTO attachment (event_id, display_name, storage_name, mime, size_bytes, sha256, "
-                "scan_status, alt_text, credit, rights_basis, persons_depicted, consent_note, derivatives) "
-                "VALUES (:e, 'p', 'p', 'image/png', 1, 'aa', 'clean', 'a', 'c', 'own_work', true, :n, "
+                "scan_status, kind, rights_basis, persons_depicted, consent_note, derivatives) "
+                "VALUES (:e, 'p', 'p', 'image/png', 1, 'aa', 'clean', 'poster', 'unknown', true, NULL, "
                 '\'{"thumb_400": {}, "card_1200": {}, "og_1200x630": {}}\') RETURNING id'
             ),
-            {"e": event_id, "n": None},
+            {"e": event_id},
         ).scalar_one()
         conn.execute(
-            text("UPDATE event SET hero_attachment_id = :a WHERE id = :e"),
+            text(
+                "UPDATE event SET hero_attachment_id = :a, state = 'published', slug = 'rohling' "
+                "WHERE id = :e"
+            ),
             {"a": attachment, "e": event_id},
         )
-    with pytest.raises(DBAPIError) as caught, engine.begin() as conn:
-        conn.execute(text("UPDATE event SET state = 'approved' WHERE id = :e"), {"e": event_id})
-    assert sqlstate(caught.value) == "23514"
+    hero = "SELECT hero_sha FROM public_event_v WHERE id = :e"
+    with engine.connect() as conn:
+        assert conn.execute(text(hero), {"e": event_id}).scalar_one() is None
     with engine.begin() as conn:
         conn.execute(text("UPDATE attachment SET consent_note = 'liegt vor'"))
-        conn.execute(text("UPDATE event SET state = 'approved' WHERE id = :e"), {"e": event_id})
+    with engine.connect() as conn:
+        assert conn.execute(text(hero), {"e": event_id}).scalar_one() == "aa"
 
 
 def test_the_new_event_columns_are_checked(engine: Engine) -> None:
-    event_id = new_event(engine, "idea")
+    event_id = new_event(engine)
     bad = [
         "ticket_url = 'http://x.de'",
         "website_url = 'https://user@x.de'",

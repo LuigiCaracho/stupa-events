@@ -1,18 +1,12 @@
 /**
- * M4 acceptance (PLAN 16.1, row M4) against the compose stack with the Keycloak dev IdP: a question on the poster blocks
- * the approval in the guard list until it is resolved, the checklist with its template, a mail template with a preview
- * and the sentence for an unknown placeholder, the comparison quotes of a foreign organization answering not found,
- * and axe in light and dark on the new tabs.
+ * M4 acceptance (PLAN 16.1, row M4), moved onto the dossier page by M5b, against the compose stack with the Keycloak dev IdP:
+ * a question on the poster is a thread and never blocks publishing, the checklist with its template, a mail template with a
+ * preview and the sentence for an unknown placeholder, the comparison quotes of a foreign organization answering not found,
+ * and axe in light and dark on the sections.
  */
 import { type Browser, type Page, expect, test } from '@playwright/test';
 import { expectNoAxeViolations } from './support/axe';
-import {
-  confirmLocation,
-  confirmTransition,
-  createDossier,
-  setSummary,
-  uploadPoster,
-} from './support/dossier';
+import { createDossier, runAction, toSection, uploadPoster } from './support/dossier';
 import { login, postJson, waitForCleanPoster } from './support/session';
 
 const BASE_URL = process.env['E2E_BASE_URL'] ?? 'http://localhost:8081';
@@ -29,20 +23,12 @@ async function fresh(browser: Browser): Promise<Page> {
   return context.newPage();
 }
 
-async function tab(page: Page, name: string): Promise<void> {
-  await page.getByRole('tab', { name: new RegExp(`^${name}`) }).click();
-}
-
-test('a question on the poster blocks the approval until it is resolved', async ({ browser }) => {
+test('a question on the poster is a thread and does not block publishing', async ({ browser }) => {
   const organizer = await fresh(browser);
   await login(organizer, 'organizer-fsi');
   ids['poster'] = await createDossier(organizer, title('Poster'));
-  await confirmTransition(organizer, 'Planung starten', 'Planung');
-  await setSummary(organizer, 'Kurztext Poster');
-  await uploadPoster(organizer, 'Plakat der Veranstaltung', 'Fachschaft Informatik');
+  await uploadPoster(organizer, { altText: 'Plakat der Veranstaltung', credit: 'Fachschaft Informatik' });
   await waitForCleanPoster(organizer, ids['poster']);
-  await organizer.reload();
-  await confirmTransition(organizer, 'Freigabe anfragen', 'Freigabe');
   await organizer.context().close();
 
   const editor = await fresh(browser);
@@ -54,28 +40,15 @@ test('a question on the poster blocks the approval until it is resolved', async 
   await expect(editor.getByText('Rückfrage gesendet.')).toBeVisible();
   await expect(editor.getByText('Rückfrage offen').first()).toBeVisible();
 
-  await editor.getByRole('button', { name: 'Freigeben' }).first().click();
-  const dialog = editor.getByRole('dialog', { name: 'Freigeben' });
-  await expect(
-    dialog.getByText('Eine offene Rückfrage am Poster blockiert die Freigabe.'),
-  ).toBeVisible();
-  await expect(dialog.getByRole('button', { name: 'Bestätigen', exact: true })).toBeDisabled();
-  await dialog.getByRole('button', { name: 'Abbrechen' }).click();
-
-  await tab(editor, 'Verlauf');
-  await expect(editor.getByRole('status').getByText(/blockiert die Freigabe/)).toBeVisible();
+  await toSection(editor, 'Verlauf');
   await editor.getByRole('button', { name: 'Erledigt' }).click();
   await expect(editor.getByText('Offen', { exact: true })).toHaveCount(0);
   await expectNoAxeViolations(editor, 'Verlauf with questions');
 
-  await tab(editor, 'Übersicht');
-  await confirmLocation(editor, ids['poster']);
-  await editor.getByRole('button', { name: 'Freigeben' }).first().click();
-  await expect(
-    editor
-      .getByRole('dialog', { name: 'Freigeben' })
-      .getByRole('button', { name: 'Bestätigen', exact: true }),
-  ).toBeEnabled();
+  await editor.getByRole('button', { name: 'Rückfrage zu Poster' }).click();
+  await editor.getByLabel('Deine Rückfrage').fill('Noch eine Frage, die offen bleibt.');
+  await editor.getByRole('button', { name: 'Rückfrage senden' }).click();
+  await runAction(editor, 'Veröffentlichen', 'Veröffentlicht');
   await editor.context().close();
 });
 
@@ -83,7 +56,7 @@ test('checklist: apply the template, add an own required point, tick one', async
   const page = await fresh(browser);
   await login(page, 'organizer-fsi');
   ids['checklist'] = await createDossier(page, title('Checkliste'));
-  await tab(page, 'Checkliste');
+  await toSection(page, 'Checkliste');
   await page.getByRole('button', { name: 'Vorlage anwenden' }).click();
   await expect(page.getByText(/Punkte aus der Vorlage hinzugefügt/)).toBeVisible();
   await expect(page.getByRole('heading', { name: /^Planung/ })).toBeVisible();
@@ -107,25 +80,26 @@ test('mail template: placeholder chip, live preview and the sentence for an unkn
   const page = await fresh(browser);
   await login(page, 'organizer-fsi');
   ids['mail'] = await createDossier(page, title('Mail'));
-  await tab(page, 'Mails');
-  await page.getByRole('button', { name: 'Neue Vorlage' }).click();
-  await expect(page.getByRole('radio', { name: 'Quelltext' })).toHaveAttribute(
+  await toSection(page, 'Mails');
+  const mails = page.locator('#mails');
+  await mails.getByRole('button', { name: 'Neue Vorlage' }).click();
+  await expect(mails.getByRole('radio', { name: 'Quelltext' })).toHaveAttribute(
     'aria-checked',
     'true',
   );
-  await page.getByRole('textbox', { name: 'Betreff' }).fill('Einladung');
-  await page.getByRole('textbox', { name: 'Text' }).fill('Hallo, ');
-  await page.getByRole('button', { name: '{{ event.title }}' }).click();
-  await expect(page.getByText(`Hallo, ${title('Mail')}`)).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Als Mail öffnen' })).toBeVisible();
+  await mails.getByRole('textbox', { name: 'Betreff' }).fill('Einladung');
+  await mails.getByRole('textbox', { name: 'Text' }).fill('Hallo, ');
+  await mails.getByRole('button', { name: '{{ event.title }}' }).click();
+  await expect(mails.getByText(`Hallo, ${title('Mail')}`)).toBeVisible();
+  await expect(mails.getByRole('button', { name: 'Als Mail öffnen' })).toBeVisible();
 
-  await page.getByRole('textbox', { name: 'Text' }).fill('Raum {{ event.raum }}');
-  await expect(page.getByRole('alert')).toContainText('Unbekannter Platzhalter {{ event.raum }}');
-  await expect(page.getByRole('alert')).toContainText('{{ event.title }}');
+  await mails.getByRole('textbox', { name: 'Text' }).fill('Raum {{ event.raum }}');
+  await expect(mails.getByRole('alert')).toContainText('Unbekannter Platzhalter {{ event.raum }}');
+  await expect(mails.getByRole('alert')).toContainText('{{ event.title }}');
   await expectNoAxeViolations(page, 'Mails');
 
-  await page.getByRole('textbox', { name: 'Text' }).fill('Hallo {{ org.name }}');
-  await page.getByRole('button', { name: 'Vorlage speichern' }).click();
+  await mails.getByRole('textbox', { name: 'Text' }).fill('Hallo {{ org.name }}');
+  await mails.getByRole('button', { name: 'Vorlage speichern' }).click();
   await expect(page.getByText('Vorlage gespeichert.')).toBeVisible();
   await page.context().close();
 });
@@ -157,12 +131,12 @@ test('attachments and howto render for the organizer and pass axe', async ({ bro
   const page = await fresh(browser);
   await login(page, 'organizer-fsi');
   await page.goto(`/dossiers/${ids['checklist']}`);
-  await tab(page, 'Anhänge');
+  await toSection(page, 'Anhänge');
   await expect(page.getByRole('heading', { name: 'Anhänge' })).toBeVisible();
   await page.getByRole('button', { name: 'Anhang hinzufügen' }).click();
   await expect(page.getByRole('button', { name: 'Datei wählen' })).toBeVisible();
   await expectNoAxeViolations(page, 'Anhänge');
-  await tab(page, 'Anleitung');
+  await toSection(page, 'Anleitung');
   await page.getByRole('button', { name: 'Vorlage einfügen' }).click();
   await expect(page.getByRole('textbox', { name: 'Diese Ausgabe' })).toHaveValue(
     /## Worum geht es\?/,
@@ -199,7 +173,7 @@ test('phone at 360 px: the new tabs, account and inbox without side scroll, axe,
     Verlauf: 'Rückfragen',
   };
   for (const [name, heading] of Object.entries(headings)) {
-    await tab(page, name);
+    await toSection(page, name);
     await expect(
       page.getByRole('heading', { name: new RegExp(`^${heading}`) }).first(),
     ).toBeVisible();
@@ -207,13 +181,13 @@ test('phone at 360 px: the new tabs, account and inbox without side scroll, axe,
     await expectNoAxeViolations(page, `${name} (360 px)`);
   }
 
-  await tab(page, 'Checkliste');
+  await toSection(page, 'Checkliste');
   const box = page.getByRole('checkbox', { name: /Raum bestätigt/ });
   await box.focus();
   await page.keyboard.press('Space');
   await expect(box).toBeChecked();
 
-  await tab(page, 'Anhänge');
+  await toSection(page, 'Anhänge');
   await page.getByRole('button', { name: 'Anhang hinzufügen' }).focus();
   await page.keyboard.press('Enter');
   const chooser = page.waitForEvent('filechooser');
@@ -226,7 +200,7 @@ test('phone at 360 px: the new tabs, account and inbox without side scroll, axe,
     mimeType: 'text/plain',
     buffer: Buffer.from('Per Tastatur hochgeladen.\n'),
   });
-  await page.getByRole('button', { name: 'Hochladen' }).focus();
+  await page.getByRole('button', { name: 'Hochladen', exact: true }).focus();
   await page.keyboard.press('Enter');
   await expect(page.getByText('tastatur.txt')).toBeVisible();
   await expectNoSideScroll(page, 'Anhänge nach Upload');

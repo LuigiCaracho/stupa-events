@@ -1,7 +1,6 @@
-import { render, screen, within } from '@testing-library/angular';
+import { render, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { of, throwError } from 'rxjs';
-import { AuthService } from '@core/auth/auth.service';
 import { runAxe } from '../../../../../testing/a11y';
 import { makeCategory, makeOrganization } from '../../../../../testing/admin-fixtures';
 import { TaxonomyApi } from '../../api/taxonomy-api.service';
@@ -18,7 +17,6 @@ function fakeTaxonomy() {
           name: 'MAKERS',
           short: 'MK',
           kind: 'partner',
-          trusted: true,
           instagram: [],
         }),
       ]),
@@ -29,16 +27,10 @@ function fakeTaxonomy() {
   };
 }
 
-async function setup(canTrust: boolean) {
+async function setup() {
   const api = fakeTaxonomy();
   const view = await render(OrganizationsComponent, {
-    providers: [
-      { provide: TaxonomyApi, useValue: api },
-      {
-        provide: AuthService,
-        useValue: { can: (p: string) => canTrust && p === 'admin.mappings' },
-      },
-    ],
+    providers: [{ provide: TaxonomyApi, useValue: api }],
   });
   await view.fixture.whenStable();
   view.fixture.detectChanges();
@@ -51,27 +43,21 @@ describe('OrganizationsComponent', () => {
       ...fakeTaxonomy(),
       categories: jest.fn(() => throwError(() => new Error('down'))),
     };
-    await render(OrganizationsComponent, {
-      providers: [
-        { provide: TaxonomyApi, useValue: api },
-        { provide: AuthService, useValue: { can: () => false } },
-      ],
-    });
+    await render(OrganizationsComponent, { providers: [{ provide: TaxonomyApi, useValue: api }] });
     expect(await screen.findByText('Fachschaft Informatik')).toBeInTheDocument();
   });
 
-  it('lists name, kind, short, instagram and the trusted flag', async () => {
-    await setup(false);
+  it('lists name, kind, short and instagram', async () => {
+    await setup();
     expect(await screen.findByText('Fachschaft Informatik')).toBeInTheDocument();
     expect(screen.getByText('fsi_rt')).toBeInTheDocument();
     expect(screen.getByText('Partner')).toBeInTheDocument();
   });
 
-  it('disables the trusted switch with a reason and leaves trusted out of the body without admin.mappings', async () => {
-    const { api } = await setup(false);
+  it('has no trust switch and saves the row without one', async () => {
+    const { api } = await setup();
     await userEvent.click(await screen.findByText('Fachschaft Informatik'));
-    expect(screen.getByRole('switch', { name: 'Vertraut' })).toBeDisabled();
-    expect(screen.getByText('Nur mit Admin-Recht änderbar.')).toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: 'Vertraut' })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     expect(api.updateOrganization).toHaveBeenCalledWith('org-fsi', {
       name: 'Fachschaft Informatik',
@@ -83,37 +69,8 @@ describe('OrganizationsComponent', () => {
     });
   });
 
-  it('asks before it trusts an organization and sends trusted after the confirmation', async () => {
-    const { api } = await setup(true);
-    await userEvent.click(await screen.findByText('Fachschaft Informatik'));
-    await userEvent.click(screen.getByRole('switch', { name: 'Vertraut' }));
-    expect(await screen.findByRole('dialog')).toHaveTextContent(
-      'Approver dieser Organisation dürfen eigene Events veröffentlichen.',
-    );
-    await userEvent.click(screen.getByRole('button', { name: 'Vertrauen' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
-    expect(api.updateOrganization).toHaveBeenCalledWith(
-      'org-fsi',
-      expect.objectContaining({ trusted: true }),
-    );
-  });
-
-  it('keeps trusted off when the confirmation is cancelled', async () => {
-    const { api } = await setup(true);
-    await userEvent.click(await screen.findByText('Fachschaft Informatik'));
-    await userEvent.click(screen.getByRole('switch', { name: 'Vertraut' }));
-    await userEvent.click(
-      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Abbrechen' }),
-    );
-    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
-    expect(api.updateOrganization).toHaveBeenCalledWith(
-      'org-fsi',
-      expect.objectContaining({ trusted: false }),
-    );
-  });
-
   it('splits the instagram accounts at commas on create', async () => {
-    const { api } = await setup(false);
+    const { api } = await setup();
     await userEvent.click(await screen.findByRole('button', { name: 'Hinzufügen' }));
     await userEvent.type(screen.getByRole('textbox', { name: /^Name/ }), 'Neue Org');
     await userEvent.type(screen.getByRole('textbox', { name: /Slug/ }), 'neue-org');
@@ -125,7 +82,7 @@ describe('OrganizationsComponent', () => {
   });
 
   it('has no axe violations', async () => {
-    const view = await setup(true);
+    const view = await setup();
     await screen.findByText('MAKERS');
     expect(await runAxe(view.container)).toHaveNoViolations();
   });

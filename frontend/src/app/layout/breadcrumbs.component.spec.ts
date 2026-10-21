@@ -15,7 +15,7 @@ const routes = [
   {
     path: 'budget',
     component: StubPage,
-    data: { title: 'nav.dossiers' as const },
+    data: { title: 'nav.events' as const },
   },
   {
     path: 'budget/pots',
@@ -89,7 +89,7 @@ describe('BreadcrumbsComponent', () => {
     fixture.detectChanges();
 
     expect(screen.getByRole('navigation', { name: BREADCRUMB })).toBeInTheDocument();
-    const parent = screen.getByRole('link', { name: i18n.translate('nav.dossiers') });
+    const parent = screen.getByRole('link', { name: i18n.translate('nav.events') });
     expect(parent).toHaveAttribute('href', '/budget');
     const current = screen.getByText(i18n.translate('nav.account'));
     expect(current).toHaveAttribute('aria-current', 'page');
@@ -103,7 +103,7 @@ describe('BreadcrumbsComponent', () => {
     // crumb remains and the nav stays hidden.
     expect(screen.queryByRole('navigation', { name: BREADCRUMB })).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('link', { name: i18n.translate('nav.tasks') }),
+      screen.queryByRole('link', { name: i18n.translate('nav.events') }),
     ).not.toBeInTheDocument();
   });
 

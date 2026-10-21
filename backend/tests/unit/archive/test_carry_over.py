@@ -25,7 +25,6 @@ def test_each_part_has_exactly_one_rule() -> None:
         ("documents", "copy", "partial"),
         ("checklist", "copy", "partial"),
         ("poster", "never", "never"),
-        ("imageException", "never", "never"),
         ("files", "never", "never"),
         ("socialPosts", "never", "never"),
         ("links", "never", "never"),
@@ -48,33 +47,48 @@ def test_the_report_has_a_line_per_rule_with_counts_and_the_howto_link() -> None
     assert plan("foreign", SourceCounts(0, False, 0)) == copied
 
 
-def test_facts_reset_drops_expiring_keys_and_the_budget_for_foreign_templates() -> None:
+def test_facts_reset_drops_expiring_keys_and_keeps_few_for_foreign_templates() -> None:
     facts = {
         "ageLimit": 18,
         "capacity": 100,
+        "minParticipants": 4,
+        "maxParticipants": 40,
         "securityPlanDone": True,
         "noisePermitRef": "X",
         "budgetCents": 500,
         "priceText": "20 Euro",
         "meetingPoint": "Hbf",
         "protocolOwner": "Ada",
+        "agendaMd": "# Tops",
     }
     assert reset_facts(facts, "own") == {
         "ageLimit": 18,
         "capacity": 100,
+        "minParticipants": 4,
+        "maxParticipants": 40,
         "budgetCents": 500,
         "priceText": "20 Euro",
         "meetingPoint": "Hbf",
         "protocolOwner": "Ada",
+        "agendaMd": "# Tops",
     }
-    assert reset_facts(facts, "foreign") == {"ageLimit": 18, "capacity": 100}
-    assert reset_facts(None, "own") == {}
-    assert {
-        "budgetCents",
-        "priceText",
-        "meetingPoint",
-        "protocolOwner",
-    } == carry_over.FACT_RESET_FOREIGN
+    assert reset_facts(facts, "foreign") == {
+        "ageLimit": 18,
+        "capacity": 100,
+        "minParticipants": 4,
+        "maxParticipants": 40,
+    }
+    assert reset_facts(None, "own") == {} and reset_facts(None, "foreign") == {}
+    assert {"capacity", "ageLimit", "minParticipants", "maxParticipants"} == (
+        carry_over.FACTS_KEPT_FOREIGN
+    )
+
+
+def test_the_facts_line_names_what_stays_for_a_foreign_template() -> None:
+    counts = SourceCounts(0, False, 0)
+    own = {line.part: line for line in plan("own", counts)}["facts"]
+    foreign = {line.part: line for line in plan("foreign", counts)}["facts"]
+    assert own.reason == "clone.reason.facts" and foreign.reason == "clone.reason.factsForeign"
 
 
 @pytest.mark.parametrize(
@@ -82,13 +96,10 @@ def test_facts_reset_drops_expiring_keys_and_the_budget_for_foreign_templates() 
     [
         ("archived", True, True),
         ("archived", False, True),
-        ("live", True, True),
-        ("followup", True, True),
-        ("live", False, False),
-        ("followup", False, False),
-        ("idea", True, False),
-        ("planning", True, False),
-        ("withdrawn", True, False),
+        ("published", True, True),
+        ("published", False, False),
+        ("draft", True, False),
+        ("draft", False, False),
     ],
 )
 def test_which_dossiers_are_templates(state: str, own: bool, want: bool) -> None:

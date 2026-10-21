@@ -46,21 +46,10 @@ function fakeApi(over: Partial<Record<keyof AttachmentsApi, unknown>> = {}) {
         file({ id: 'a2', kind: 'quote', displayName: 'angebot.pdf' }),
       ]),
     ),
-    quotes: jest.fn(() =>
-      of({
-        groups: [],
-        selectedTotalCents: 0,
-        selectedTotalCurrency: 'EUR',
-        suggestedBudgetCents: null,
-      }),
-    ),
     upload: jest.fn(() => of(file({}))),
     replace: jest.fn(() => of(file({}))),
     patch: jest.fn(() => of(file({}))),
     retire: jest.fn(() => of(undefined)),
-    addQuote: jest.fn(() => of({})),
-    selectQuote: jest.fn(() => of({})),
-    removeQuote: jest.fn(() => of(undefined)),
     downloadUrl: (id: string) => `/dl/${id}`,
     previewUrl: (id: string) => `/pv/${id}`,
     ...over,
@@ -94,12 +83,7 @@ describe('AttachmentsTabComponent', () => {
   });
 
   it('says so when there are no files and when loading fails', async () => {
-    await setup(
-      fakeApi({
-        list: jest.fn(() => of([])),
-        quotes: jest.fn(() => throwError(() => new Error('x'))),
-      }),
-    );
+    await setup(fakeApi({ list: jest.fn(() => of([])) }));
     expect(screen.getByText('Noch keine Anhänge.')).toBeInTheDocument();
   });
 
@@ -194,49 +178,5 @@ describe('AttachmentsTabComponent', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Hochladen' }));
     expect(api.replace).toHaveBeenCalledWith('a1', expect.objectContaining({ kind: 'other' }));
     expect(screen.queryByText(/wird ersetzt/)).not.toBeInTheDocument();
-  });
-
-  it('creates, chooses and hides quotes', async () => {
-    const quotes = {
-      groups: [
-        {
-          grp: 'T',
-          cheapestId: 'q1',
-          selectedId: null,
-          quotes: [
-            {
-              id: 'q1',
-              grp: 'T',
-              vendor: 'V',
-              amountCents: 100,
-              currency: 'EUR',
-              validUntil: null,
-              note: null,
-              attachmentId: null,
-              selected: false,
-              expired: false,
-              retiredAt: null,
-            },
-          ],
-        },
-      ],
-      selectedTotalCents: 0,
-      selectedTotalCurrency: 'EUR',
-      suggestedBudgetCents: null,
-    };
-    const { api } = await setup(fakeApi({ quotes: jest.fn(() => of(quotes)) }));
-    await userEvent.click(screen.getByRole('radio', { name: 'Angebot von V wählen' }));
-    expect(api.selectQuote).toHaveBeenCalledWith('q1');
-    await userEvent.click(
-      screen.getAllByRole('button', { name: 'Ausblenden' }).at(-1) as HTMLElement,
-    );
-    expect(api.removeQuote).toHaveBeenCalledWith('q1');
-    await userEvent.click(screen.getByRole('button', { name: 'Angebot hinzufügen' }));
-    const boxes = screen.getAllByRole('textbox');
-    await userEvent.type(boxes[0], 'G');
-    await userEvent.type(boxes[1], 'W');
-    await userEvent.type(boxes[2], '5');
-    await userEvent.click(screen.getByRole('button', { name: 'Angebot speichern' }));
-    expect(api.addQuote).toHaveBeenCalledWith('ev-1', { grp: 'G', vendor: 'W', amountCents: 500 });
   });
 });

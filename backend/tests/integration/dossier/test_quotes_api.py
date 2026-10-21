@@ -7,7 +7,7 @@ import json
 import pytest
 
 from tests._support import samples
-from tests.integration.dossier.helpers import planning_event, upload
+from tests.integration.dossier.helpers import draft_event, upload
 from tests.integration.events.harness import Api
 
 pytestmark = pytest.mark.integration
@@ -19,7 +19,7 @@ async def add_quote(api: Api, eid: str, user: str = "organizer-fsi", **over: obj
 
 
 async def test_groups_cheapest_selection_and_totals(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     a = (await add_quote(api, eid)).json()
     b = (await add_quote(api, eid, vendor="Ton AG", amountCents=90_000)).json()
     c = (await add_quote(api, eid, grp="Catering", vendor="Brot", amountCents=30_000)).json()
@@ -43,7 +43,7 @@ async def test_groups_cheapest_selection_and_totals(api: Api) -> None:
 
 
 async def test_expired_quotes_cannot_be_selected_and_hidden_ones_vanish(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     old = (await add_quote(api, eid, validUntil="2020-01-01")).json()
     assert old["expired"] is True
     blocked = await api.request("organizer-fsi", "POST", f"/api/quotes/{old['id']}/select")
@@ -59,8 +59,8 @@ async def test_expired_quotes_cannot_be_selected_and_hidden_ones_vanish(api: Api
 
 
 async def test_a_quote_file_must_be_a_quote_attachment_of_the_dossier(api: Api) -> None:
-    eid = await planning_event(api)
-    other = await planning_event(api)
+    eid = await draft_event(api)
+    other = await draft_event(api)
     quote_file = (
         await upload(api, "organizer-fsi", eid, "quote", "a.pdf", samples.pdf_bytes())
     ).json()
@@ -76,11 +76,11 @@ async def test_a_quote_file_must_be_a_quote_attachment_of_the_dossier(api: Api) 
 async def test_quotes_are_invisible_to_foreign_organizations_and_403_without_the_right(
     api: Api,
 ) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     quote = (await add_quote(api, eid)).json()
     file = (await upload(api, "organizer-fsi", eid, "quote", "a.pdf", samples.pdf_bytes())).json()
     assert await api.process_poster(file["id"]) == "clean"
-    for user in ("organizer-makers", "approver-stupa"):
+    for user in ("organizer-makers",):
         assert (await api.request(user, "GET", f"/api/events/{eid}/quotes")).status_code == 404, (
             user
         )
@@ -116,7 +116,7 @@ async def test_quotes_are_invisible_to_foreign_organizations_and_403_without_the
 
 
 async def test_quote_amounts_do_not_leak(api: Api) -> None:
-    eid = await planning_event(api)
+    eid = await draft_event(api)
     marker = 1_234_567
     quote = (await add_quote(api, eid, amountCents=marker, note="Notiz")).json()
     assert (

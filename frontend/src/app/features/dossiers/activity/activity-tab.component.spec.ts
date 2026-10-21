@@ -64,7 +64,6 @@ async function setup(
                   at: '2026-10-02T10:00:00Z',
                   actor: { sub: 'u', displayName: 'Ben' },
                   actorType: 'human',
-                  fieldClass: 'text',
                   changeNote: null,
                   changedFields: ['title'],
                 },
@@ -73,9 +72,8 @@ async function setup(
                   at: '2026-10-01T10:00:00Z',
                   actor: { sub: 'u', displayName: 'Ben' },
                   actorType: 'human',
-                  fieldClass: 'state',
                   changeNote: 'n',
-                  changedFields: [],
+                  changedFields: ['state'],
                 },
               ],
               total: 2,
@@ -118,11 +116,9 @@ async function setup(
 }
 
 describe('ActivityTabComponent', () => {
-  it('shows the guard sentence while a question on the poster is open', async () => {
+  it('shows a question on the poster without any blocking sentence', async () => {
     const { container } = await setup([thread({})]);
-    expect(screen.getByRole('status', { name: '' })).toHaveTextContent(
-      'Eine offene Rückfrage am Poster blockiert die Freigabe.',
-    );
+    expect(screen.queryByRole('status', { name: '' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Poster' })).toBeInTheDocument();
     expect(await runAxe(container)).toHaveNoViolations();
   });

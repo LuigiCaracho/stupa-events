@@ -60,7 +60,6 @@ export const makeOrganization = (o: Partial<AdminOrganization> = {}): AdminOrgan
   colorToken: null,
   categoryId: null,
   instagram: ['fsi_rt'],
-  trusted: false,
   legacyWpIds: [],
   active: true,
   createdAt: STAMP,

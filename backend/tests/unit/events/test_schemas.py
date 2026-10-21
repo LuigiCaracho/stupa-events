@@ -8,7 +8,7 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from app.modules.events.schemas import EventCreate, EventPatch, ImageExceptionIn, TransitionIn
+from app.modules.events.schemas import CancelIn, EventCreate, EventPatch, PostponeIn
 
 BASE: dict[str, Any] = {
     "title": "Movienight",
@@ -42,6 +42,7 @@ def test_defaults_and_trimming() -> None:
         {"tzid": "UTC"},
         {"allDay": True},
         {"unknown": 1},
+        {"organizationId": None},
     ],
 )
 def test_create_rejects(over: dict[str, Any]) -> None:
@@ -62,13 +63,22 @@ def test_patch_tracks_given_fields_and_takes_an_optional_revision() -> None:
     assert EventPatch.model_validate({"rev": 1, "allDay": True}).all_day is True
 
 
-def test_note_and_exception_reason_limits() -> None:
-    assert TransitionIn.model_validate({}).note is None
+def test_the_organization_is_required_to_create() -> None:
+    body = {k: v for k, v in BASE.items() if k != "organizationId"}
     with pytest.raises(ValidationError):
-        TransitionIn.model_validate({"note": "x" * 501})
+        EventCreate.model_validate(body)
+
+
+def test_patch_takes_the_organization_for_the_editorial_team() -> None:
+    org = uuid4()
+    assert EventPatch.model_validate({"organizationId": str(org)}).organization_id == org
+
+
+def test_reason_and_public_text_limits() -> None:
+    assert CancelIn.model_validate({}).reason is None
     assert (
-        ImageExceptionIn.model_validate({"reason": "  zehn Zeichen!  "}).reason == "zehn Zeichen!"
+        PostponeIn.model_validate({"newStartsAt": "2026-12-01T10:00:00+01:00"}).new_ends_at is None
     )
-    for reason in ("kurz", "   neun   z", "x" * 501):
+    for bad in ({"reason": "x" * 501}, {"publicReasonText": "x" * 141}, {"publicReasonCode": "x"}):
         with pytest.raises(ValidationError):
-            ImageExceptionIn.model_validate({"reason": reason})
+            CancelIn.model_validate(bad)

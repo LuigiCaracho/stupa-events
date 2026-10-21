@@ -2,11 +2,11 @@
 # only the patterns come from KARTE 2.7. `state` decides who sees a dossier: archived ones
 # are readable for everybody, the others only in their own organization.
 events:
-  - {title: "Sitzung FSI", org: fsi, state: live, start: "2026-12-01T18:00:00+01:00"}
+  - {title: "Sitzung FSI", org: fsi, state: published, start: "2026-12-01T18:00:00+01:00"}
   - {title: "STUPA-Sitzung", org: stupa, state: archived, start: "2026-02-10T18:00:00+01:00"}
-  - {title: "Sommerfest der Fachschaft", org: fsi, state: approved, start: "2027-06-20T15:00:00+02:00"}
-  - {title: "Movienight: Whiplash", org: fsi, state: live, format: movienight, start: "2026-12-10T20:00:00+01:00"}
-  - {title: "Movienight: Halloween-Special", org: fsi, state: followup, format: movienight, start: "2026-10-31T20:00:00+01:00"}
+  - {title: "Sommerfest der Fachschaft", org: fsi, state: draft, start: "2027-06-20T15:00:00+02:00"}
+  - {title: "Movienight: Whiplash", org: fsi, state: published, format: movienight, start: "2026-12-10T20:00:00+01:00"}
+  - {title: "Movienight: Halloween-Special", org: fsi, state: published, format: movienight, start: "2026-10-31T20:00:00+01:00"}
   - {title: "Movienight: Das Finale", org: fsi, state: archived, format: movienight, start: "2026-02-03T20:00:00+01:00"}
   - {title: "STUPA Movienight: Arrival (OmU)", org: fsi, state: archived, format: movienight, start: "2025-06-10T20:00:00+02:00"}
   - {title: "Nosferatu – STUPA Movienight", org: fsi, state: archived, format: movienight, start: "2024-12-31T23:30:00Z"}
@@ -21,7 +21,7 @@ events:
       - {kind: notes, title: "Interne Notiz", visibility: team, body: "Kontext-Notiz: der Hausmeister will vorab Bescheid."}
   - {title: "Party", org: stupa, state: archived, start: "2026-06-12T21:00:00+02:00"}
   - {title: "LAN Party", org: stupa, state: archived, start: "2026-07-03T17:00:00+02:00"}
-  - {title: "FSI LAN-Party 2026", org: fsi, state: live, start: "2026-11-27T17:00:00+01:00"}
+  - {title: "FSI LAN-Party 2026", org: fsi, state: published, start: "2026-11-27T17:00:00+01:00"}
   - {title: "Skiausfahrt Davos", org: stupa, state: archived, start: "2026-01-23T06:00:00+01:00"}
   - {title: "Game Together", org: fsi, state: archived, start: "2026-02-19T19:00:00+01:00"}
   - title: "Filmquiz: Wer errät mehr?"

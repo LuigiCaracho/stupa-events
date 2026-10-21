@@ -61,7 +61,7 @@ def test_the_renames_keep_the_ids_of_the_m1_keys() -> None:
 
 def test_organizations_after_m2() -> None:
     assert len(ORGANIZATIONS) == 13
-    assert [o["slug"] for o in ORGANIZATIONS if o["trusted"]] == ["stupa"]
+    assert all("trusted" not in o for o in ORGANIZATIONS)
     assert organization_legacy_fixes() == [(reference_id("organization", "tec"), [])]
 
 

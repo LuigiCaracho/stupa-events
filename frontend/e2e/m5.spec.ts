@@ -1,14 +1,12 @@
 /**
  * M5 acceptance in the browser (contract 12.3 l): a new edition from an archived Movienight (preview, no poster), the search
- * finds "Sitzung" for "Fachschaftssitzung", the palette by keyboard, the calendar by keyboard, the follow-up up to T09 and the
- * archive, the library and the formats, at 360 px and at desktop width, with axe in light and dark.
- * It needs the M5 backend (migration `0006`) and, for the clone, the Movienight fixture in the dev seed (organization FSI).
- * The follow-up test moves a dossier into `followup` with SQL (`support/db.ts`, dev stack only).
+ * finds "Sitzung" for "Fachschaftssitzung", the palette by keyboard, the calendar by keyboard, the section "So lief es" written
+ * in the archive, the library and the formats, at 360 px and at desktop width, with axe in light and dark.
+ * It needs the M5b backend (migration `0007`) and, for the clone, the Movienight fixture in the dev seed (organization FSI).
  */
 import { type Browser, type Page, expect, test } from '@playwright/test';
 import { expectNoAxeViolations } from './support/axe';
-import { createDossier } from './support/dossier';
-import { databaseReachable, moveToFollowup } from './support/db';
+import { createDossier, runAction, toSection } from './support/dossier';
 import { eventOf, inDays, login } from './support/session';
 
 const BASE_URL = process.env['E2E_BASE_URL'] ?? 'http://localhost:8081';
@@ -72,12 +70,11 @@ test('a new edition from an archived Movienight: preview, no poster, "Letztes Ma
   await page.waitForURL(/\/dossiers\/[0-9a-f-]{36}$/);
   ids['clone'] = page.url().split('/').pop() as string;
 
-  await expect(page.getByText('Noch kein Poster hochgeladen.')).toBeVisible();
+  await expect(page.locator('app-poster-slot').getByText('Ohne Bild nicht bewerbbar')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Letztes Mal' })).toBeVisible();
   const event = await eventOf(page, ids['clone']);
-  expect(event['state']).toBe('idea');
+  expect(event['state']).toBe('draft');
   expect(event['poster']).toBeNull();
-  expect(event['imageException']).toBeNull();
   expect(event['derivedFromId']).toBeTruthy();
   await page.context().close();
 });
@@ -107,8 +104,8 @@ test('"Fachschaftssitzung" finds "Sitzung" in the archive search', async ({ brow
 test('the palette works with the keyboard alone', async ({ browser }) => {
   const page = await fresh(browser);
   await login(page, 'organizer-fsi');
-  await page.goto('/aufgaben');
-  await expect(page.getByRole('heading', { name: 'Meine Aufgaben', level: 1 })).toBeVisible();
+  await page.goto('/dossiers');
+  await expect(page.getByRole('heading', { name: 'Events', level: 1 })).toBeVisible();
   await page.keyboard.press('Control+k');
   const box = page.getByRole('combobox', { name: 'Dossiers, Formate, Aktionen und Seiten suchen' });
   await expect(box).toBeFocused();
@@ -131,6 +128,7 @@ test('the palette works with the keyboard alone', async ({ browser }) => {
   await page.waitForURL(new RegExp(`/dossiers/${ids['sitzung']}$`));
 
   await page.keyboard.press('Control+k');
+  await expect(box).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog', { name: 'Suchen und springen' })).toBeHidden();
   await page.context().close();
@@ -145,7 +143,7 @@ test('the calendar: month grid by keyboard, a click opens the dossier, agenda li
   const day = new Date(event['startsAt'] as string).toLocaleDateString('en-CA', {
     timeZone: 'Europe/Berlin',
   });
-  await page.goto('/kalender');
+  await page.goto(`/dossiers?ansicht=kalender&q=${encodeURIComponent(title('Sitzung'))}`);
   await expect(page.getByRole('grid', { name: 'Termine im Kalender' })).toBeVisible();
   const cell = page.locator(`[role="gridcell"][data-day="${day}"]`);
   for (let i = 0; i < 4; i++) {
@@ -164,54 +162,46 @@ test('the calendar: month grid by keyboard, a click opens the dossier, agenda li
   await expectNoAxeViolations(page, 'Kalender Monat', '[role="grid"]');
   await page.keyboard.press('Enter');
   const sheet = page.getByRole('dialog');
-  if (await sheet.isVisible().catch(() => false))
-    await sheet.getByRole('button', { name: new RegExp(title('Sitzung')) }).click();
+  const opened = await sheet.waitFor({ state: 'visible', timeout: 3_000 }).then(
+    () => true,
+    () => false,
+  );
+  if (opened) await sheet.getByRole('button', { name: new RegExp(title('Sitzung')) }).click();
   await page.waitForURL(new RegExp(`/dossiers/${ids['sitzung']}$`));
 
   await page.setViewportSize({ width: 360, height: 740 });
-  await page.goto('/kalender');
+  await page.goto('/dossiers?ansicht=kalender');
   await expect(page.getByRole('grid')).toHaveCount(0);
   await noHorizontalScroll(page);
   await page.getByRole('button', { name: 'Mehr', exact: true }).click();
   await expect(
-    page.getByRole('dialog', { name: 'Mehr' }).getByRole('link', { name: 'Bibliothek' }),
+    page.getByRole('dialog', { name: 'Mehr' }).getByRole('link', { name: 'Konto' }),
   ).toBeVisible();
   await page.context().close();
 });
 
-test('the follow-up: guard list, retrospective and result, T09 to the archive', async ({
-  browser,
-}) => {
-  test.skip(!databaseReachable(), 'the dev Postgres container is not reachable (E2E_PG_CONTAINER)');
+test('"So lief es" stays writable in the archive: retrospective, result and the howto check', async ({ browser }) => {
   const page = await fresh(browser);
   await login(page, 'organizer-fsi');
-  ids['followup'] = await createDossier(page, title('Nachbereitung'));
-  moveToFollowup(ids['followup']);
+  ids['outcome'] = await createDossier(page, title('So lief es'));
+  await runAction(page, 'Archivieren', 'Archiv');
 
-  await page.goto(`/dossiers/${ids['followup']}/nachbereitung`);
-  await expect(page.getByRole('heading', { name: 'Zum Abschließen fehlt noch' })).toBeVisible();
-  await expect(page.getByText('Die Nachbereitung fehlt.')).toBeVisible();
-  await expect(page.getByText('Das Ergebnis fehlt.')).toBeVisible();
-  await expectNoAxeViolations(page, 'Nachbereitung');
+  await toSection(page, 'So lief es');
+  const section = page.locator('#so-lief-es');
+  await expect(section.getByText('Freiwillig')).toBeVisible();
+  await expectNoAxeViolations(page, 'So lief es');
 
-  await page.getByRole('button', { name: 'Rückblick schreiben' }).click();
-  await page.getByRole('button', { name: 'Rückblick speichern' }).click();
+  await section.getByRole('button', { name: 'Rückblick speichern' }).click();
   await expect(page.getByText('Gespeichert.').first()).toBeVisible();
 
-  await page.getByRole('button', { name: 'Ergebnis eintragen' }).click();
-  await page.getByRole('spinbutton', { name: 'Besucher:innen' }).fill('12');
-  await page.getByRole('textbox', { name: /Kosten \(Ist\)/ }).fill('0');
-  await page.getByRole('textbox', { name: /Kosten \(Ist\)/ }).blur();
-  await page.getByRole('button', { name: 'Ergebnis speichern' }).click();
+  await section.getByRole('spinbutton', { name: 'Besucher:innen' }).fill('12');
+  await section.getByRole('textbox', { name: /Kosten \(Ist\)/ }).fill('0');
+  await section.getByRole('textbox', { name: /Kosten \(Ist\)/ }).blur();
+  await section.getByRole('button', { name: 'Ergebnis speichern' }).click();
   await expect(page.getByText('Ergebnis gespeichert.')).toBeVisible();
-
-  await expect(page.getByText('Alles bereit.')).toBeVisible();
-  await page.getByRole('button', { name: 'Nachbereitung abschließen' }).first().click();
-  const dialog = page.getByRole('dialog', { name: 'Nachbereitung abschließen' });
-  await dialog.getByRole('button', { name: 'Bestätigen', exact: true }).click();
-  await expect(dialog).toBeHidden();
-  await expect(page.locator('app-status-text', { hasText: 'Archiv' }).first()).toBeVisible();
-  expect((await eventOf(page, ids['followup']))['state']).toBe('archived');
+  const event = await eventOf(page, ids['outcome']);
+  expect(event['state']).toBe('archived');
+  expect(event['outcome']).toMatchObject({ attendance: 12 });
   await page.context().close();
 });
 
@@ -228,7 +218,7 @@ test('archive, formats and library render at desktop and 360 px, light and dark,
       ['/archiv', 'Archiv'],
       ['/formate', 'Formate'],
       ['/bibliothek', 'Bibliothek'],
-      ['/kalender', 'Kalender'],
+      ['/dossiers', 'Events'],
     ] as const) {
       await page.goto(path);
       await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();

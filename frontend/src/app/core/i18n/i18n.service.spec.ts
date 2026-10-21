@@ -13,7 +13,7 @@ describe('I18nService', () => {
 
   it('translates a key and interpolates parameters', () => {
     const i18n = service();
-    expect(i18n.translate('nav.tasks')).toBe('Aufgaben');
+    expect(i18n.translate('nav.events')).toBe('Events');
     expect(i18n.translate('shell.nav.brand', { name: 'X' })).toBe('X, Start');
     expect(i18n.translate('shell.nav.brand', {})).toBe('{name}, Start');
   });

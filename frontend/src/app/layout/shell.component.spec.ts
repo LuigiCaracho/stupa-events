@@ -15,9 +15,9 @@ import { ShellComponent } from './shell.component';
 class StubPage {}
 
 const ROUTES: Routes = [
-  { path: 'aufgaben', component: StubPage, data: { footer: true } },
+  { path: 'dossiers', component: StubPage, data: { footer: true } },
   { path: 'login', component: StubPage, data: { chrome: false } },
-  { path: 'start', component: StubPage, data: { fab: true } },
+  { path: 'start', component: StubPage },
 ];
 
 const PRINCIPAL = {
@@ -29,7 +29,7 @@ const PRINCIPAL = {
   organizations: [],
 };
 
-async function setup(signedIn: boolean | null, url = '/aufgaben') {
+async function setup(signedIn: boolean | null, url = '/dossiers') {
   const view = await render(ShellComponent, {
     deferBlockBehavior: DeferBlockBehavior.Playthrough,
     providers: [

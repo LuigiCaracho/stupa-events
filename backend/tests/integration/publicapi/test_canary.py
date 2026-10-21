@@ -21,7 +21,7 @@ from tests._support.canary import (
     seed_canary,
 )
 from tests.integration.events.harness import Api
-from worker.advance import advance_states
+from worker.advance import archive_ended
 
 pytestmark = pytest.mark.integration
 FOREIGN = ("member", "organizer-makers", "viewer-tec")
@@ -158,7 +158,7 @@ async def foreign_requests(api: Api, user: str, canary: Any) -> list[Response]:
     get = lambda path, **params: api.request(user, "GET", path, params=params)  # noqa: E731
     out = [
         await get(f"/api/archive/{canary.archived}"),
-        await get(f"/api/archive/{canary.live}"),
+        await get(f"/api/archive/{canary.published}"),
         await get("/api/library", limit=50),
         await get("/api/library", q="CANARY"),
         await get("/api/library", q="TEAMFILE"),
@@ -216,8 +216,8 @@ async def test_the_own_organization_does_find_its_own_strings(api: Api) -> None:
     assert mark("DOCTEAM") not in [h["title"] for h in submitter_team.json()["hits"]]
 
 
-async def test_canary_freedom_after_each_transition(api: Api) -> None:
-    event = await api.to_state("approved", title="Wandel")
+async def test_canary_freedom_after_each_lifecycle_step(api: Api) -> None:
+    event = await api.to_state("draft", title="Wandel")
     eid = event["id"]
     slugs = await category_slugs(api)
 
@@ -225,10 +225,11 @@ async def test_canary_freedom_after_each_transition(api: Api) -> None:
         assert not leaks(*await public_responses(api, slugs))
 
     await clean()
-    assert (await api.fire("editor", eid, "T05")).status_code == 200
+    await api.confirm_location(eid)
+    assert (await api.act("editor", eid, "publish")).status_code == 200
     await internal_bits(api, eid)
     await clean()
-    cancelled = await api.action(
+    cancelled = await api.act(
         "editor",
         eid,
         "cancel",
@@ -238,34 +239,32 @@ async def test_canary_freedom_after_each_transition(api: Api) -> None:
     )
     assert cancelled.status_code == 200
     await clean()
-    await api.action("editor", eid, "reinstate", reason=mark("REVNOTE"))
+    await api.act("editor", eid, "reinstate", reason=mark("REVNOTE"))
     ended = datetime.fromisoformat((await api.get("editor", eid))["endsAt"])
-    await advance_states(
+    await archive_ended(
         {"advance_sessionmaker": api.maker, "redis": api.pool}, now=ended + timedelta(hours=13)
     )
     await clean()
-    await api.sql("UPDATE event SET state = 'archived' WHERE id = :e", e=eid)
-    await clean()
     feed = (await api.request(None, "GET", "/api/public/feed/events")).content.decode()
     assert "Wandel" in feed
+    assert (await api.act("editor", eid, "restore")).status_code == 200
+    await clean()
+    feed = (await api.request(None, "GET", "/api/public/feed/events")).content.decode()
+    assert "Wandel" not in feed
 
 
 async def test_every_state_reaches_the_view_only_when_allowed(api: Api) -> None:
-    ids = {}
-    for state in ("idea", "planning", "in_review", "approved", "live"):
-        ids[state] = (await api.to_state(state, title=f"Zustand {state}"))["id"]
-    for state in ("followup", "archived"):
-        ids[state] = (await api.to_state("live", title=f"Zustand {state}"))["id"]
-        await api.sql("UPDATE event SET state = :s WHERE id = :e", s=state, e=ids[state])
-    gone = (await api.to_state("planning", title="Zustand withdrawn"))["id"]
-    await api.fire("organizer-fsi", gone, "T11", note="x")
-    ids["withdrawn"] = gone
+    ids = {
+        "draft": (await api.to_state("draft", title="Zustand draft"))["id"],
+        "published": (await api.to_state("published", title="Zustand published"))["id"],
+        "archived": (await api.to_state("archived", title="Zustand archived"))["id"],
+    }
     shown = {
         i["id"]
         for i in (
             await api.request(None, "GET", "/api/public/feed/events", params={"limit": 500})
         ).json()["items"]
     }
-    assert {s for s, i in ids.items() if i in shown} == {"live", "followup", "archived"}
+    assert {s for s, i in ids.items() if i in shown} == {"published", "archived"}
     ics = (await api.request(None, "GET", "/ics/all.ics")).content.decode()
-    assert {s for s, i in ids.items() if f"UID:{i}@" in ics} == {"live", "followup", "archived"}
+    assert {s for s, i in ids.items() if f"UID:{i}@" in ics} == {"published", "archived"}

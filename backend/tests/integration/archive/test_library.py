@@ -17,7 +17,7 @@ async def library(api: Api, user: str = "member", **params: object) -> dict:
 
 async def test_library_lists_only_what_was_shared_in_archived_dossiers(api: Api) -> None:
     eid = await archived_movienight(api, files=FILES)
-    live = await api.to_state("live", title="Noch live")
+    live = await api.to_state("published", title="Noch live")
     await api.sql(
         "INSERT INTO document (event_id, kind, title, body_md, visibility) "
         "VALUES (:e, 'howto', 'Live-Anleitung', 'x', 'shared')",
@@ -117,7 +117,7 @@ async def test_adopt_copies_text_only_and_turns_a_second_howto_into_a_note(api: 
     assert foreign.status_code == 404
 
 
-async def test_adopt_refuses_documents_outside_the_library_and_closed_targets(api: Api) -> None:
+async def test_adopt_refuses_documents_outside_the_library(api: Api) -> None:
     eid = await archived_movienight(api)
     rows = await api.sql("SELECT id, kind FROM document WHERE event_id = :e", e=eid)
     ids = {kind: str(i) for i, kind in rows}
@@ -130,13 +130,6 @@ async def test_adopt_refuses_documents_outside_the_library_and_closed_targets(ap
             json={"eventId": target["id"]},
         )
         assert refused.status_code == 404, kind
-    closed = await api.request(
-        "organizer-fsi",
-        "POST",
-        f"/api/library/documents/{ids['howto']}/adopt",
-        json={"eventId": eid},
-    )
-    assert closed.status_code == 409 and closed.json()["code"] == "dossier_closed"
     await api.sql("UPDATE document SET visibility = 'team' WHERE id = :i", i=ids["howto"])
     hidden = await api.request(
         "organizer-fsi",
@@ -146,7 +139,7 @@ async def test_adopt_refuses_documents_outside_the_library_and_closed_targets(ap
     )
     assert hidden.status_code == 404
     await api.sql("UPDATE document SET visibility = 'shared' WHERE id = :i", i=ids["howto"])
-    await api.sql("UPDATE event SET state = 'followup' WHERE id = :e", e=eid)
+    await api.sql("UPDATE event SET state = 'draft' WHERE id = :e", e=eid)
     not_archived = await api.request(
         "organizer-fsi",
         "POST",
@@ -158,7 +151,7 @@ async def test_adopt_refuses_documents_outside_the_library_and_closed_targets(ap
 
 async def test_template_list(api: Api) -> None:
     eid = await archived_movienight(api)
-    own_live = await api.to_state("live", title="Movienight: Live")
+    own_live = await api.to_state("published", title="Movienight: Live")
     mine = await ok(await api.request("organizer-fsi", "GET", "/api/templates"))
     titles = {c["title"]: c for c in mine["items"]}
     assert set(titles) == {"Movienight: Whiplash", "Movienight: Live"}

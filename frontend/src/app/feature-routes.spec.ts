@@ -17,27 +17,26 @@ describe('FEATURE_ROUTES', () => {
     expect(byPath('verwaltung')?.data?.['wide']).toBe(true);
   });
 
-  it('flags the new-event route and serves the dossier as a child of the list', async () => {
+  it('flags the new-event route and serves the list and the dossier page as siblings', async () => {
     expect(byPath('dossiers/neu')?.data?.['newEvent']).toBe(true);
     expect(byPath('dossiers/:id')).toBeUndefined();
     const loaded = await (byPath('dossiers')?.loadChildren as () => Promise<{ default: Routes }>)();
-    const child = loaded.default[0].children?.[0];
-    expect(child?.path).toBe(':id');
-    expect(child?.canDeactivate).toHaveLength(1);
+    expect(loaded.default.map((r) => r.path)).toEqual(['', ':id']);
+    expect(loaded.default[0].children).toBeUndefined();
+    expect(loaded.default[1].canDeactivate).toHaveLength(1);
   });
 
-  it('adds Kalender, Archiv, Formate and Bibliothek behind the session guard in the wide frame', async () => {
-    for (const path of ['kalender', 'archiv', 'formate', 'bibliothek']) {
+  it('keeps Archiv, Formate and Bibliothek behind the session guard in the wide frame', () => {
+    for (const path of ['archiv', 'formate', 'bibliothek']) {
       expect(byPath(path)?.canActivate).toHaveLength(1);
       expect(byPath(path)?.data?.['wide']).toBe(true);
     }
   });
 
-  it('opens the follow-up tab by its own child route of the dossier list', async () => {
+  it('has no board, task, calendar or follow-up route any more', async () => {
+    for (const path of ['aufgaben', 'pipeline', 'kalender']) expect(byPath(path)).toBeUndefined();
     const loaded = await (byPath('dossiers')?.loadChildren as () => Promise<{ default: Routes }>)();
-    const child = loaded.default[0].children?.find((r) => r.path === ':id/nachbereitung');
-    expect(child?.data?.['tab']).toBe('followup');
-    expect(child?.canDeactivate).toHaveLength(1);
+    expect(loaded.default.some((r) => r.path?.includes('nachbereitung'))).toBe(false);
   });
 
   it('serves the archive page and the read-only archive dossier, the format as a child and the library item', async () => {
@@ -47,9 +46,5 @@ describe('FEATURE_ROUTES', () => {
     expect(formats.default[0].children?.[0].path).toBe(':slug');
     const library = await (byPath('bibliothek')?.loadChildren as () => Promise<{ default: Routes }>)();
     expect(library.default.map((r) => r.path)).toEqual(['', ':kind/:id']);
-  });
-
-  it('gives the pipeline the wide frame and the fab', () => {
-    expect(byPath('pipeline')?.data).toEqual({ title: 'nav.pipeline', wide: true, fab: true });
   });
 });

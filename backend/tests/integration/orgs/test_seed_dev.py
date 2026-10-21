@@ -18,7 +18,7 @@ REALM = Path(__file__).resolve().parents[4] / "deploy" / "keycloak" / "stupa-eve
 
 async def test_seed_is_idempotent(api: Api, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(seed_dev, "get_sessionmaker", lambda: api.maker)
-    assert await seed_dev.main() == 12
+    assert await seed_dev.main() == 11
     async with api.maker() as session:
         mappings_after_first = (
             await session.execute(
@@ -35,31 +35,13 @@ async def test_seed_is_idempotent(api: Api, monkeypatch: pytest.MonkeyPatch) -> 
         ).scalar_one()
         chain = (await session.execute(text("SELECT count(*) FROM audit_entry"))).scalar_one()
     by_title = {t: s for t, s, _ in states}
-    assert by_title["Movienight: Beispielfilm"] == "planning"
-    assert [
-        by_title[t] for t in sorted(by_title) if t.startswith(("Filmquiz", "Sommer", "Archiv"))
-    ] == [
-        "archived",
-        "in_review",
-        "approved",
-    ]
-    assert by_title["Vorschlag: Karaoke-Abend"] == "idea"
-    assert by_title["Löten für Einsteiger:innen: Rückblick"] == "followup"
-    assert by_title["Spieleabend: Brettspielklassiker"] == "live"
+    assert by_title["Movienight: Beispielfilm"] == "draft"
+    assert by_title["Spieleabend: Brettspielklassiker"] == "published"
+    assert by_title["Archivtreffen"] == "archived"
+    assert sorted(set(by_title.values())) == ["archived", "draft", "published"]
     assert {t: v for t, _, v in states}["Movienight: Beispielfilm"] == "Kinosaal 9-133"
-    assert revisions == 76
-    assert chain == 81 + mappings_after_first
-
-
-async def test_the_proposal_has_no_organization_and_belongs_to_the_member(
-    api: Api, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setattr(seed_dev, "get_sessionmaker", lambda: api.maker)
-    await seed_dev.main()
-    rows = await api.sql(
-        "SELECT created_by, organization_id FROM event WHERE title LIKE 'Vorschlag%'"
-    )
-    assert rows == [("seed-member", None)]
+    assert revisions == 31
+    assert chain == 36 + mappings_after_first
 
 
 async def test_ensure_reference_adds_missing_rows_only(api: Api) -> None:
@@ -93,13 +75,4 @@ async def test_seed_maps_every_realm_group(api: Api, monkeypatch: pytest.MonkeyP
         mapped = set(
             (await session.execute(text("SELECT oidc_group FROM group_mapping"))).scalars()
         )
-        approver = (
-            await session.execute(
-                text(
-                    "SELECT m.role, o.trusted FROM group_mapping m JOIN organization o "
-                    "ON o.id = m.organization_id WHERE m.oidc_group = 'events-fsi-approver'"
-                )
-            )
-        ).one()
     assert {g["name"] for g in realm["groups"]} - {"events-users"} <= mapped
-    assert tuple(approver) == ("approver", False)

@@ -13,7 +13,6 @@ const rev = (n: number, over: Partial<RevisionOut> = {}): RevisionOut => ({
   at: '2026-10-18T12:02:00Z',
   actor: { sub: 'u', displayName: 'Anna' },
   actorType: 'human',
-  fieldClass: 'text',
   changeNote: null,
   changedFields: ['summary'],
   ...over,
@@ -38,18 +37,16 @@ async function setup(
 }
 
 describe('DossierHistoryComponent', () => {
-  it('lists the revisions with person, class, note and the changed fields', async () => {
+  it('lists the revisions with person, state change mark, note and the changed fields', async () => {
     const { api } = await setup([
       rev(5, { changeNote: 'Tippfehler', changedFields: ['summary', 'starts_at'] }),
-      rev(4, { fieldClass: 'state', changedFields: [] }),
-      rev(3, { actorType: 'system', fieldClass: 'critical', changedFields: ['title'] }),
+      rev(4, { changedFields: ['state'] }),
+      rev(3, { actorType: 'system', changedFields: ['title'] }),
     ]);
     expect(api.revisions).toHaveBeenCalledWith('ev-1');
     expect(screen.getByText('Fassung 5')).toBeInTheDocument();
     expect(screen.getByText('Tippfehler')).toBeInTheDocument();
-    expect(screen.getByText('Textänderung')).toBeInTheDocument();
-    expect(screen.getByText('Zustand')).toBeInTheDocument();
-    expect(screen.getByText('Kritische Änderung')).toBeInTheDocument();
+    expect(screen.getAllByText('Zustandswechsel')).toHaveLength(1);
     expect(screen.getByText('System')).toBeInTheDocument();
     expect(screen.getByText('Kurztext')).toBeInTheDocument();
     expect(screen.getByText('Beginn')).toBeInTheDocument();

@@ -71,7 +71,7 @@ describe('SearchHitComponent', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Neu aus Vorlage' }));
     expect(open).toHaveBeenCalledWith(expect.objectContaining({ id: 'ev-9' }));
     expect(useTemplate).toHaveBeenCalled();
-    view.fixture.componentRef.setInput('hit', makeHit({ state: 'live', foreign: true }));
+    view.fixture.componentRef.setInput('hit', makeHit({ state: 'published', foreign: true }));
     view.fixture.detectChanges();
     expect(screen.queryByRole('button', { name: 'Neu aus Vorlage' })).not.toBeInTheDocument();
     view.fixture.componentRef.setInput('hit', makeHit({ kind: 'document' }));
@@ -99,13 +99,12 @@ describe('SearchHitComponent', () => {
     expect(screen.queryByRole('button', { name: 'Neu aus Vorlage' })).not.toBeInTheDocument();
   });
 
-  it('offers "Neu aus Vorlage" for an own live or follow-up dossier', async () => {
-    const view = await render(SearchHitComponent, { inputs: { hit: makeHit({ state: 'live' }) } });
+  it('offers "Neu aus Vorlage" for an own published dossier, not for a draft', async () => {
+    const view = await render(SearchHitComponent, {
+      inputs: { hit: makeHit({ state: 'published' }) },
+    });
     expect(screen.getByRole('button', { name: 'Neu aus Vorlage' })).toBeInTheDocument();
-    view.fixture.componentRef.setInput('hit', makeHit({ state: 'followup' }));
-    view.fixture.detectChanges();
-    expect(screen.getByRole('button', { name: 'Neu aus Vorlage' })).toBeInTheDocument();
-    view.fixture.componentRef.setInput('hit', makeHit({ state: 'planning' }));
+    view.fixture.componentRef.setInput('hit', makeHit({ state: 'draft' }));
     view.fixture.detectChanges();
     expect(screen.queryByRole('button', { name: 'Neu aus Vorlage' })).not.toBeInTheDocument();
   });

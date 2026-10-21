@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { I18nService } from '@core/i18n/i18n.service';
 import type { RevisionOut } from '../api/action.models';
 import type { CommentThread } from '../model/comment.models';
-import { commentEntries, documentEntries, revisionEntries } from './timeline';
+import { commentEntries, documentEntries, isStateChange, revisionEntries } from './timeline';
 
 const i18n = () => TestBed.inject(I18nService);
 
@@ -14,16 +14,14 @@ describe('timeline entries', () => {
         at: '2026-10-01T10:00:00Z',
         actor: { sub: 'u', displayName: 'Anna' },
         actorType: 'human',
-        fieldClass: 'state',
         changeNote: 'n',
-        changedFields: ['title'],
+        changedFields: ['state', 'title'],
       },
       {
         rev: 1,
         at: '2026-09-01T10:00:00Z',
         actor: { sub: 's', displayName: null },
         actorType: 'system',
-        fieldClass: 'text',
         changeNote: null,
         changedFields: [],
       },
@@ -35,12 +33,17 @@ describe('timeline entries', () => {
       actor: 'Anna',
       body: 'n',
     });
-    expect(entries[0].changes?.[0].label).toBe('Titel');
+    expect(entries[0].changes?.map((c) => c.label)).toEqual(['Zustand', 'Titel']);
     expect(entries[1]).toMatchObject({
       icon: 'edit',
       title: 'Fassung 1 gespeichert',
       actor: 'System',
     });
+  });
+
+  it('knows a state change by the field "state" in its snapshot diff', () => {
+    expect(isStateChange({ changedFields: ['state'] } as RevisionOut)).toBe(true);
+    expect(isStateChange({ changedFields: ['summary'] } as RevisionOut)).toBe(false);
   });
 
   it('turns document revisions into entries', () => {

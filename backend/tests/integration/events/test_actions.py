@@ -1,4 +1,4 @@
-"""cancel, postpone, reinstate, assign-organization, revert-revision, flyer and the M1 alias."""
+"""cancel, postpone, reinstate, the organization by PATCH, revert-revision and `allowedActions`."""
 
 from __future__ import annotations
 
@@ -19,15 +19,15 @@ async def seq(api: Api, eid: str) -> int:
 
 
 async def test_cancel_keeps_the_event_in_the_feed_as_cancelled(api: Api) -> None:
-    event = await api.to_state("live")
+    event = await api.to_state("published")
     eid = event["id"]
     before = await seq(api, eid)
-    done = await api.action(
+    done = await api.act(
         "organizer-fsi", eid, "cancel", reason="Referent krank", publicReasonCode="illness"
     )
     assert done.status_code == 200
     body = done.json()
-    assert body["state"] == "live" and body["publicStatus"] == "cancelled"
+    assert body["state"] == "published" and body["publicStatus"] == "cancelled"
     assert body["publicReason"] == {"code": "illness", "text": None}
     assert await seq(api, eid) == before + 1
     item = await feed_item(api, eid)
@@ -37,13 +37,14 @@ async def test_cancel_keeps_the_event_in_the_feed_as_cancelled(api: Api) -> None
 
 
 async def test_the_reason_is_internal_only(api: Api) -> None:
-    event = await api.to_state("live")
-    await api.action("organizer-fsi", event["id"], "cancel", reason="Geheimer Grund")
+    event = await api.to_state("published")
+    await api.act("organizer-fsi", event["id"], "cancel", reason="Geheimer Grund")
     status = await api.sql(
-        "SELECT note, transition_id FROM event_status_event WHERE event_id = :i ORDER BY id DESC LIMIT 1",
+        "SELECT note, transition_id, actor_type FROM event_status_event "
+        "WHERE event_id = :i ORDER BY id DESC LIMIT 1",
         i=event["id"],
     )
-    assert status == [("Geheimer Grund", "cancel")]
+    assert status == [("Geheimer Grund", "cancel", "human")]
     audit = await api.sql("SELECT data::text FROM audit_entry WHERE action = 'event_cancel'")
     assert "Geheimer Grund" not in audit[0][0]
     revisions = await api.sql(
@@ -52,18 +53,13 @@ async def test_the_reason_is_internal_only(api: Api) -> None:
     assert all("Geheimer" not in (r[0] or "") for r in revisions)
 
 
-async def test_the_public_text_needs_the_approve_right(api: Api) -> None:
-    event = await api.to_state("live")
+async def test_the_organizer_sets_the_public_text_and_the_reason_is_optional(api: Api) -> None:
+    event = await api.to_state("published")
     eid = event["id"]
-    refused = await api.action(
-        "organizer-fsi", eid, "cancel", reason="x", publicReasonText="Der Saal ist belegt"
-    )
-    assert refused.status_code == 403
-    done = await api.action(
-        "editor",
+    done = await api.act(
+        "organizer-fsi",
         eid,
         "cancel",
-        reason="x",
         publicReasonCode="room",
         publicReasonText="Der Saal ist belegt",
     )
@@ -72,42 +68,41 @@ async def test_the_public_text_needs_the_approve_right(api: Api) -> None:
     assert item is not None and item["statusReason"]["text"] == "Der Saal ist belegt"
 
 
-async def test_actions_need_a_reason_and_the_live_state(api: Api) -> None:
-    event = await api.to_state("live")
+async def test_the_actions_need_the_published_state_and_a_fitting_status(api: Api) -> None:
+    event = await api.to_state("published")
     eid = event["id"]
-    for body in ({}, {"reason": "  "}):
-        response = await api.action("organizer-fsi", eid, "cancel", **body)
-        assert response.status_code == 422 and response.json()["code"] == "reason_required"
-    assert (await api.action("organizer-fsi", eid, "cancel", reason="x")).status_code == 200
-    again = await api.action("organizer-fsi", eid, "cancel", reason="x")
-    assert again.status_code == 409 and again.json()["code"] == "invalid_transition"
-    approved = await api.to_state("approved")
-    early = await api.action("editor", approved["id"], "cancel", reason="x")
-    assert early.status_code == 409
-    bad = await api.action("editor", eid, "postpone", reason="x", publicReasonCode="nonsense")
+    assert (await api.act("organizer-fsi", eid, "cancel")).status_code == 200
+    again = await api.act("organizer-fsi", eid, "cancel")
+    assert again.status_code == 409 and again.json()["code"] == "invalid_state"
+    draft = await api.to_state("draft")
+    early = await api.act("editor", draft["id"], "cancel")
+    assert early.status_code == 409 and early.json()["code"] == "invalid_state"
+    archived = await api.to_state("archived")
+    late = await api.act("editor", archived["id"], "reinstate")
+    assert late.status_code == 409
+    bad = await api.act("editor", eid, "postpone", publicReasonCode="nonsense")
     assert bad.status_code == 422
 
 
 async def test_rights_of_the_status_actions(api: Api) -> None:
-    event = await api.to_state("live")
+    event = await api.to_state("published")
     eid = event["id"]
-    assert (await api.action("viewer-fsi", eid, "cancel", reason="x")).status_code == 403
-    assert (await api.action("submitter-fsi", eid, "cancel", reason="x")).status_code == 403
-    assert (await api.action("organizer-makers", eid, "cancel", reason="x")).status_code == 404
-    assert (await api.action("organizer-fsi", eid, "reinstate", reason="x")).status_code == 403
-    assert (await api.action("member", eid, "cancel", reason="x")).status_code == 403
+    assert (await api.act("viewer-fsi", eid, "cancel")).status_code == 403
+    assert (await api.act("submitter-fsi", eid, "cancel")).status_code == 403
+    assert (await api.act("organizer-makers", eid, "cancel")).status_code == 404
+    assert (await api.act("member", eid, "cancel")).status_code == 403
+    assert (await api.act("stupa", eid, "cancel")).status_code == 403
+    await api.act("organizer-fsi", eid, "cancel")
+    assert (await api.act("organizer-fsi", eid, "reinstate")).status_code == 200
+    assert (await api.act("organizer-fsi", eid, "cancel", without_if_match=True)).status_code == 428
 
 
 async def test_postpone_with_a_new_date_stays_postponed_until_reinstated(api: Api) -> None:
-    event = await api.to_state("live")
+    event = await api.to_state("published")
     eid = event["id"]
     new_start, new_end = future(30), future(30, 2)
-    needs_right = await api.action(
-        "organizer-fsi", eid, "postpone", reason="x", newStartsAt=new_start.isoformat()
-    )
-    assert needs_right.status_code == 403
-    done = await api.action(
-        "editor",
+    done = await api.act(
+        "organizer-fsi",
         eid,
         "postpone",
         reason="Raum belegt",
@@ -119,7 +114,7 @@ async def test_postpone_with_a_new_date_stays_postponed_until_reinstated(api: Ap
     assert done.json()["startsAt"].startswith(new_start.strftime("%Y-%m-%dT%H"))
     item = await feed_item(api, eid)
     assert item is not None and item["status"] == "postponed"
-    back = await api.action("editor", eid, "reinstate", reason="Termin steht")
+    back = await api.act("organizer-fsi", eid, "reinstate", reason="Termin steht")
     assert back.status_code == 200 and back.json()["publicStatus"] == "scheduled"
     assert back.json()["publicReason"] is None
     final = await feed_item(api, eid)
@@ -127,243 +122,168 @@ async def test_postpone_with_a_new_date_stays_postponed_until_reinstated(api: Ap
 
 
 async def test_postpone_without_a_date_and_its_validation(api: Api) -> None:
-    event = await api.to_state("live")
+    event = await api.to_state("published")
     eid = event["id"]
-    lone = await api.action("editor", eid, "postpone", reason="x", newEndsAt=future(9).isoformat())
+    lone = await api.act("editor", eid, "postpone", newEndsAt=future(9).isoformat())
     assert lone.status_code == 422
-    past = await api.action(
-        "editor", eid, "postpone", reason="x", newStartsAt=future(-9).isoformat()
-    )
+    past = await api.act("editor", eid, "postpone", newStartsAt=future(-9).isoformat())
     assert past.status_code == 422 and past.json()["code"] == "start_in_past"
-    reversed_ = await api.action(
+    reversed_ = await api.act(
         "editor",
         eid,
         "postpone",
-        reason="x",
         newStartsAt=future(9).isoformat(),
         newEndsAt=future(8).isoformat(),
     )
     assert reversed_.status_code == 422
-    plain = await api.action("organizer-fsi", eid, "postpone", reason="Folgt")
+    plain = await api.act("organizer-fsi", eid, "postpone", reason="Folgt")
     assert plain.status_code == 200 and plain.json()["startsAt"] == event["startsAt"]
-    twice = await api.action("organizer-fsi", eid, "postpone", reason="Folgt")
+    twice = await api.act("organizer-fsi", eid, "postpone", reason="Folgt")
     assert twice.status_code == 409
-    cancelled = await api.action("editor", eid, "cancel", reason="Doch nicht")
+    cancelled = await api.act("editor", eid, "cancel", reason="Doch nicht")
     assert cancelled.json()["publicStatus"] == "cancelled"
 
 
-async def test_reinstate_runs_the_publish_guards(api: Api) -> None:
-    event = await api.to_state("live")
-    eid = event["id"]
-    await api.action("editor", eid, "cancel", reason="x")
-    await api.sql("UPDATE event SET title = '[ABGESAGT] Movienight' WHERE id = :i", i=eid)
-    refused = await api.action("editor", eid, "reinstate", reason="x")
-    assert refused.status_code == 422 and refused.json()["code"] == "title_has_status"
-    await api.sql("UPDATE event SET title = 'Movienight' WHERE id = :i", i=eid)
-    ok = await api.action("editor", eid, "reinstate", reason="x")
-    assert ok.status_code == 200
-    plain = await api.action("editor", eid, "reinstate", reason="x")
-    assert plain.status_code == 409
+async def test_postponing_an_all_day_event_moves_its_days(api: Api) -> None:
+    event = await api.create_event(
+        startsAt=None, endsAt=None, allDay=True, startsOn="2030-05-01", endsOn="2030-05-02"
+    )
+    assert (await api.act("organizer-fsi", event["id"], "publish")).status_code == 200
+    moved = await api.act(
+        "organizer-fsi",
+        event["id"],
+        "postpone",
+        newStartsAt="2030-06-09T22:00:00+00:00",
+        newEndsAt="2030-06-11T22:00:00+00:00",
+    )
+    body = moved.json()
+    assert moved.status_code == 200
+    assert (body["startsOn"], body["endsOn"]) == ("2030-06-10", "2030-06-11")
 
 
-async def test_assign_organization(api: Api) -> None:
-    proposal = (
-        await api.request(
-            "member",
-            "POST",
-            "/api/events",
-            json={"title": "Idee", "startsAt": future().isoformat()},
-        )
-    ).json()
-    pid = proposal["id"]
-    assert (
-        await api.action(
-            "organizer-fsi", pid, "assign-organization", organizationId=api.org_ids["fsi"]
-        )
-    ).status_code == 403
-    assert (
-        await api.action("member", pid, "assign-organization", organizationId=api.org_ids["fsi"])
-    ).status_code == 403
-    unknown = await api.action(
-        "editor", pid, "assign-organization", organizationId="00000000-0000-0000-0000-000000000000"
+async def test_assign_the_organization_by_patch(api: Api) -> None:
+    await api.sql(
+        "INSERT INTO event (title, starts_at, ends_at, created_by, state) "
+        "VALUES ('Alter Vorschlag', now() + interval '3 days', now() + interval '4 days', "
+        "'sub-member', 'draft')"
+    )
+    orphan = (await api.sql("SELECT id::text FROM event"))[0][0]
+    org = api.org_ids["fsi"]
+    assert (await api.get("editor", orphan))["organization"] is None
+    assert (await api.patch("organizer-fsi", orphan, organizationId=org)).status_code == 404
+    assert (await api.patch("member", orphan, organizationId=org)).status_code == 403
+    unknown = await api.patch(
+        "editor", orphan, organizationId="00000000-0000-0000-0000-000000000000"
     )
     assert unknown.status_code == 404
-    done = await api.action("editor", pid, "assign-organization", organizationId=api.org_ids["fsi"])
+    done = await api.patch("editor", orphan, organizationId=org)
     assert done.status_code == 200 and done.json()["organization"]["slug"] == "fsi"
-    twice = await api.action(
-        "editor", pid, "assign-organization", organizationId=api.org_ids["makers"]
+    twice = await api.patch("editor", orphan, organizationId=api.org_ids["makers"])
+    assert twice.status_code == 409 and twice.json()["code"] == "field_locked"
+    assert (await api.act("organizer-fsi", orphan, "publish")).status_code == 200
+
+
+async def test_an_orphan_draft_cannot_be_published(api: Api) -> None:
+    await api.sql(
+        "INSERT INTO event (title, starts_at, ends_at, created_by, state) "
+        "VALUES ('Alter Vorschlag', now() + interval '3 days', now() + interval '4 days', "
+        "'sub-editor', 'draft')"
     )
-    assert twice.status_code == 409 and twice.json()["code"] == "organization_already_set"
-    assert (await api.fire("organizer-fsi", pid, "T01")).status_code == 200
-    assert (await api.fire("member", pid, "T01")).status_code == 404
+    orphan = (await api.sql("SELECT id::text FROM event"))[0][0]
+    refused = await api.act("editor", orphan, "publish")
+    assert refused.status_code == 422 and refused.json()["code"] == "publish_incomplete"
+    assert [e["field"] for e in refused.json()["errors"]] == ["organizationId"]
+    assert refused.json()["reasons"] == [{"field": "organizationId"}]
 
 
 async def test_revert_revision_restores_the_content(api: Api) -> None:
-    event = await api.to_state("live")
+    event = await api.to_state("published")
     eid = event["id"]
     first_rev = event["rev"]
     await api.patch("organizer-fsi", eid, summary="Vertippt!!", descriptionMd="Neuer Text")
-    reverted = await api.action("editor", eid, "revert-revision", rev=first_rev)
+    reverted = await api.act("organizer-fsi", eid, "revert-revision", rev=first_rev)
     assert reverted.status_code == 200
     body = reverted.json()
     assert body["summary"] == event["summary"] and body["descriptionMd"] == event["descriptionMd"]
-    assert body["rev"] == first_rev + 2 and body["state"] == "live"
+    assert body["rev"] == first_rev + 2 and body["state"] == "published"
     rows = await api.sql(
-        "SELECT change_note, field_class FROM event_revision WHERE event_id = :i ORDER BY rev DESC LIMIT 1",
+        "SELECT change_note FROM event_revision WHERE event_id = :i ORDER BY rev DESC LIMIT 1",
         i=eid,
     )
-    assert rows == [(f"Zurückgesetzt auf Revision {first_rev}", "text")]
-    assert (await api.action("editor", eid, "revert-revision", rev=999)).status_code == 404
-    assert (
-        await api.action("organizer-fsi", eid, "revert-revision", rev=first_rev)
-    ).status_code == 403
+    assert rows == [(f"Zurückgesetzt auf Revision {first_rev}",)]
+    assert (await api.act("editor", eid, "revert-revision", rev=999)).status_code == 404
+    assert (await api.act("viewer-fsi", eid, "revert-revision", rev=first_rev)).status_code == 403
 
 
 async def test_revert_is_refused_when_the_poster_was_replaced(api: Api) -> None:
-    event = await api.to_state("planning")
+    event = await api.to_state("draft")
     eid = event["id"]
     first = await api.upload_poster("organizer-fsi", eid)
     await api.process_poster(first.json()["id"])
     rev_with_poster = (await api.get("editor", eid))["rev"]
     second = await api.upload_poster("organizer-fsi", eid, altText="Anderes Bild")
     assert second.status_code == 201
-    refused = await api.action("editor", eid, "revert-revision", rev=rev_with_poster)
+    refused = await api.act("editor", eid, "revert-revision", rev=rev_with_poster)
     assert refused.status_code == 409 and refused.json()["code"] == "revert_poster_replaced"
 
 
-async def test_revert_runs_the_live_guards_and_is_closed_after_live(api: Api) -> None:
-    event = await api.create_event(summary=None)
-    eid = event["id"]
-    await api.fire("organizer-fsi", eid, "T01")
-    await api.patch("organizer-fsi", eid, summary="Jetzt mit Kurztext")
-    await api.action("editor", eid, "image-exception", reason="Test ohne Motiv")
-    await api.fire("organizer-fsi", eid, "T02")
-    await api.fire("editor", eid, "T04")
-    await api.fire("editor", eid, "T05")
-    refused = await api.action("editor", eid, "revert-revision", rev=1)
-    assert refused.status_code == 422 and refused.json()["code"] == "field_missing"
-    assert (await api.get("editor", eid))["summary"] == "Jetzt mit Kurztext"
-    await api.sql("UPDATE event SET state = 'followup' WHERE id = :i", i=eid)
-    closed = await api.action("editor", eid, "revert-revision", rev=1)
+async def test_revert_is_closed_in_the_archive(api: Api) -> None:
+    event = await api.to_state("archived")
+    closed = await api.act("editor", event["id"], "revert-revision", rev=1)
     assert closed.status_code == 409 and closed.json()["code"] == "field_locked"
 
 
-async def test_confirm_flyer_and_the_flyer_guard(api: Api) -> None:
-    first = await api.to_state("planning")
-    poster = await api.upload_poster("organizer-fsi", first["id"])
-    await api.process_poster(poster.json()["id"])
-    other = await api.to_state(
-        "planning",
-        title="Anderes Jahr",
-        startsAt=future(400).isoformat(),
-        endsAt=future(400, 2).isoformat(),
-    )
-    same_file = await api.upload_poster("organizer-fsi", other["id"])
-    await api.process_poster(same_file.json()["id"])
-    await api.fire("organizer-fsi", other["id"], "T02")
-    guards = (await api.request("editor", "GET", f"/api/events/{other['id']}/guards/T04")).json()
-    assert "flyer_date" in [r["code"] for r in guards["reasons"]]
-    assert (await api.fire("editor", other["id"], "T04")).json()["code"] == "flyer_date"
-    done = await api.action("organizer-fsi", other["id"], "confirm-flyer")
-    assert done.status_code == 200 and done.json()["flyerCheckedAt"] is not None
-    guards = (await api.request("editor", "GET", f"/api/events/{other['id']}/guards/T04")).json()
-    assert "flyer_date" not in [r["code"] for r in guards["reasons"]]
-    assert (await api.fire("editor", other["id"], "T04")).status_code == 200
-    assert (await api.action("organizer-fsi", other["id"], "confirm-flyer")).status_code == 409
-    assert (await api.action("viewer-fsi", first["id"], "confirm-flyer")).status_code == 403
-    foreign = await api.create_event(user="submitter2-fsi", title="Fremd")
-    assert (await api.action("submitter-fsi", foreign["id"], "confirm-flyer")).status_code == 403
+async def test_revert_runs_through_the_same_derivations_as_patch(api: Api) -> None:
+    event = await api.to_state("published", venueText="Kinosaal")
+    eid = event["id"]
+    await api.act("editor", eid, "confirm-location", precision="exact")
+    assert (await api.get("editor", eid))["locationPrecision"] == "exact"
+    changed = await api.patch("organizer-fsi", eid, venueText="Aula")
+    assert changed.status_code == 200 and changed.json()["locationPrecision"] == "hidden"
+    await api.act("editor", eid, "confirm-location", precision="building")
+    back = await api.act("organizer-fsi", eid, "revert-revision", rev=event["rev"] + 1)
+    assert back.status_code == 200 and back.json()["venueText"] == "Kinosaal"
+    assert back.json()["locationPrecision"] == "hidden"
+    item = await feed_item(api, eid)
+    assert item is not None and not item.get("venueText") and "Kinosaal" not in str(item)
 
 
-async def test_confirm_flyer_marks_the_poster_and_works_without_one(api: Api) -> None:
-    bare = await api.to_state("planning")
-    plain = await api.action("organizer-fsi", bare["id"], "confirm-flyer")
-    assert plain.status_code == 200 and plain.json()["flyerCheckedAt"] is not None
-    event = await api.to_state("planning", title="Mit Plakat")
-    poster = (await api.upload_poster("organizer-fsi", event["id"])).json()
-    await api.process_poster(poster["id"])
-    assert (await api.action("organizer-fsi", event["id"], "confirm-flyer")).status_code == 200
-    rows = await api.sql(
-        "SELECT flyer_date_confirmed_at IS NOT NULL, flyer_date_confirmed_by FROM attachment WHERE id = :i",
-        i=poster["id"],
-    )
-    assert rows[0][0] is True and rows[0][1]
+async def test_revert_bumps_the_public_sequence_only_for_public_fields(api: Api) -> None:
+    published = await api.to_state("published")
+    await api.patch("organizer-fsi", published["id"], descriptionMd="Mehr Text")
+    before = await seq(api, published["id"])
+    done = await api.act("editor", published["id"], "revert-revision", rev=published["rev"])
+    assert done.status_code == 200
+    assert await seq(api, published["id"]) == before
+    await api.patch("organizer-fsi", published["id"], summary="Anders")
+    before = await seq(api, published["id"])
+    await api.act("editor", published["id"], "revert-revision", rev=published["rev"])
+    assert await seq(api, published["id"]) == before + 1
 
 
-async def test_acknowledge_changes_needs_live(api: Api) -> None:
-    event = await api.to_state("planning")
-    refused = await api.action("editor", event["id"], "acknowledge-changes")
-    assert refused.status_code == 409
-    assert (
-        await api.action("organizer-fsi", event["id"], "acknowledge-changes")
-    ).status_code == 403
-
-
-async def test_the_m1_image_exception_path_is_an_alias(api: Api) -> None:
-    event = await api.to_state("planning")
-    old = await api.request(
-        "editor",
-        "POST",
-        f"/api/events/{event['id']}/image-exception",
-        json={"reason": "Alter Pfad ok"},
-    )
-    new = await api.action("editor", event["id"], "image-exception", reason="Neuer Pfad ist ok")
-    assert old.status_code == 200 and new.status_code == 200
-    assert new.json()["imageException"]["reason"] == "Neuer Pfad ist ok"
-    short = await api.action("editor", event["id"], "image-exception", reason="kurz")
-    assert short.status_code == 422
-
-
-async def test_allowed_actions_and_transitions_in_event_out(api: Api) -> None:
-    event = await api.to_state("live")
+async def test_allowed_actions_in_event_out(api: Api) -> None:
+    event = await api.to_state("published")
     editor = await api.get("editor", event["id"])
     assert editor["allowedActions"] == [
+        "unpublish",
+        "archive",
         "cancel",
         "postpone",
-        "postpone-with-date",
-        "public-text",
         "revert-revision",
-        "acknowledge-changes",
-        "verify-howto",
         "confirm-location",
-        "save-as-format",
-        "clone",
-    ]
-    assert editor["allowedTransitions"] == ["T07"]
-    organizer = await api.get("organizer-fsi", event["id"])
-    assert organizer["allowedActions"] == [
-        "cancel",
-        "postpone",
         "verify-howto",
         "save-as-format",
         "clone",
     ]
+    organizer = await api.get("organizer-fsi", event["id"])
+    assert organizer["allowedActions"] == editor["allowedActions"]
     viewer = await api.get("viewer-fsi", event["id"])
-    assert viewer["allowedActions"] == [] and viewer["allowedTransitions"] == []
+    assert viewer["allowedActions"] == [] and viewer["editableFields"] == []
+    assert "title" in editor["editableFields"]
 
 
 async def test_a_stale_if_match_on_an_action_is_a_conflict(api: Api) -> None:
-    event = await api.to_state("live")
-    stale = await api.request(
-        "organizer-fsi",
-        "POST",
-        f"/api/events/{event['id']}/actions/cancel",
-        json={"reason": "x"},
-        headers={"If-Match": f'"{event["rev"] - 1}"'},
-    )
+    event = await api.to_state("published")
+    stale = await api.act("organizer-fsi", event["id"], "cancel", if_match_rev=event["rev"] - 1)
     assert stale.status_code == 409 and stale.json()["code"] == "conflict"
     assert stale.json()["current"]["rev"] == event["rev"]
-
-
-async def test_revert_outside_live_and_without_a_summary_change(api: Api) -> None:
-    planning = await api.to_state("planning")
-    first = planning["rev"]
-    await api.patch("organizer-fsi", planning["id"], summary="Anders", title="Neu")
-    back = await api.action("editor", planning["id"], "revert-revision", rev=first)
-    assert back.status_code == 200 and back.json()["title"] == planning["title"]
-    live = await api.to_state("live")
-    await api.patch("organizer-fsi", live["id"], descriptionMd="Mehr Text")
-    seq = (await api.sql("SELECT public_seq FROM event WHERE id = :i", i=live["id"]))[0][0]
-    done = await api.action("editor", live["id"], "revert-revision", rev=live["rev"])
-    assert done.status_code == 200
-    assert (await api.sql("SELECT public_seq FROM event WHERE id = :i", i=live["id"]))[0][0] == seq

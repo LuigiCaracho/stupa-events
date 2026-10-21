@@ -20,7 +20,6 @@ FORMAT_ONLY = "LIBRARYONLY-"
 PUBLIC_TITLE = "CANARY-PUBLIC-TITLE"
 PUBLIC_SUMMARY = "CANARY-PUBLIC-SUMMARY"
 AMOUNT_DIGITS = "98765432101"
-DRAFT_STATES = ("idea", "planning", "in_review", "approved")
 
 
 def format_mark(name: str) -> str:
@@ -37,7 +36,7 @@ def mark(name: str) -> str:
 class Canary:
     """The ids of the canary dossiers."""
 
-    live: str
+    published: str
     archived: str
     hidden_text: str
     private_venue: str
@@ -49,13 +48,9 @@ async def internal_bits(api: Api, eid: str) -> None:
     """Hang the internal strings onto a dossier (rows written directly, as a hostile import would)."""
     sql = api.sql
     await sql(
-        "UPDATE event SET created_by = :c, submitted_by = :s, approved_by = :a, "
-        "outcome = CAST(:o AS jsonb), facts = CAST(:f AS jsonb), "
-        "image_exception = jsonb_set(coalesce(image_exception, '{}'::jsonb), '{reason}', to_jsonb(CAST(:x AS text))) "
-        "WHERE id = :e",
+        "UPDATE event SET created_by = :c, outcome = CAST(:o AS jsonb), "
+        "facts = CAST(:f AS jsonb) WHERE id = :e",
         c=f"sub-{mark('SUBCREATOR')}",
-        s=f"sub-{mark('SUBCREATOR')}",
-        a=f"sub-{mark('SUBAPPROVER')}",
         o=json.dumps(
             {
                 "attendance": 5,
@@ -66,7 +61,6 @@ async def internal_bits(api: Api, eid: str) -> None:
             }
         ),
         f=json.dumps({"noisePermitRef": mark("FACTS")}),
-        x=mark("EXCEPTION"),
         e=eid,
     )
     for kind, visibility, scan, name, extra in (
@@ -141,19 +135,19 @@ async def internal_bits(api: Api, eid: str) -> None:
     )
     await sql(
         "INSERT INTO notification (recipient_sub, kind, event_id, params, link) "
-        "VALUES ('sub-org-fsi', 'transition_done', :e, CAST(:p AS jsonb), '/x')",
+        "VALUES ('sub-org-fsi', 'comment_added', :e, CAST(:p AS jsonb), '/x')",
         e=eid,
         p=json.dumps({"note": mark("NOTIFPARAM")}),
     )
     await sql(
         "INSERT INTO event_status_event (event_id, from_state, to_state, transition_id, note) "
-        "VALUES (:e, 'live', 'live', 'cancel', :n)",
+        "VALUES (:e, 'published', 'published', 'cancel', :n)",
         e=eid,
         n=mark("CANCELNOTE"),
     )
     await sql(
-        "INSERT INTO event_revision (event_id, rev, field_class, snapshot, change_note) "
-        "SELECT :e, 900, 'text', '{}'::jsonb, :n",
+        "INSERT INTO event_revision (event_id, rev, snapshot, change_note) "
+        "SELECT :e, 900, '{}'::jsonb, :n",
         e=eid,
         n=mark("REVNOTE"),
     )
@@ -204,15 +198,15 @@ async def drop_canary_format(api: Api) -> None:
 
 async def seed_canary(api: Api) -> Canary:
     """Build the canary dossiers and return their ids."""
-    live = await api.to_state(
-        "live",
+    published = await api.to_state(
+        "published",
         title=PUBLIC_TITLE,
         summary=PUBLIC_SUMMARY,
         venueText="CANARY-PUBLIC-VENUE",
         descriptionMd="CANARY-PUBLIC-DESCRIPTION",
     )
-    await internal_bits(api, live["id"])
-    await internal_format(api, live["id"])
+    await internal_bits(api, published["id"])
+    await internal_format(api, published["id"])
     archived = await archived_movienight(api, title="CANARY-PUBLIC-ARCHIVED")
     await internal_bits(api, archived)
     await api.sql(
@@ -221,7 +215,7 @@ async def seed_canary(api: Api) -> Canary:
         e=archived,
     )
     hidden_text = await api.to_state(
-        "live",
+        "published",
         title="Ort ohne Bestätigung",
         venueText=mark("UNCONFIRMEDTEXT"),
         startsAt=future(20).isoformat(),
@@ -241,7 +235,7 @@ async def seed_canary(api: Api) -> Canary:
         h=mark("HIDDENADDRESS"),
     )
     private = await api.to_state(
-        "live",
+        "published",
         title="Privater Ort",
         startsAt=future(21).isoformat(),
         endsAt=future(21, 2).isoformat(),
@@ -251,7 +245,7 @@ async def seed_canary(api: Api) -> Canary:
         e=private["id"],
     )
     hidden = await api.to_state(
-        "live",
+        "published",
         title="Versteckte Adresse",
         startsAt=future(22).isoformat(),
         endsAt=future(22, 2).isoformat(),
@@ -260,11 +254,8 @@ async def seed_canary(api: Api) -> Canary:
         "UPDATE event SET venue_id = (SELECT id FROM venue WHERE slug = 'canary-hidden') WHERE id = :e",
         e=hidden["id"],
     )
-    drafts = []
-    for state in DRAFT_STATES:
-        draft = await api.to_state(state, title=mark(f"DRAFT{state.upper()}"))
-        drafts.append(draft["id"])
-    withdrawn = await api.to_state("planning", title=mark("WITHDRAWN"))
-    assert (await api.fire("organizer-fsi", withdrawn["id"], "T11", note="x")).status_code == 200
-    drafts.append(withdrawn["id"])
-    return Canary(live["id"], archived, hidden_text["id"], private["id"], hidden["id"], drafts)
+    draft = await api.to_state("draft", title=mark("DRAFT"))
+    unpublished = await api.to_state("published", title=mark("UNPUBLISHED"))
+    assert (await api.act("organizer-fsi", unpublished["id"], "unpublish")).status_code == 200
+    drafts = [draft["id"], unpublished["id"]]
+    return Canary(published["id"], archived, hidden_text["id"], private["id"], hidden["id"], drafts)

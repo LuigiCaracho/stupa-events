@@ -30,6 +30,6 @@ def reference_state(engine: Engine) -> Iterator[None]:
         ):
             ids = [str(row["id"]) for row in rows]
             conn.execute(text(f"DELETE FROM {table} WHERE id::text <> ALL(:ids)"), {"ids": ids})
-        conn.execute(text("UPDATE organization SET trusted = (slug = 'stupa'), active = true"))
+        conn.execute(text("UPDATE organization SET active = true"))
         conn.execute(text("UPDATE category SET active = true"))
         conn.execute(text("UPDATE venue SET active = true, is_private = false"))
