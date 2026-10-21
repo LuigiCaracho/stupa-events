@@ -3,7 +3,9 @@
 Criterion (M5b contract 1 and 2): a dossier has three states; the organization publishes
 with title, start and organization alone; a missing poster is a hint and the feed says
 `image: null`; the editorial team restores; cancel and reinstate change the public status;
-the worker archives twelve hours after the end. Then the public surface of M5 still holds:
+the worker archives twelve hours after the end. Rights per role, the removed pipeline routes,
+"Neu aus Vorlage", format and library, and the cache invalidation on a category rename are
+checked as well (`m5b_dossier`, `m5b_rights`). Then the public surface of M5 still holds:
 calendars, canary, Schemathesis, snapshot cache and the 20 sample searches.
 
 Only for the local stack. Every person logs in through the real OIDC flow; SQL moves clocks
@@ -22,6 +24,8 @@ from scripts.acceptance_common import PREFIX, check, expect, feed_items, login, 
 from scripts.m5_live import anonymous, bump_feed
 from scripts.m5_public import check_cache, check_canary, check_ics, check_schemathesis
 from scripts.m5_search import check_search
+from scripts.m5b_dossier import check_doc_path, check_template
+from scripts.m5b_rights import check_gone, check_invalidation, check_rights
 
 PREFIX[0] = "m5b"
 
@@ -109,8 +113,10 @@ def main() -> None:
     organizer, editor = login("organizer-fsi"), login("editor")
     makers, member, viewer = login("organizer-makers"), login("member"), login("viewer-fsi")
     if "a" in only:
+        check_doc_path(organizer)
         check_lifecycle(organizer, editor, viewer)
     if "b" in only:
+        check_rights(organizer, editor, login("submitter-fsi"), makers)
         check_worker(organizer)
     if "c" in only:
         check_ics(organizer, editor)
@@ -119,10 +125,13 @@ def main() -> None:
     if "e" in only:
         check_schemathesis()
     if "f" in only:
+        check_gone(organizer)
         check_cache(organizer)
     if "g" in only:
         check_search()
+        check_template(organizer, editor)
     if "h" in only:
+        check_invalidation(organizer, editor)
         with anonymous() as client:
             expect(client.get("/api/public/feed/events"), 200, "h: the public feed answers")
     step("all checks passed")
