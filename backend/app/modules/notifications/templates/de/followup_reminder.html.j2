@@ -1,5 +1,0 @@
-{% if missing %}<p>Das Dossier „{{ title }}“ ist seit {{ days }} Tagen in der Nachbereitung. Es fehlt noch: {{ missing }}.</p>
-<p>Nach 30 Tagen archiviert das System das Dossier von selbst, auch wenn noch etwas fehlt.</p>
-{% else %}<p>Das Dossier „{{ title }}“ ist seit {{ days }} Tagen in der Nachbereitung. Alles ist erledigt, es fehlt nur noch das Abschließen.</p>
-{% endif %}<p><a href="{{ link }}">Nachbereitung öffnen</a></p>
-<p><small><a href="{{ prefs_link }}">Benachrichtigungen verwalten</a></small></p>
