@@ -1,0 +1,31 @@
+<article class="ec">
+  <div class="ec__thumb" aria-hidden="true">
+    @if (thumb(); as src) {
+      <img class="ec__img" [src]="src" alt="" loading="lazy" decoding="async" (error)="failed.set(true)" />
+    } @else {
+      <app-icon name="image" [size]="28" />
+    }
+  </div>
+  <div class="ec__body">
+    <a class="ec__title" [routerLink]="['/dossiers', card().id]">{{ card().title }}</a>
+    <span class="ec__sub">
+      <span class="num">{{ when() }}</span>
+      <span>{{ sub() }}</span>
+    </span>
+    <span class="ec__marks">
+      <app-status-text [kind]="state().kind">{{ state().key | t }}</app-status-text>
+      @if (publicMark(); as m) {
+        <app-status-text [kind]="m.kind">{{ m.key | t }}</app-status-text>
+      }
+      @if (noImageMark()) {
+        <app-status-text kind="warn">
+          <app-icon name="alert" [size]="14" />
+          {{ 'dossiers.noImage' | t }}
+        </app-status-text>
+      }
+      @if (card().howtoUnverified) {
+        <app-status-text kind="warn">{{ 'format.unverified' | t }}</app-status-text>
+      }
+    </span>
+  </div>
+</article>

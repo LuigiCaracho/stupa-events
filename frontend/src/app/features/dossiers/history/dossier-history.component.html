@@ -12,7 +12,9 @@
             <span class="dhi__rev num">{{ 'history.rev' | t: { rev: r.rev } }}</span>
             <span>{{ who(r) }}</span>
             <span class="dhi__muted num">{{ when(r) }}</span>
-            <span class="dhi__muted">{{ classLabel(r) }}</span>
+            @if (isStateChange(r)) {
+              <span class="dhi__muted">{{ 'history.stateChange' | t }}</span>
+            }
           </div>
           @if (r.changeNote) {
             <p class="dhi__note">{{ r.changeNote }}</p>

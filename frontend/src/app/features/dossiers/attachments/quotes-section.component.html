@@ -1,5 +1,5 @@
 <section class="qs" aria-labelledby="quotes-heading">
-  <h3 class="sec" id="quotes-heading">{{ 'quote.title' | t }}</h3>
+  <h2 class="sec" id="quotes-heading">{{ 'quote.title' | t }}</h2>
   @for (g of quotes().groups; track g.grp) {
     <app-quote-table
       [group]="g"

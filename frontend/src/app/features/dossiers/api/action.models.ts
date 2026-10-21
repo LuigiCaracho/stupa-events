@@ -1,24 +1,9 @@
-/** Wire models of the actions, revisions and drafts of a dossier (M3 contract 2.4, 4, 5.4, 5.5). */
+/** Wire models of the lifecycle bodies, revisions and drafts of a dossier (M5b contract 7.1). */
+import type { PersonRef } from './card.models';
 import type { EventFields, PublicReasonCode } from './event.models';
-import type { PersonRef } from './board.models';
-
-export type ActionName =
-  | 'cancel'
-  | 'postpone'
-  | 'reinstate'
-  | 'image-exception'
-  | 'assign-organization'
-  | 'revert-revision'
-  | 'acknowledge-changes'
-  | 'confirm-flyer'
-  | 'verify-howto'
-  | 'confirm-location'
-  /** Hints of `allowedActions` only; they have no route of their own. */
-  | 'postpone-with-date'
-  | 'public-text';
 
 export interface CancelBody {
-  reason: string;
+  reason?: string;
   publicReasonCode: PublicReasonCode;
   publicReasonText?: string;
 }
@@ -28,12 +13,8 @@ export interface PostponeBody extends CancelBody {
   newEndsAt?: string;
 }
 
-export interface ReasonBody {
-  reason: string;
-}
-
-export interface AssignBody {
-  organizationId: string;
+export interface ReinstateBody {
+  reason?: string;
 }
 
 export interface RevertBody {
@@ -41,21 +22,11 @@ export interface RevertBody {
   note?: string;
 }
 
-export interface ConfirmLocationBody {
-  precision: 'exact' | 'building';
-}
-
-export type ActionBody =
-  ConfirmLocationBody | CancelBody | PostponeBody | ReasonBody | AssignBody | RevertBody | Record<string, never>;
-
-export type FieldClass = 'state' | 'critical' | 'text' | 'dossier';
-
 export interface RevisionOut {
   rev: number;
   at: string;
   actor: PersonRef;
   actorType: 'human' | 'system' | 'agent';
-  fieldClass: FieldClass;
   changeNote: string | null;
   changedFields: string[];
 }

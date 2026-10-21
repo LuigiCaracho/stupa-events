@@ -1,14 +1,13 @@
 /** German strings of the app frame: navigation, login, account, error pages, PWA prompt. */
 export const shellDe = {
   'app.title': 'STUPA Events',
-  'app.tagline': 'Veranstaltungen planen, freigeben, wiederholen.',
+  'app.tagline': 'Veranstaltungen dokumentieren, veröffentlichen, wiederholen.',
   'app.skipToContent': 'Zum Inhalt springen',
   'common.loading': 'Wird geladen …',
   'common.back': 'Zurück',
   'nav.main': 'Hauptnavigation',
   'nav.footer': 'Fußzeile',
-  'nav.tasks': 'Aufgaben',
-  'nav.dossiers': 'Dossiers',
+  'nav.events': 'Events',
   'nav.account': 'Konto',
   'nav.more': 'Mehr',
   'shell.nav.brand': '{name}, Start',
@@ -27,7 +26,7 @@ export const shellDe = {
   'notFound.body': 'Diese Seite gibt es nicht oder du hast keinen Zugriff.',
   'home.heading': 'Veranstaltungen der Hochschule Reutlingen',
   'home.body':
-    'Melde dich an, um Events zu planen, zur Freigabe einzureichen und zu veröffentlichen.',
+    'Melde dich an, um Events zu dokumentieren und zu veröffentlichen.',
   'account.title': 'Konto',
   'account.name': 'Name',
   'account.email': 'E-Mail',

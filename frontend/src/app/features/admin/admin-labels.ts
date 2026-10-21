@@ -50,7 +50,6 @@ export const ROLE_KEYS: Record<MappingRole, TranslationKey> = {
   viewer: 'admin.role.viewer',
   submitter: 'admin.role.submitter',
   organizer: 'admin.role.organizer',
-  approver: 'admin.role.approver',
 };
 
 /**

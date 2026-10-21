@@ -2,7 +2,7 @@
  * The autosave of the dossier form (E21). It collects the changes of one person, sends them as a draft
  * (`PUT .../draft`) 15 s after the first unsent change and then every 15 s while changes remain, saves them for good
  * on request (`PATCH`, which also drops the draft) and applies them by itself after 30 minutes without input, but only
- * in `idea` and `planning`. Offline, the text waits in `localStorage` and goes out when the connection is back.
+ * in `draft`. Offline, the text waits in `localStorage` and goes out when the connection is back.
  * A stale draft or a 409 raises the conflict handler; nothing is overwritten. Only network and 5xx errors retry by
  * themselves; a 4xx (locked field, right, size) stops, is reported once and keeps the draft until the next change.
  */
@@ -15,7 +15,7 @@ import type { EventsApi } from '../api/events-api.service';
 
 export const AUTOSAVE_MS = 15_000;
 export const IDLE_APPLY_MS = 30 * 60_000;
-const IDLE_STATES: readonly string[] = ['idea', 'planning'];
+const IDLE_STATES: readonly string[] = ['draft'];
 
 export type SaveStatus = 'idle' | 'saved' | 'saving' | 'unsaved' | 'offline' | 'conflict' | 'error';
 

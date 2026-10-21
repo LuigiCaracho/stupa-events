@@ -1,8 +1,7 @@
 /**
  * I12 Verlauf und Kommentare: the question threads (open first) with anchors, resolve and reopen, the timeline of
  * revisions, transitions, howto revisions and comments, the comparison of two revisions and, for reviewers, the
- * older revision list with "Auf diesen Stand zurücksetzen". The guard sentence "Rückfrage am Poster blockiert die
- * Freigabe" shows while a thread on the poster is open.
+ * older revision list with "Auf diesen Stand zurücksetzen". An open question blocks nothing (M5b).
  */
 import {
   ChangeDetectionStrategy,
@@ -19,7 +18,7 @@ import { AuthService } from '@core/auth/auth.service';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { ChatComponent, type ChatReply } from '@shared/ui/chat/chat.component';
-import { fieldLabel } from '@shared/ui/guard-list/reason-text';
+import { fieldLabel } from '../hints/field-label';
 import { HistoryComponent } from '@shared/ui/history/history.component';
 import { NoteComponent } from '@shared/ui/note/note.component';
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
@@ -92,14 +91,6 @@ export class ActivityTabComponent {
 
   protected readonly open = computed(() => this.threads().filter((t) => !t.resolvedAt));
   protected readonly done = computed(() => this.threads().filter((t) => !!t.resolvedAt));
-  protected readonly posterBlocked = computed(() =>
-    this.open().some(
-      (t) =>
-        t.anchor &&
-        'field' in t.anchor &&
-        (t.anchor.field === 'hero' || t.anchor.field === 'poster'),
-    ),
-  );
 
   protected readonly entries = computed(() => [
     ...revisionEntries(this.i18n, this.revisions.hasValue() ? this.revisions.value().items : []),

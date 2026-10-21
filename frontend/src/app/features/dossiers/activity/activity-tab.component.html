@@ -1,8 +1,5 @@
 <section class="act" aria-labelledby="questions-heading">
   <h2 class="sec" id="questions-heading">{{ 'activity.questions' | t }}</h2>
-  @if (posterBlocked()) {
-    <app-note kind="warn" role="status">{{ 'guards.open_comment_on_hero' | t }}</app-note>
-  }
   @if (canComment()) {
     <app-question-button
       [eventId]="event().id"

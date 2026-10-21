@@ -1,11 +1,8 @@
 /**
  * I23, tab "Organisationen" (`/verwaltung/organisationen`): organizations as an inline-editable table.
- * The `trusted` switch needs `admin.mappings` and asks for confirmation before it turns on, because
- * it lets the approvers of the organization publish their own events.
  */
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { AuthService } from '@core/auth/auth.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { NoteComponent } from '@shared/ui/note/note.component';
 import { SelectFieldComponent, type SelectFieldOption } from '@shared/ui/select/select.component';
@@ -15,7 +12,6 @@ import {
   CellDirective,
   type ColumnDef,
   DataTableComponent,
-  DialogComponent,
   InputComponent,
   SwitchComponent,
 } from '@stupa-makers/ui-kit';
@@ -36,7 +32,6 @@ interface OrganizationValue {
   short: string;
   categoryId: string;
   instagram: string;
-  trusted: boolean;
   active: boolean;
 }
 
@@ -47,7 +42,6 @@ const BLANK: OrganizationValue = {
   short: '',
   categoryId: '',
   instagram: '',
-  trusted: false,
   active: true,
 };
 
@@ -61,7 +55,6 @@ const DRAFT: AdminOrganization = {
   colorToken: null,
   categoryId: null,
   instagram: [],
-  trusted: false,
   legacyWpIds: [],
   active: true,
   createdAt: '',
@@ -84,8 +77,7 @@ const splitAccounts = (text: string): string[] =>
     ButtonComponent,
     CellDirective,
     DataTableComponent,
-    DialogComponent,
-    InputComponent,
+      InputComponent,
     NoteComponent,
     SelectFieldComponent,
     StatusTextComponent,
@@ -96,7 +88,6 @@ const splitAccounts = (text: string): string[] =>
 })
 export class OrganizationsComponent extends TaxonomyTable<AdminOrganization, OrganizationValue> {
   private readonly api = inject(TaxonomyApi);
-  private readonly auth = inject(AuthService);
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
     slug: '',
@@ -105,12 +96,9 @@ export class OrganizationsComponent extends TaxonomyTable<AdminOrganization, Org
     short: '',
     categoryId: '',
     instagram: '',
-    trusted: false,
-    active: true,
+      active: true,
   });
 
-  protected readonly canTrust = computed(() => this.auth.can('admin.mappings'));
-  protected readonly confirmTrust = signal(false);
   protected readonly categories = rxResource({ stream: () => this.api.categories() });
 
   protected readonly columns: ColumnDef[] = [
@@ -120,7 +108,6 @@ export class OrganizationsComponent extends TaxonomyTable<AdminOrganization, Org
     { key: 'short', label: this.i18n.translate('admin.col.short'), width: '8rem' },
     { key: 'categoryId', label: this.i18n.translate('admin.col.category'), width: '14rem' },
     { key: 'instagram', label: this.i18n.translate('admin.col.instagram'), width: '14rem' },
-    { key: 'trusted', label: this.i18n.translate('admin.col.trusted'), width: '9rem' },
     { key: 'active', label: this.i18n.translate('admin.col.active'), width: '7rem' },
     {
       key: 'actions',
@@ -152,35 +139,6 @@ export class OrganizationsComponent extends TaxonomyTable<AdminOrganization, Org
     this.isNew() ? [DRAFT, ...this.loaded()] : this.loaded(),
   );
 
-  protected override startNew(): void {
-    super.startNew();
-    this.syncTrustedAccess();
-  }
-
-  protected override startEdit(row: AdminOrganization): void {
-    super.startEdit(row);
-    this.syncTrustedAccess();
-  }
-
-  private syncTrustedAccess(): void {
-    if (this.canTrust()) this.form.controls.trusted.enable();
-    else this.form.controls.trusted.disable();
-  }
-
-  protected onTrustedChange(on: boolean): void {
-    if (on) this.confirmTrust.set(true);
-  }
-
-  protected acceptTrust(): void {
-    this.form.controls.trusted.setValue(true);
-    this.confirmTrust.set(false);
-  }
-
-  protected declineTrust(): void {
-    this.form.controls.trusted.setValue(false);
-    this.confirmTrust.set(false);
-  }
-
   protected fetch() {
     return this.api.organizations();
   }
@@ -197,7 +155,6 @@ export class OrganizationsComponent extends TaxonomyTable<AdminOrganization, Org
       short: row.short,
       categoryId: row.categoryId ?? '',
       instagram: row.instagram.join(', '),
-      trusted: row.trusted,
       active: row.active,
     };
   }
@@ -210,7 +167,6 @@ export class OrganizationsComponent extends TaxonomyTable<AdminOrganization, Org
       categoryId: v.categoryId || null,
       instagram: splitAccounts(v.instagram),
       active: v.active,
-      ...(this.canTrust() && { trusted: v.trusted }),
     };
     return id === null
       ? this.api.createOrganization({ ...body, slug: v.slug })

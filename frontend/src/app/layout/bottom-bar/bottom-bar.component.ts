@@ -9,8 +9,8 @@ import { SideSheetComponent } from '@shared/ui/side-sheet/side-sheet.component';
 import { BOTTOM_BAR_KEYS, NavService, type NavItem } from '../nav.service';
 
 /**
- * The phone navigation (viewport <= 768px): Aufgaben, Pipeline, Kalender and Archiv, the bell, and a "Mehr" sheet
- * (`shared/ui/side-sheet`) with Dossiers, Formate, Bibliothek, Verwaltung (with a permission) and Konto.
+ * The phone navigation (viewport <= 768px): Events, Archiv, Formate and Bibliothek, the bell, and a "Mehr" sheet
+ * (`shared/ui/side-sheet`) with Verwaltung (with a permission) and Konto.
  *
  * The shell shows the bar only under the phone media query (`MEDIA.phone`).
  */

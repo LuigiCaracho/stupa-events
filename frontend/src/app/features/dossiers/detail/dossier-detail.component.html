@@ -1,147 +1,143 @@
 @if (event(); as e) {
   <app-dossier-head
     [event]="e"
-    [actions]="actions()"
     [howtoUnverified]="e.howtoUnverified ?? false"
+    [busy]="busy()"
     (command)="command($event)"
   />
 
-  <app-tabs
-    #bar
-    idPrefix="dd"
-    [ariaLabel]="'detail.tabs' | t"
-    [tabs]="tabs()"
-    [active]="tab()"
-    (activeChange)="tab.set($any($event))"
+  @if (posterMissingWarn()) {
+    <app-note kind="warn" role="status">{{ 'detail.noPosterBanner' | t }}</app-note>
+  }
+  <app-hint-list [hints]="hintList()" (fix)="fix($event)" />
+
+  <app-poster-slot
+    [event]="e"
+    [canEdit]="editable()"
+    [busy]="busy()"
+    (submitted)="upload($event)"
+    (removed)="removePoster()"
   />
 
-  <section
-    class="dd__panel"
-    role="tabpanel"
-    [id]="bar.panelId(tab())"
-    [attr.aria-labelledby]="bar.tabId(tab())"
-  >
-    @if (tab() === 'overview') {
-      <app-dossier-overview
-        [event]="e"
-        [guards]="guards.hasValue() ? guards.value() : null"
-        [guardsLoading]="guards.isLoading()"
-        [changes]="changedAfter()"
-        [readOnly]="!editable()"
-        [busy]="busy()"
-        (fix)="fix($event)"
-        (revert)="revertBaseline()"
-        (acknowledge)="acknowledge()"
-      />
+  <app-section-nav [links]="links()" [label]="'detail.sections' | t" />
 
+  <section class="dd__sec" id="eckdaten" tabindex="-1" aria-labelledby="basics-heading">
+    <div class="dd__formHead">
+      <h2 class="sec dd__toggleHead">
+        <button
+          type="button"
+          class="dd__toggle"
+          id="basics-heading"
+          aria-controls="basics-body"
+          [attr.aria-expanded]="basicsOpen()"
+          (click)="basicsOpen.set(!basicsOpen())"
+        >
+          {{ 'detail.data' | t }}
+        </button>
+      </h2>
       @if (editable()) {
-        <section class="dd__form" id="dossier-form" aria-labelledby="form-heading">
-          <div class="dd__formHead">
-            <h2 class="sec" id="form-heading">{{ 'detail.data' | t }}</h2>
-            <app-autosave-indicator [status]="autosave.status()" [savedAt]="autosave.savedAt()" />
-          </div>
-          @if (restoredAt()) {
-            <app-note>
-              <span>{{ restoredText() }}</span>
-              <app-button variant="text" size="sm" (click)="discardDraft()">{{
-                'autosave.discard' | t
-              }}</app-button>
-            </app-note>
-          }
-          <app-event-form
-            [event]="e"
-            [categories]="lookups.hasValue() ? lookups.value().categories : []"
-            [venues]="lookups.hasValue() ? lookups.value().venues : []"
-            [draft]="draft()"
-            [busy]="busy()"
-            (changes)="formChanged($event)"
-            (saveClicked)="save()"
-          />
-        </section>
+        <app-autosave-indicator [status]="autosave.status()" [savedAt]="autosave.savedAt()" />
       }
-
+    </div>
+    <div class="dd__body" id="basics-body" [hidden]="!basicsOpen()">
+      @if (editable()) {
+        @if (restoredAt()) {
+          <app-note>
+            <span>{{ restoredText() }}</span>
+            <app-button variant="text" size="sm" (click)="discardDraft()">{{
+              'autosave.discard' | t
+            }}</app-button>
+          </app-note>
+        }
+        <app-event-form
+          [event]="e"
+          [categories]="lookups.hasValue() ? lookups.value().categories : []"
+          [venues]="lookups.hasValue() ? lookups.value().venues : []"
+          [draft]="draft()"
+          [busy]="busy()"
+          (changes)="formChanged($event)"
+          (saveClicked)="save()"
+        />
+      } @else {
+        <app-field-group>
+          <app-field-row [label]="'detail.when' | t" [value]="when()" />
+          <app-field-row
+            [label]="'detail.venue' | t"
+            [value]="e.venue?.name ?? e.venueText ?? ('detail.none' | t)"
+          />
+          <app-field-row
+            [label]="'detail.category' | t"
+            [value]="e.primaryCategory?.name ?? ('detail.none' | t)"
+          />
+          <app-field-row [label]="'detail.summary' | t" [value]="e.summary ?? ('detail.none' | t)" />
+        </app-field-group>
+        @if (e.state === 'archived') {
+          <app-note>{{ 'lock.archived' | t }}</app-note>
+        }
+      }
       @if (recomputed() > 0) {
         <app-note role="status">{{ 'checklist.recomputed' | t: { count: recomputed() } }}</app-note>
       }
-
       <app-facts-form [event]="e" [canEdit]="editable()" (changed)="event.set($event)" />
-
       <app-last-time-block [event]="e" />
       <app-template-panel [event]="e" />
+    </div>
+  </section>
 
-      <section class="dd__poster" aria-labelledby="poster-heading">
-        <h2 class="sec" id="poster-heading" tabindex="-1">{{ 'detail.poster' | t }}</h2>
-        @if (e.poster; as p) {
-          <div class="dd__posterRow">
-            <app-image-thumb [src]="posterSrc(e)" [alt]="p.altText" />
-            <div class="dd__posterMeta">
-              <span>{{ p.altText }}</span>
-              <span class="dd__muted">{{ 'detail.credit' | t }}: {{ p.credit }}</span>
-              @if (p.scanStatus === 'pending') {
-                <app-status-text kind="warn">{{ 'detail.posterReview' | t }}</app-status-text>
-              } @else if (p.scanStatus === 'infected' || p.scanStatus === 'error') {
-                <app-status-text kind="error">{{ 'detail.posterInfected' | t }}</app-status-text>
-              }
-            </div>
-            @if (canPoster() && !posterOpen()) {
-              <app-button variant="tonal" (click)="posterOpen.set(true)">{{
-                'detail.posterReplace' | t
-              }}</app-button>
-            }
-          </div>
-        } @else {
-          <p class="dd__muted">{{ 'detail.noPoster' | t }}</p>
-        }
-        @if (showUpload()) {
-          <app-poster-upload [busy]="busy()" (submitted)="upload($event)" />
-        }
-      </section>
+  <div class="dd__sec" id="doku" tabindex="-1">
+    <app-howto-tab [event]="e" [canEdit]="canWrite()" (changed)="changedKnowledge()" />
+  </div>
 
-      <section class="dd__questions" aria-labelledby="questions-heading">
-        <h2 class="sec" id="questions-heading">{{ 'activity.fieldQuestions' | t }}</h2>
-        <app-field-questions
-          [eventId]="e.id"
-          [threads]="threadList()"
-          [canComment]="canComment()"
-          (asked)="changedKnowledge()"
-          (show)="tab.set('history')"
-        />
-      </section>
-    } @else if (tab() === 'attachments') {
-      <app-attachments-tab
-        [event]="e"
-        [canEdit]="editable()"
-        [threads]="threadList()"
-        (changed)="changedKnowledge()"
-        (showQuestions)="tab.set('history')"
-        (budget)="useBudget($event)"
-      />
-    } @else if (tab() === 'howto') {
-      <app-howto-tab [event]="e" [canEdit]="editable()" (changed)="changedKnowledge()" />
-    } @else if (tab() === 'checklist') {
-      <app-checklist-tab [event]="e" [canEdit]="editable()" (changed)="changedKnowledge()" />
-    } @else if (tab() === 'mails') {
-      <app-mails-tab [event]="e" [canEdit]="editable()" (changed)="changedKnowledge()" />
-    } @else if (tab() === 'followup') {
-      <app-followup-tab
-        [event]="e"
-        [canEdit]="canWrite()"
-        [guards]="e.state === 'followup' && guards.hasValue() ? guards.value() : null"
-        (changed)="followupChanged($event)"
-        (fix)="fix($event)"
-        (finish)="command({ kind: 'transition', id: 'T09' })"
-        (openChecklist)="tab.set('checklist')"
-      />
-    } @else {
-      <app-activity-tab
-        [event]="e"
-        [threads]="threadList()"
-        [canComment]="canComment()"
-        [canRevert]="canRevert()"
-        (changed)="changedKnowledge()"
-        (revert)="revertTo($event)"
-      />
-    }
+  <div class="dd__sec" id="anhaenge" tabindex="-1">
+    <app-attachments-tab
+      [event]="e"
+      [canEdit]="canWrite()"
+      [threads]="threadList()"
+      (changed)="changedKnowledge()"
+      (showQuestions)="goTo('verlauf')"
+    />
+  </div>
+
+  <div class="dd__sec" id="checkliste" tabindex="-1">
+    <app-checklist-tab [event]="e" [canEdit]="canWrite()" (changed)="changedKnowledge()" />
+  </div>
+
+  <div class="dd__sec" id="mails" tabindex="-1">
+    <app-mails-tab [event]="e" [canEdit]="canWrite()" (changed)="changedKnowledge()" />
+  </div>
+
+  <div class="dd__sec" id="angebote" tabindex="-1">
+    <app-quotes-tab
+      [event]="e"
+      [canEdit]="canWrite()"
+      (changed)="changedKnowledge()"
+      (budget)="useBudget($event)"
+    />
+  </div>
+
+  <section class="dd__sec" id="so-lief-es" tabindex="-1" aria-labelledby="outcome-heading">
+    <h2 class="sec" id="outcome-heading">{{ 'detail.tabOutcome' | t }}</h2>
+    <p class="dd__muted">{{ 'detail.outcomeHint' | t }}</p>
+    <app-outcome-section [event]="e" [canEdit]="canWrite()" (changed)="outcomeChanged($event)" />
+  </section>
+
+  <section class="dd__sec" id="verlauf" tabindex="-1" aria-labelledby="field-questions-heading">
+    <h2 class="sec" id="field-questions-heading">{{ 'activity.fieldQuestions' | t }}</h2>
+    <app-field-questions
+      [eventId]="e.id"
+      [threads]="threadList()"
+      [canComment]="canComment()"
+      (asked)="changedKnowledge()"
+      (show)="goTo('verlauf')"
+    />
+    <app-activity-tab
+      [event]="e"
+      [threads]="threadList()"
+      [canComment]="canComment()"
+      [canRevert]="canRevert()"
+      (changed)="changedKnowledge()"
+      (revert)="revertTo($event)"
+    />
   </section>
 
   @if (formatDialog()) {
@@ -160,21 +156,41 @@
     />
   }
 
-  <app-detail-dialogs
-    [event]="e"
-    [state]="dialog()"
-    [venues]="lookups.hasValue() ? lookups.value().venues : []"
-    [categories]="lookups.hasValue() ? lookups.value().categories : []"
-    [busy]="busy()"
-    (applied)="applied($event)"
-    (partial)="event.set($event)"
-    (stale)="refresh()"
-    (fix)="fix($event)"
-    (closed)="dialog.set(null)"
-    (keep)="keepMine($event)"
-    (theirs)="takeTheirs()"
-    (leave)="leaveChoice($event)"
-  />
+  @switch (dialog()?.kind) {
+    @case ('lifecycle') {
+      <app-cancel-dialog
+        [event]="e"
+        [mode]="$any(dialog()).mode"
+        (done)="applied($event)"
+        (stale)="refresh()"
+        (closed)="dialog.set(null)"
+      />
+    }
+    @case ('revert') {
+      <app-revert-dialog
+        [subtitle]="e.title"
+        [busy]="busy()"
+        (submitted)="revert($event)"
+        (closed)="dialog.set(null)"
+      />
+    }
+    @case ('conflict') {
+      <app-conflict-dialog
+        [current]="$any(dialog()).current"
+        [mine]="$any(dialog()).mine"
+        [base]="$any(dialog()).base"
+        [venues]="lookups.hasValue() ? lookups.value().venues : []"
+        [categories]="lookups.hasValue() ? lookups.value().categories : []"
+        [busy]="busy()"
+        (keep)="keepMine($event)"
+        (reload)="takeTheirs()"
+        (closed)="dialog.set(null)"
+      />
+    }
+    @case ('leave') {
+      <app-leave-dialog [subtitle]="e.title" (choice)="leaveChoice($event)" />
+    }
+  }
 } @else if (loaded.error()) {
   <app-note kind="error" role="alert">{{ 'detail.loadFailed' | t }}</app-note>
   <app-button variant="text" (click)="reload()">{{ 'action.retry' | t }}</app-button>

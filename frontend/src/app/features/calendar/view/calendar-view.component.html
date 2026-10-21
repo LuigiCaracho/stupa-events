@@ -1,26 +1,10 @@
-<app-page-header [title]="'calendar.title' | t">
-  <ng-container ngProjectAs="[actions]">
-    <app-button variant="tonal" size="sm" (click)="toList()">{{
-      'calendar.list' | t
-    }}</app-button>
-  </ng-container>
-</app-page-header>
-
-<app-sticky-bar>
-  <app-pipeline-filters
-    [filters]="state.filters()"
-    [showPeriod]="false"
-    (changed)="state.set($event)"
-  />
-</app-sticky-bar>
-
-<div class="cp__bar">
-  <div class="cp__nav" role="group" [attr.aria-label]="'calendar.view' | t">
+<div class="cv__bar">
+  <div class="cv__nav" role="group" [attr.aria-label]="'calendar.view' | t">
     <app-button variant="tonal" size="sm" (click)="step(-1)">{{ 'calendar.prev' | t }}</app-button>
     <app-button variant="tonal" size="sm" (click)="today()">{{ 'calendar.goToday' | t }}</app-button>
     <app-button variant="tonal" size="sm" (click)="step(1)">{{ 'calendar.next' | t }}</app-button>
   </div>
-  <h2 class="cp__title" aria-live="polite">{{ title() }}</h2>
+  <h2 class="cv__title" aria-live="polite">{{ title() }}</h2>
   <app-segmented
     [ariaLabel]="'calendar.mode' | t"
     [options]="modes()"

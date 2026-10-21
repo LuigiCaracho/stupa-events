@@ -1,84 +1,47 @@
-<app-list-detail [detailOpen]="selectedId() !== null" (back)="closeDetail()">
-  <section list class="ld-pane" aria-labelledby="dl-title">
-    <app-page-header
-      [pane]="true"
-      titleId="dl-title"
-      [titleTag]="selectedId() ? 'p' : 'h1'"
-      [title]="'dossiers.title' | t"
-      [meta]="meta()"
-    >
-      <ng-container ngProjectAs="[actions]">
-        <app-button variant="text" size="sm" (click)="openCalendar()">{{
-          'calendar.title' | t
-        }}</app-button>
-        <app-button variant="tonal" size="sm" (click)="openNew()">{{
-          'dossiers.new' | t
-        }}</app-button>
-      </ng-container>
-    </app-page-header>
-    <app-sticky-bar class="ld-pane__filters">
-      <app-pipeline-filters
-        [filters]="state.filters()"
-        [showView]="true"
-        (changed)="state.set($event)"
-      />
-    </app-sticky-bar>
-    @if (events.error() && !events.hasValue()) {
-      <app-note kind="error" role="alert">{{ 'dossiers.loadFailed' | t }}</app-note>
-    } @else if (!events.hasValue()) {
-      <app-skeleton variant="items" [count]="5" />
-    } @else if (rows().length === 0) {
-      <app-empty-state plain [heading]="(filtered() ? 'dossiers.empty' : 'dossiers.emptyNone') | t">
-        @if (filtered()) {
-          <app-button variant="tonal" (click)="reset()">{{
-            'dossiers.resetFilters' | t
-          }}</app-button>
-        } @else {
-          <app-button variant="fill" (click)="openNew()">{{ 'dossiers.new' | t }}</app-button>
-        }
-      </app-empty-state>
-    } @else {
-      <ul class="dl__list rowgroup">
-        @for (card of rows(); track card.id) {
-          <li>
-            <app-list-item
-              [title]="card.title"
-              [sub]="sub(card)"
-              [link]="['/dossiers', card.id]"
-              linkQueryParamsHandling="preserve"
-              [selected]="card.id === selectedId()"
-            >
-              <span lead class="dl__when num">{{ when(card) }}</span>
-              <app-status-text status [kind]="status(card).kind">{{
-                status(card).key | t
-              }}</app-status-text>
-              @if (card.howtoUnverified) {
-                <app-status-text status kind="warn">{{ 'format.unverified' | t }}</app-status-text>
-              }
-              @if (card.blockerCount > 0) {
-                <span trail class="dl__blockers">{{
-                  'dossiers.blockers' | t: { count: card.blockerCount }
-                }}</span>
-              }
-            </app-list-item>
-          </li>
-        }
-      </ul>
-      @if (more()) {
-        <app-button class="dl__more" variant="text" (click)="showMore()">{{
-          'dossiers.more' | t
-        }}</app-button>
-      }
-    }
-  </section>
-  <div detail>
-    @if (selectedId() !== null) {
-      <router-outlet />
-    } @else {
-      <app-empty-state plain [heading]="'dossiers.pick' | t" />
-    }
+<app-page-header [title]="'dossiers.title' | t" [meta]="meta()">
+  <ng-container ngProjectAs="[actions]">
+    <app-button variant="tonal" (click)="openNew()">{{ 'dossiers.new' | t }}</app-button>
+    <app-button variant="tonal" (click)="openTemplate()">{{ 'dossiers.newFromTemplate' | t }}</app-button>
+  </ng-container>
+</app-page-header>
+
+<app-sticky-bar>
+  <div class="dl__bar">
+    <app-event-filters [filters]="state.value()" (changed)="state.set($event)" />
+    <app-segmented
+      class="dl__views"
+      [ariaLabel]="'dossiers.viewLabel' | t"
+      [options]="views()"
+      [value]="state.value().view"
+      (valueChange)="setView($event)"
+    />
   </div>
-</app-list-detail>
+</app-sticky-bar>
+
+@if (state.applied().view === 'calendar') {
+  <app-calendar-view [filters]="state.applied()" />
+} @else if (events.error() && !events.hasValue()) {
+  <app-note kind="error" role="alert">{{ 'dossiers.loadFailed' | t }}</app-note>
+} @else if (!events.hasValue()) {
+  <app-skeleton variant="items" [count]="5" />
+} @else if (rows().length === 0) {
+  <app-empty-state plain [heading]="(filtered() ? 'dossiers.empty' : 'dossiers.emptyNone') | t">
+    @if (filtered()) {
+      <app-button variant="tonal" (click)="reset()">{{ 'dossiers.resetFilters' | t }}</app-button>
+    } @else {
+      <app-button variant="fill" (click)="openNew()">{{ 'dossiers.new' | t }}</app-button>
+    }
+  </app-empty-state>
+} @else {
+  <ul class="dl__list">
+    @for (card of rows(); track card.id) {
+      <li><app-event-card [card]="card" /></li>
+    }
+  </ul>
+  @if (more()) {
+    <app-button class="dl__more" variant="text" (click)="showMore()">{{ 'dossiers.more' | t }}</app-button>
+  }
+}
 
 @if (newOpen) {
   @if (newMode() === 'template') {

@@ -1,7 +1,8 @@
 /**
- * I08 Anhänge: the groups poster, social posts, documents, quotes and other, with upload, replace, hide, visibility
- * and the comparison quotes. The server filters what a person may see (contract 3.7); this tab shows exactly what
- * comes back and never an empty group. Requests go through `AttachmentsApi`; every success tells the page.
+ * I08 Anhänge: the groups poster, social posts, documents, quote files and other, with upload, replace, hide and
+ * visibility. The server filters what a person may see (contract 3.7); this section shows exactly what comes back and
+ * never an empty group. The comparison quotes are the section next to it (`app-quotes-tab`). Requests go through
+ * `AttachmentsApi`; every success tells the page.
  */
 import {
   ChangeDetectionStrategy,
@@ -20,21 +21,15 @@ import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.componen
 import { NoteComponent } from '@shared/ui/note/note.component';
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
 import { ButtonComponent, ToastService } from '@stupa-makers/ui-kit';
-import { type Observable, catchError, of } from 'rxjs';
+import type { Observable } from 'rxjs';
 import { AttachmentsApi } from '../api/attachments-api.service';
 import { problemMessage } from '../api/problem-message';
 import type { EventDto } from '../api/event.models';
 import type { CommentThread } from '../model/comment.models';
-import type {
-  AttachmentOut,
-  AttachmentUpload,
-  QuoteIn,
-  QuotesOut,
-} from '../model/attachment.models';
+import type { AttachmentOut, AttachmentUpload } from '../model/attachment.models';
 import { GROUP_ORDER, type AttachmentGroupId, groupOf } from './attachment-kinds';
 import { AttachmentRowComponent, type AttachmentCommand } from './attachment-row.component';
 import { AttachmentUploadComponent } from './attachment-upload.component';
-import { QuotesSectionComponent } from './quotes-section.component';
 
 interface Group {
   id: AttachmentGroupId;
@@ -53,7 +48,6 @@ interface Group {
     ButtonComponent,
     EmptyStateComponent,
     NoteComponent,
-    QuotesSectionComponent,
     SkeletonComponent,
   ],
   templateUrl: './attachments-tab.component.html',
@@ -70,15 +64,10 @@ export class AttachmentsTabComponent {
 
   readonly changed = output<void>();
   readonly showQuestions = output<void>();
-  readonly budget = output<number>();
 
   protected readonly list = rxResource({
     params: () => ({ id: this.event().id, rev: this.event().rev }),
     stream: ({ params }) => this.api.list(params.id, true),
-  });
-  protected readonly quotes = rxResource<QuotesOut | null, string>({
-    params: () => this.event().id,
-    stream: ({ params }) => this.api.quotes(params).pipe(catchError(() => of(null))),
   });
 
   protected readonly busy = signal(false);
@@ -136,21 +125,8 @@ export class AttachmentsTabComponent {
     this.run(this.api.retire(a.id));
   }
 
-  protected addQuote(body: QuoteIn): void {
-    this.run(this.api.addQuote(this.event().id, body));
-  }
-
-  protected selectQuote(id: string): void {
-    this.run(this.api.selectQuote(id));
-  }
-
-  protected removeQuote(id: string): void {
-    this.run(this.api.removeQuote(id));
-  }
-
   protected refresh(): void {
     this.list.reload();
-    this.quotes.reload();
     this.changed.emit();
   }
 

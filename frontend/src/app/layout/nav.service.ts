@@ -1,24 +1,15 @@
 /** Copied from STUPA-Workflow@93c33d6 frontend/src/app/layout/nav.service.ts (rewritten) */
 /**
- * Navigation model of the signed-in frame. Rewritten from the workflow tool: the workflow entries are gone. M3 has Aufgaben,
- * Pipeline, Dossiers, Verwaltung and Konto; M5 adds Kalender, Archiv, Formate and Bibliothek. On the phone the bar holds
- * four entries and a "Mehr" sheet holds the rest. The filter is UX only; route guards and the server stay authoritative.
+ * Navigation model of the signed-in frame (M5b contract 10.3): Events (the list with its calendar), Archiv, Formate,
+ * Bibliothek, Verwaltung (with a permission) and Konto. On the phone the bar holds four entries and a "Mehr" sheet holds
+ * the rest. The filter is UX only; route guards and the server stay authoritative.
  */
 import { Injectable, computed, inject } from '@angular/core';
 import { AuthService } from '@core/auth/auth.service';
 import type { TranslationKey } from '@core/i18n/translations';
 import type { IconName } from '@stupa-makers/ui-kit';
 
-export type NavKey =
-  | 'tasks'
-  | 'pipeline'
-  | 'dossiers'
-  | 'calendar'
-  | 'archive'
-  | 'formats'
-  | 'library'
-  | 'admin'
-  | 'account';
+export type NavKey = 'dossiers' | 'archive' | 'formats' | 'library' | 'admin' | 'account';
 
 /** One entry of the navigation rail and of the phone bar. */
 export interface NavItem {
@@ -34,33 +25,9 @@ export interface NavItem {
 
 export const NAV_ITEMS: readonly NavItem[] = [
   {
-    key: 'tasks',
-    path: '/aufgaben',
-    labelKey: 'nav.tasks',
-    icon: 'tasks',
-    permissions: [],
-    place: 'main',
-  },
-  {
-    key: 'pipeline',
-    path: '/pipeline',
-    labelKey: 'nav.pipeline',
-    icon: 'kanban',
-    permissions: [],
-    place: 'main',
-  },
-  {
     key: 'dossiers',
     path: '/dossiers',
-    labelKey: 'nav.dossiers',
-    icon: 'list',
-    permissions: [],
-    place: 'main',
-  },
-  {
-    key: 'calendar',
-    path: '/kalender',
-    labelKey: 'nav.calendar',
+    labelKey: 'nav.events',
     icon: 'cal',
     permissions: [],
     place: 'main',
@@ -108,7 +75,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
 ];
 
 /** The entries of the phone bar, in bar order; the others sit in the "Mehr" sheet. */
-export const BOTTOM_BAR_KEYS: readonly NavKey[] = ['tasks', 'pipeline', 'calendar', 'archive'];
+export const BOTTOM_BAR_KEYS: readonly NavKey[] = ['dossiers', 'archive', 'formats', 'library'];
 
 @Injectable({ providedIn: 'root' })
 export class NavService {

@@ -1,6 +1,7 @@
 /**
- * Poster upload form of a dossier: file, alt text, credit and rights basis in one block. It
- * validates the required fields and emits `submitted`; the page sends the request (PLAN 4.4, 9.1).
+ * Poster upload form of a dossier: the file is the only requirement; alt text, credit and rights basis are
+ * recommended and travel along when filled (M5b contract 3.1). Persons recognisable need a consent note. It emits
+ * `submitted`; the page sends the request.
  */
 import {
   ChangeDetectionStrategy,
@@ -68,9 +69,9 @@ export class PosterUploadComponent {
   protected readonly attempted = signal(false);
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
-    altText: ['', [Validators.required, Validators.maxLength(250)]],
-    credit: ['', [Validators.required, Validators.maxLength(200)]],
-    rightsBasis: ['', [Validators.required]],
+    altText: ['', [Validators.maxLength(250)]],
+    credit: ['', [Validators.maxLength(200)]],
+    rightsBasis: ['unknown'],
     personsDepicted: [false],
     consentNote: [''],
   });
@@ -84,11 +85,11 @@ export class PosterUploadComponent {
     this.rejected.set(false);
   }
 
-  protected invalid(name: 'altText' | 'credit' | 'rightsBasis'): boolean {
-    return this.attempted() && this.form.controls[name].invalid;
+  protected invalid(name: 'altText' | 'credit'): boolean {
+    return this.form.controls[name].invalid;
   }
 
-  /** People are recognisable but the consent note is empty: the guard `rights_incomplete` would refuse it. */
+  /** People are recognisable but the consent note is empty: the picture would stay out of the public feed. */
   protected consentMissing(): boolean {
     const { personsDepicted, consentNote } = this.form.getRawValue();
     return personsDepicted && consentNote.trim() === '';

@@ -1,17 +1,18 @@
 /**
- * Tab "Verlauf" (minimal, before I12): the revisions of the dossier, newest first, with the fields each one changed and,
- * for reviewers, "Auf diesen Stand zurücksetzen". Comments, diffs and anchors come with M4.
+ * Section "Verlauf": the revisions of the dossier, newest first, with the fields each one changed and, for those who may,
+ * "Auf diesen Stand zurücksetzen".
  */
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
-import { fieldLabel } from '@shared/ui/guard-list/reason-text';
+import { fieldLabel } from '../hints/field-label';
 import { NoteComponent } from '@shared/ui/note/note.component';
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
 import { ButtonComponent } from '@stupa-makers/ui-kit';
 import type { RevisionOut } from '../api/action.models';
 import { EventsApi } from '../api/events-api.service';
+import { isStateChange } from '../activity/timeline';
 
 @Component({
   selector: 'app-dossier-history',
@@ -44,8 +45,8 @@ export class DossierHistoryComponent {
     return revision.changedFields.map((f) => fieldLabel(this.i18n, f));
   }
 
-  protected classLabel(revision: RevisionOut): string {
-    return this.i18n.translate(`history.class.${revision.fieldClass}`);
+  protected isStateChange(revision: RevisionOut): boolean {
+    return isStateChange(revision);
   }
 
   protected who(revision: RevisionOut): string {

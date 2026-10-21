@@ -1,58 +1,54 @@
 /**
- * I04: dossier list (`/dossiers`, `/dossiers/:id`, `/dossiers/neu`). The same filters as the board, one row per dossier
- * (day, title, organization, state as text, number of blockers). Wide screens show the open dossier (the child route)
- * beside the list; narrow screens show one view at a time. On `/dossiers/neu` the dialog I05 opens over the list; with
- * `?vorlage=` or `?format=` (or the second tab) it is I06 "Neu aus Vorlage". "Kalender" leads to `/kalender` with the filters.
+ * The start page `/dossiers` (M5b contract 10.2): "Neues Event" and "Neu aus Vorlage" side by side, filter chips
+ * (organization, category, state, year, "Nur meine") in the URL, the switch Liste | Kalender and either one card per
+ * event or the calendar. On `/dossiers/neu` the dialog I05 opens over the list; with `?vorlage=` or `?format=` (or
+ * `?modus=vorlage`) it is I06 "Neu aus Vorlage".
  */
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { rxResource, toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { rxResource } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router } from '@angular/router';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
-import { ListDetailLayoutComponent } from '@shared/ui/list-detail/list-detail-layout.component';
-import { ListItemComponent } from '@shared/ui/list-item/list-item.component';
 import { NoteComponent } from '@shared/ui/note/note.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
-import { StatusTextComponent } from '@shared/ui/status-text/status-text.component';
 import { StickyBarComponent } from '@shared/ui/sticky-bar/sticky-bar.component';
-import { eventStateStatus } from '@shared/status-kind.util';
-import { ButtonComponent } from '@stupa-makers/ui-kit';
-import { filter, map, startWith } from 'rxjs/operators';
-import { createFilterState } from '../../pipeline/filters/filter-state';
-import { PipelineFiltersComponent } from '../../pipeline/filters/pipeline-filters.component';
+import { createUrlState } from '@shared/url-state';
+import { ButtonComponent, SegmentedComponent, type SegmentedOption } from '@stupa-makers/ui-kit';
+import { CalendarViewComponent } from '../../calendar/view/calendar-view.component';
+import { CloneDialogComponent } from '../clone/clone-dialog.component';
+import { EventsApi } from '../api/events-api.service';
 import {
+  type EventFilters,
   NO_FILTERS,
   activeFilterCount,
+  eventFiltersCodec,
   filtersToQuery,
-} from '../../pipeline/filters/pipeline-filters';
-import type { EventCard } from '../api/board.models';
-import { formatEventDay } from '../api/event-time';
-import { EventsApi } from '../api/events-api.service';
-import { CloneDialogComponent } from '../clone/clone-dialog.component';
+} from '../filters/event-filters';
+import { EventFiltersComponent } from '../filters/event-filters.component';
 import { NewEventDialogComponent } from '../new-event/new-event-dialog.component';
+import { EventCardComponent } from './event-card.component';
 
-const PAGE = 100;
+const PAGE = 50;
 
 @Component({
   selector: 'app-dossier-list',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    RouterOutlet,
     TranslatePipe,
     ButtonComponent,
+    CalendarViewComponent,
     CloneDialogComponent,
     EmptyStateComponent,
-    ListDetailLayoutComponent,
-    ListItemComponent,
+    EventCardComponent,
+    EventFiltersComponent,
     NewEventDialogComponent,
     NoteComponent,
     PageHeaderComponent,
-    PipelineFiltersComponent,
+    SegmentedComponent,
     SkeletonComponent,
-    StatusTextComponent,
     StickyBarComponent,
   ],
   templateUrl: './dossier-list.component.html',
@@ -67,48 +63,49 @@ export class DossierListComponent {
   protected readonly newOpen = this.route.snapshot.data['newEvent'] === true;
   protected readonly templateId = this.route.snapshot.queryParamMap.get('vorlage');
   protected readonly formatSlug = this.route.snapshot.queryParamMap.get('format');
-  /** "Neu" or "Aus Vorlage" in the dialog of `/dossiers/neu`; a template or a format in the URL starts on the second. */
   protected readonly newMode = signal<'blank' | 'template'>(
-    this.templateId || this.formatSlug || this.route.snapshot.queryParamMap.get('modus') === 'vorlage'
+    this.templateId ||
+      this.formatSlug ||
+      this.route.snapshot.queryParamMap.get('modus') === 'vorlage'
       ? 'template'
       : 'blank',
   );
-  protected readonly state = createFilterState();
+  protected readonly state = createUrlState(eventFiltersCodec);
   protected readonly limit = signal(PAGE);
 
-  protected readonly selectedId = toSignal(
-    this.router.events.pipe(
-      filter((e) => e instanceof NavigationEnd),
-      startWith(null),
-      map(() => this.openId()),
-    ),
-    { initialValue: this.openId() },
-  );
-
   protected readonly events = rxResource({
-    params: () => ({ filters: this.state.applied(), limit: this.limit() }),
+    params: () => {
+      const filters = this.state.applied();
+      return filters.view === 'list' ? { filters, limit: this.limit() } : undefined;
+    },
     stream: ({ params }) =>
       this.api.listCards({ ...filtersToQuery(params.filters), limit: params.limit }),
   });
 
-  protected readonly rows = computed(() =>
-    this.events.hasValue() ? this.events.value().items : [],
-  );
+  protected readonly rows = computed(() => {
+    const items = this.events.hasValue() ? this.events.value().items : [];
+    return this.state.applied().state === 'cancelled'
+      ? items.filter((card) => card.publicStatus === 'cancelled')
+      : items;
+  });
   protected readonly more = computed(
-    () => this.events.hasValue() && this.events.value().total > this.rows().length,
+    () => this.events.hasValue() && this.events.value().total > this.events.value().items.length,
   );
   protected readonly meta = computed(() =>
-    this.events.hasValue()
-      ? this.i18n.translate('dossiers.count', { count: this.events.value().total })
+    this.events.hasValue() && this.state.applied().view === 'list'
+      ? this.i18n.translate('dossiers.count', { count: this.rows().length })
       : null,
   );
-  protected readonly filtered = computed(
-    () => activeFilterCount(this.state.applied()) > 0 || this.state.applied().view !== 'active',
+  protected readonly filtered = computed(() => activeFilterCount(this.state.applied()) > 0);
+  protected readonly views = computed<SegmentedOption[]>(() =>
+    (['list', 'calendar'] as const).map((value) => ({
+      value,
+      label: this.i18n.translate(`dossiers.view.${value}`),
+    })),
   );
 
-  /** The id of the open dossier; the child route has no snapshot yet while the list is being created. */
-  private openId(): string | null {
-    return this.route.firstChild?.snapshot?.paramMap.get('id') ?? null;
+  protected setView(value: string | null): void {
+    this.state.set({ ...this.state.value(), view: value === 'calendar' ? 'calendar' : 'list' });
   }
 
   protected showMore(): void {
@@ -116,40 +113,22 @@ export class DossierListComponent {
   }
 
   protected reset(): void {
-    this.state.set({ ...NO_FILTERS });
-  }
-
-  protected when(card: EventCard): string {
-    return formatEventDay(card.startsAt, card.tzid);
-  }
-
-  protected sub(card: EventCard): string {
-    return [card.organization?.short ?? this.i18n.translate('dossiers.noOrg'), card.venueLabel]
-      .filter(Boolean)
-      .join(' · ');
-  }
-
-  protected status(card: EventCard) {
-    return eventStateStatus(card.state);
+    this.state.set({ ...NO_FILTERS, view: this.state.value().view } satisfies EventFilters);
   }
 
   protected openNew(): void {
     void this.router.navigateByUrl('/dossiers/neu');
   }
 
+  protected openTemplate(): void {
+    void this.router.navigateByUrl('/dossiers/neu?modus=vorlage');
+  }
+
   protected closeNew(): void {
     void this.router.navigateByUrl('/dossiers');
   }
 
-  protected openCalendar(): void {
-    void this.router.navigate(['/kalender'], { queryParamsHandling: 'preserve' });
-  }
-
   protected created(id: string): void {
     void this.router.navigate(['/dossiers', id]);
-  }
-
-  protected closeDetail(): void {
-    void this.router.navigate(['/dossiers'], { queryParamsHandling: 'preserve' });
   }
 }

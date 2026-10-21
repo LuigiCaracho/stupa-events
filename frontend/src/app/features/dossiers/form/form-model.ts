@@ -38,12 +38,9 @@ export const CONTROL_FIELD: Record<keyof FormValue, keyof EventFields> = {
   websiteUrl: 'websiteUrl',
 };
 
-const FALLBACK_EDITABLE: readonly (keyof EventFields)[] = Object.values(CONTROL_FIELD);
-
-/** The fields editable now: the server's list, else every field in `idea`/`planning` and none elsewhere. */
+/** The fields editable now: the server's list (all of them or none, by state and right). */
 export function editableFields(event: EventDto): readonly string[] {
-  if (event.editableFields) return event.editableFields;
-  return event.state === 'idea' || event.state === 'planning' ? FALLBACK_EDITABLE : [];
+  return event.editableFields;
 }
 
 /** The form values of an event with the fields of a draft laid over them. */

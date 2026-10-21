@@ -1,0 +1,29 @@
+:host {
+  display: block;
+}
+
+.hl__summary {
+  cursor: pointer;
+  font-weight: var(--fw-semibold);
+}
+
+.hl__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hl__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+}
+
+.hl__text {
+  flex: 1 1 12rem;
+  min-width: 0;
+}

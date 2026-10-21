@@ -88,20 +88,6 @@
         {{ row.instagram.join(', ') }}
       }
     </ng-template>
-    <ng-template appCell="trusted" let-row>
-      @if (editing(row)) {
-        <app-switch
-          [formControl]="form.controls.trusted"
-          [ariaLabel]="'admin.col.trusted' | t"
-          [hint]="canTrust() ? '' : ('admin.trustedNeedsAdmin' | t)"
-          (checkedChange)="onTrustedChange($event)"
-        />
-      } @else {
-        <app-status-text [kind]="row.trusted ? 'accent' : 'muted'">{{
-          (row.trusted ? 'admin.yes' : 'admin.no') | t
-        }}</app-status-text>
-      }
-    </ng-template>
     <ng-template appCell="active" let-row>
       @if (editing(row)) {
         <app-switch [formControl]="form.controls.active" [ariaLabel]="'admin.col.active' | t" />
@@ -137,18 +123,3 @@
     </ng-template>
   </app-data-table>
 }
-
-<app-dialog
-  [open]="confirmTrust()"
-  [title]="'admin.trusted.title' | t"
-  [closeLabel]="'action.close' | t"
-  (closed)="declineTrust()"
->
-  <p>{{ 'admin.trusted.body' | t }}</p>
-  <div dialog-footer class="og__footer">
-    <app-button variant="text" (click)="declineTrust()">{{ 'action.cancel' | t }}</app-button>
-    <app-button variant="fill" (click)="acceptTrust()">{{
-      'admin.trusted.confirm' | t
-    }}</app-button>
-  </div>
-</app-dialog>

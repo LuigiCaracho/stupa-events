@@ -1,21 +1,21 @@
 :host {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  min-width: 0;
-}
-
-.dd__panel {
-  display: flex;
-  flex-direction: column;
   gap: var(--space-5);
   min-width: 0;
 }
 
-.dd__form {
+.dd__sec {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  min-width: 0;
+  scroll-margin-top: calc(var(--layout-header-height, 0px) + 4rem);
+}
+
+.dd__sec:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 4px;
 }
 
 .dd__formHead {
@@ -26,27 +26,41 @@
   gap: var(--space-2);
 }
 
-.dd__poster,
-.dd__questions {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+.dd__toggleHead {
+  margin: 0;
 }
 
-.dd__posterRow {
+.dd__toggle {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+
+.dd__toggle::after {
+  margin-left: var(--space-2);
+  content: '▾';
+}
+
+.dd__toggle[aria-expanded='false']::after {
+  content: '▸';
+}
+
+.dd__toggle:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.dd__body {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  flex-direction: column;
   gap: var(--space-4);
 }
 
-.dd__posterMeta {
-  display: flex;
-  flex: 1 1 14rem;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-width: 0;
-  overflow-wrap: anywhere;
+.dd__body[hidden] {
+  display: none;
 }
 
 .dd__muted {

@@ -23,22 +23,18 @@
     [label]="'poster.alt' | t"
     [hint]="'poster.altHint' | t"
     [error]="invalid('altText') ? ('poster.errAlt' | t) : ''"
-    [required]="true"
   />
   <app-input
     formControlName="credit"
     [label]="'poster.credit' | t"
     [hint]="'poster.creditHint' | t"
     [error]="invalid('credit') ? ('poster.errCredit' | t) : ''"
-    [required]="true"
   />
   <app-select
     formControlName="rightsBasis"
     [label]="'poster.rights' | t"
     [options]="rights()"
     [clearable]="false"
-    [required]="true"
-    [error]="invalid('rightsBasis') ? ('poster.errRights' | t) : ''"
   />
   <app-checkbox formControlName="personsDepicted">{{ 'poster.persons' | t }}</app-checkbox>
   @if (form.controls.personsDepicted.value) {

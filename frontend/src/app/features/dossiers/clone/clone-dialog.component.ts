@@ -20,7 +20,6 @@ import {
 import { rxResource, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { problemOf } from '@core/api/problem';
-import { AuthService } from '@core/auth/auth.service';
 import { I18nService } from '@core/i18n/i18n.service';
 import { LocalizedDatePipe } from '@core/i18n/localized-date.pipe';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
@@ -116,7 +115,6 @@ export class CloneDialogComponent {
   private readonly events = inject(EventsApi);
   private readonly formats = inject(FormatsApi);
   private readonly attachments = inject(AttachmentsApi);
-  private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(I18nService);
 
@@ -192,13 +190,10 @@ export class CloneDialogComponent {
   protected readonly lastTime = computed(() => resourceValue(this.preview, EMPTY_PREVIEW).lastTime);
   protected readonly quoteGroups = computed(() => resourceValue(this.quotes, [] as QuoteGroup[]));
 
-  protected readonly orgOptions = computed<SelectFieldOption[]>(() => {
-    const own = new Set(this.auth.organizations().map((o) => o.slug));
-    const global = this.auth.can('event.read_all');
-    return this.lookup()
-      .orgs.filter((o) => global || own.has(o.slug))
-      .map((o) => ({ value: o.id, label: o.name }));
-  });
+  /** The server lists only the organizations the person may create events in (`creatable=true`). */
+  protected readonly orgOptions = computed<SelectFieldOption[]>(() =>
+    this.lookup().orgs.map((o) => ({ value: o.id, label: o.name })),
+  );
   protected readonly formatOptions = computed<FilterSelectOption[]>(() => [
     { value: '', label: this.i18n.translate('search.allFormats') },
     ...this.lookup().formats.items.map((f) => ({

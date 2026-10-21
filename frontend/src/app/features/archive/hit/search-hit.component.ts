@@ -55,10 +55,10 @@ export class SearchHitComponent {
     const s = this.hit().state;
     return s ? eventStateStatus(s) : null;
   });
-  /** Clonable are archived dossiers, and live or follow-up ones of the own organization (M5 contract 4.2). */
+  /** Clonable are archived dossiers, and published ones of the own organization (M5 contract 4.2, M5b state names). */
   protected readonly canTemplate = computed(() => {
     const h = this.hit();
-    const own = !h.foreign && (h.state === 'live' || h.state === 'followup');
+    const own = !h.foreign && h.state === 'published';
     return h.kind === 'event' && (h.state === 'archived' || own);
   });
 

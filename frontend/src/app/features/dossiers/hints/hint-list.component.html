@@ -1,0 +1,18 @@
+@if (lines().length > 0) {
+  <details class="hl">
+    <summary class="hl__summary">{{ 'hints.heading' | t: { count: lines().length } }}</summary>
+    <ul class="hl__list">
+      @for (line of lines(); track line.hint.code) {
+        <li class="hl__item">
+          <app-status-text [kind]="line.hint.severity === 'warn' ? 'warn' : 'muted'">{{
+            (line.hint.severity === 'warn' ? 'hints.severity.warn' : 'hints.severity.info') | t
+          }}</app-status-text>
+          <span class="hl__text">{{ line.text }}</span>
+          <app-button variant="text" size="sm" (click)="fix.emit(line.hint)">{{
+            'hints.fix' | t
+          }}</app-button>
+        </li>
+      }
+    </ul>
+  </details>
+}

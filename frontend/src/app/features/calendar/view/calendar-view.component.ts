@@ -1,9 +1,9 @@
 /**
- * The internal calendar (`/kalender`, M5 contract 7): month or week as a grid, an agenda list on the phone. The page
- * owns period and mode, asks the endpoint for exactly the range the grid reports, takes the filters of the board
- * (the URL carries them, so the list/calendar switch of I04 keeps them) and opens a clicked dossier.
+ * The internal calendar inside the event list (M5b contract 10.2): month or week as a grid, an agenda list on the
+ * phone. The list page owns the filters and the Liste | Kalender switch; this view owns period and mode, asks the
+ * endpoint for exactly the range the grid reports and opens a clicked dossier.
  */
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { I18nService } from '@core/i18n/i18n.service';
@@ -20,20 +20,17 @@ import {
   todayKey,
 } from '@shared/ui/calendar-grid/calendar-grid.util';
 import { NoteComponent } from '@shared/ui/note/note.component';
-import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
-import { StickyBarComponent } from '@shared/ui/sticky-bar/sticky-bar.component';
 import { ButtonComponent, SegmentedComponent, type SegmentedOption } from '@stupa-makers/ui-kit';
 import { of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { createFilterState } from '../../pipeline/filters/filter-state';
-import { PipelineFiltersComponent } from '../../pipeline/filters/pipeline-filters.component';
+import { type EventFilters, statesOf } from '../../dossiers/filters/event-filters';
 import { CalendarApi } from '../api/calendar-api.service';
 import { toGridEntry } from '../model/calendar-entries';
 import type { CalendarOut } from '../model/calendar.models';
 
 @Component({
-  selector: 'app-calendar-page',
+  selector: 'app-calendar-view',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
@@ -41,33 +38,35 @@ import type { CalendarOut } from '../model/calendar.models';
     ButtonComponent,
     CalendarGridComponent,
     NoteComponent,
-    PageHeaderComponent,
-    PipelineFiltersComponent,
     SegmentedComponent,
     SkeletonComponent,
-    StickyBarComponent,
   ],
-  templateUrl: './calendar-page.component.html',
-  styleUrl: './calendar-page.component.scss',
+  templateUrl: './calendar-view.component.html',
+  styleUrl: './calendar-view.component.scss',
 })
-export class CalendarPageComponent {
+export class CalendarViewComponent {
   private readonly api = inject(CalendarApi);
   private readonly router = inject(Router);
   private readonly i18n = inject(I18nService);
   private readonly now = inject(CALENDAR_NOW);
 
-  protected readonly state = createFilterState();
+  readonly filters = input.required<EventFilters>();
+
   protected readonly mode = signal<CalendarMode>('month');
   protected readonly anchor = signal(todayKey(this.now()));
   protected readonly range = signal<DayRange | null>(null);
 
-  protected readonly data = rxResource<CalendarOut | null, { range: DayRange } | undefined>({
+  protected readonly data = rxResource<
+    CalendarOut | null,
+    { range: DayRange; filters: EventFilters } | undefined
+  >({
     params: () => {
       const range = this.range();
-      return range ? { range } : undefined;
+      return range ? { range, filters: this.filters() } : undefined;
     },
     stream: ({ params }) => {
-      const f = this.state.applied();
+      const f = params.filters;
+      const state = statesOf(f.state);
       return this.api
         .range({
           ...params.range,
@@ -75,12 +74,17 @@ export class CalendarPageComponent {
           organization: f.organization || undefined,
           category: f.category || undefined,
           mine: f.mine || undefined,
+          ...(state.length > 0 ? { state } : {}),
         })
         .pipe(catchError(() => of(null)));
     },
   });
 
-  protected readonly entries = computed(() => (this.data.value()?.entries ?? []).map(toGridEntry));
+  protected readonly entries = computed(() =>
+    (this.data.value()?.entries ?? [])
+      .filter((e) => this.filters().state !== 'cancelled' || e.publicStatus === 'cancelled')
+      .map(toGridEntry),
+  );
   protected readonly title = computed(() => periodTitle(this.mode(), this.anchor()));
   protected readonly failed = computed(() => this.data.hasValue() && this.data.value() === null);
   protected readonly modes = computed<SegmentedOption[]>(() =>
@@ -104,9 +108,5 @@ export class CalendarPageComponent {
 
   protected open(id: string): void {
     void this.router.navigate(['/dossiers', id]);
-  }
-
-  protected toList(): void {
-    void this.router.navigate(['/dossiers'], { queryParamsHandling: 'preserve' });
   }
 }

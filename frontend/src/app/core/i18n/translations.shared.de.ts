@@ -1,13 +1,8 @@
 /** German strings of the blocks in `shared/ui` and of the shared status mapping. */
 export const sharedDe = {
-  'event.state.idea': 'Idee',
-  'event.state.planning': 'Planung',
-  'event.state.in_review': 'Freigabe angefragt',
-  'event.state.approved': 'Freigegeben',
-  'event.state.live': 'Veröffentlicht',
-  'event.state.followup': 'Nachbereitung',
+  'event.state.draft': 'Entwurf',
+  'event.state.published': 'Veröffentlicht',
   'event.state.archived': 'Archiv',
-  'event.state.withdrawn': 'Verworfen',
   'action.close': 'Schließen',
   'action.cancel': 'Abbrechen',
   'action.retry': 'Erneut versuchen',

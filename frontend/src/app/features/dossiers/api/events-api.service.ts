@@ -1,16 +1,19 @@
-/** Typed client of the internal event endpoints (`/api/events`, `/api/tasks`; M1 contract 4.3, M3 contract 5). */
+/** Typed client of the internal event endpoints (`/api/events`; M5b contract 7). */
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { API_BASE_URL } from '@core/api/api.config';
+import { toParams } from '@core/api/query-params';
 import { type Observable, map } from 'rxjs';
 import type {
-  ActionBody,
-  ActionName,
+  CancelBody,
   DraftOut,
+  PostponeBody,
+  ReinstateBody,
+  RevertBody,
   RevisionDetail,
   RevisionOut,
 } from './action.models';
-import type { BoardOut, CardPage, EventQuery } from './board.models';
+import type { CardPage, EventQuery } from './card.models';
 import type {
   Attachment,
   CategoryRef,
@@ -18,30 +21,17 @@ import type {
   EventDto,
   EventFields,
   EventPatch,
-  GuardResult,
+  HintsOut,
   OrgRef,
   Page,
   PosterMeta,
   PosterVariant,
-  TransitionId,
-  TransitionIn,
   VenueRef,
 } from './event.models';
-import type { TasksOut } from './task.models';
 
 const items = <T>(body: T[] | Page<T>): T[] => (Array.isArray(body) ? body : body.items);
 
 const ifMatch = (rev: number): HttpHeaders => new HttpHeaders({ 'If-Match': `"${rev}"` });
-
-function queryParams(query: EventQuery): HttpParams {
-  let params = new HttpParams();
-  for (const [key, value] of Object.entries(query)) {
-    if (value === undefined || value === '' || value === false) continue;
-    if (Array.isArray(value)) value.forEach((v) => (params = params.append(key, String(v))));
-    else params = params.set(key, value === true ? '1' : String(value));
-  }
-  return params;
-}
 
 @Injectable({ providedIn: 'root' })
 export class EventsApi {
@@ -50,18 +40,8 @@ export class EventsApi {
 
   listCards(query: EventQuery = {}): Observable<CardPage> {
     return this.http.get<CardPage>(`${this.base}/events`, {
-      params: queryParams({ ...query, view: 'list' }),
+      params: toParams({ ...query, view: 'list' }),
     });
-  }
-
-  board(query: EventQuery = {}): Observable<BoardOut> {
-    return this.http.get<BoardOut>(`${this.base}/events`, {
-      params: queryParams({ ...query, view: 'board' }),
-    });
-  }
-
-  tasks(): Observable<TasksOut> {
-    return this.http.get<TasksOut>(`${this.base}/tasks`);
   }
 
   get(id: string): Observable<EventDto> {
@@ -77,25 +57,54 @@ export class EventsApi {
     return this.http.patch<EventDto>(`${this.base}/events/${id}`, body, { headers: ifMatch(rev) });
   }
 
-  transition(
-    id: string,
-    transition: TransitionId,
-    body: TransitionIn = {},
-    rev?: number,
-  ): Observable<EventDto> {
-    const headers = rev === undefined ? undefined : ifMatch(rev);
-    return this.http.post<EventDto>(`${this.base}/events/${id}/transitions/${transition}`, body, {
-      headers,
+  /** The lifecycle calls answer the dossier; `rev` travels as `If-Match`. */
+  publish(id: string, rev: number): Observable<EventDto> {
+    return this.lifecycle(id, 'publish', {}, rev);
+  }
+
+  unpublish(id: string, rev: number): Observable<EventDto> {
+    return this.lifecycle(id, 'unpublish', {}, rev);
+  }
+
+  archive(id: string, rev: number): Observable<EventDto> {
+    return this.lifecycle(id, 'archive', {}, rev);
+  }
+
+  restore(id: string, rev: number): Observable<EventDto> {
+    return this.lifecycle(id, 'restore', {}, rev);
+  }
+
+  cancel(id: string, rev: number, body: CancelBody): Observable<EventDto> {
+    return this.lifecycle(id, 'cancel', body, rev);
+  }
+
+  postpone(id: string, rev: number, body: PostponeBody): Observable<EventDto> {
+    return this.lifecycle(id, 'postpone', body, rev);
+  }
+
+  reinstate(id: string, rev: number, body: ReinstateBody = {}): Observable<EventDto> {
+    return this.lifecycle(id, 'reinstate', body, rev);
+  }
+
+  revert(id: string, rev: number, body: RevertBody): Observable<EventDto> {
+    return this.http.post<EventDto>(`${this.base}/events/${id}/actions/revert-revision`, body, {
+      headers: ifMatch(rev),
     });
   }
 
-  guards(id: string, transition: TransitionId): Observable<GuardResult> {
-    return this.http.get<GuardResult>(`${this.base}/events/${id}/guards/${transition}`);
+  hints(id: string): Observable<HintsOut> {
+    return this.http.get<HintsOut>(`${this.base}/events/${id}/hints`);
   }
 
-  action(id: string, name: ActionName, body: ActionBody = {}, rev?: number): Observable<EventDto> {
-    const headers = rev === undefined ? undefined : ifMatch(rev);
-    return this.http.post<EventDto>(`${this.base}/events/${id}/actions/${name}`, body, { headers });
+  private lifecycle(
+    id: string,
+    name: 'publish' | 'unpublish' | 'archive' | 'restore' | 'cancel' | 'postpone' | 'reinstate',
+    body: object,
+    rev: number,
+  ): Observable<EventDto> {
+    return this.http.post<EventDto>(`${this.base}/events/${id}/${name}`, body, {
+      headers: ifMatch(rev),
+    });
   }
 
   draft(id: string): Observable<DraftOut | null> {
@@ -120,11 +129,8 @@ export class EventsApi {
     id: string,
     limit = 50,
     offset = 0,
-    filter: { fieldClass?: string; minRev?: number } = {},
   ): Observable<Page<RevisionOut>> {
-    let params = new HttpParams().set('limit', limit).set('offset', offset);
-    if (filter.fieldClass) params = params.set('fieldClass', filter.fieldClass);
-    if (filter.minRev) params = params.set('minRev', filter.minRev);
+    const params = new HttpParams().set('limit', limit).set('offset', offset);
     return this.http.get<Page<RevisionOut>>(`${this.base}/events/${id}/revisions`, { params });
   }
 
@@ -135,8 +141,8 @@ export class EventsApi {
   uploadPoster(id: string, file: File, meta: PosterMeta): Observable<Attachment> {
     const body = new FormData();
     body.append('file', file);
-    body.append('altText', meta.altText);
-    body.append('credit', meta.credit);
+    if (meta.altText) body.append('altText', meta.altText);
+    if (meta.credit) body.append('credit', meta.credit);
     body.append('rightsBasis', meta.rightsBasis);
     if (meta.personsDepicted !== undefined)
       body.append('personsDepicted', String(meta.personsDepicted));
@@ -164,7 +170,7 @@ export class EventsApi {
     return this.http.get<VenueRef[] | Page<VenueRef>>(`${this.base}/venues`).pipe(map(items));
   }
 
-  /** All organizations (not only the creatable ones), for filters and the assignment dialog. */
+  /** All organizations (not only the creatable ones), for the filters. */
   allOrganizations(): Observable<OrgRef[]> {
     return this.http.get<OrgRef[] | Page<OrgRef>>(`${this.base}/organizations`).pipe(map(items));
   }

@@ -67,8 +67,6 @@ export interface DossierCounts {
   openChecklist: number;
   mailTemplates: number;
   openComments: number;
-  /** Open blockers of T09 (M5 contract 3.4). */
-  followupOpen?: number;
 }
 
 export interface QuoteOut {

@@ -12,7 +12,7 @@ export type RequiredProfile = 'generic' | 'party' | 'meeting' | 'trip';
 export type ColorToken = 'orange' | 'blue' | 'petrol' | 'navy' | 'yellow' | 'red';
 export type PublicPrecision = 'exact' | 'building' | 'hidden';
 export type MappingRole =
-  'admin' | 'editor' | 'stupa' | 'viewer' | 'submitter' | 'organizer' | 'approver';
+  'admin' | 'editor' | 'stupa' | 'viewer' | 'submitter' | 'organizer';
 
 export const CATEGORY_KINDS: readonly CategoryKind[] = ['format', 'fachschaft', 'partner'];
 export const ORGANIZATION_KINDS: readonly OrganizationKind[] = [
@@ -39,12 +39,7 @@ export const COLOR_TOKENS: readonly ColorToken[] = [
 ];
 export const PUBLIC_PRECISIONS: readonly PublicPrecision[] = ['exact', 'building', 'hidden'];
 export const GLOBAL_ROLES: readonly MappingRole[] = ['admin', 'editor', 'stupa'];
-export const ORGANIZATION_ROLES: readonly MappingRole[] = [
-  'viewer',
-  'submitter',
-  'organizer',
-  'approver',
-];
+export const ORGANIZATION_ROLES: readonly MappingRole[] = ['viewer', 'submitter', 'organizer'];
 
 export interface AdminCategory {
   id: string;
@@ -79,7 +74,6 @@ export interface AdminOrganization {
   colorToken: ColorToken | null;
   categoryId: string | null;
   instagram: string[];
-  trusted: boolean;
   legacyWpIds: number[];
   active: boolean;
   createdAt: string;
@@ -89,7 +83,7 @@ export interface AdminOrganization {
 export type OrganizationWrite = Partial<
   Pick<
     AdminOrganization,
-    'name' | 'kind' | 'short' | 'categoryId' | 'instagram' | 'trusted' | 'active'
+    'name' | 'kind' | 'short' | 'categoryId' | 'instagram' | 'active'
   >
 > & { slug?: string };
 

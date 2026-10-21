@@ -3,19 +3,19 @@
   gap: var(--space-4);
 }
 
-.cp__bar {
+.cv__bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
 }
 
-.cp__nav {
+.cv__nav {
   display: flex;
   gap: var(--space-2);
 }
 
-.cp__title {
+.cv__title {
   flex: 1 1 10rem;
   margin: 0;
   font-size: var(--fs-lg);

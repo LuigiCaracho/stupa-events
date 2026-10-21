@@ -1,32 +1,27 @@
-/** Wire models of the event endpoints (M1 contract 4.2, M3 contract 5.1, camelCase). Written by hand, not generated. */
-import type { ProblemReason } from '@core/api/models';
+/** Wire models of the event endpoints (M5b contract 7, camelCase). Written by hand, not generated. */
 import type { EventState } from '@shared/status-kind.util';
 
-export const TRANSITION_IDS = [
-  'T01',
-  'T02',
-  'T03',
-  'T04',
-  'T05',
-  'T06',
-  'T07',
-  'T08',
-  'T08b',
-  'T09',
-  'T09b',
-  'T10',
-  'T11',
-  'T12',
-] as const;
-
-export type TransitionId = (typeof TRANSITION_IDS)[number];
 export type PublicStatus = 'scheduled' | 'cancelled' | 'postponed';
 export type ScanStatus = 'pending' | 'clean' | 'infected' | 'error';
 export type RightsBasis = 'own_work' | 'permission' | 'license' | 'partner_agreement' | 'unknown';
 export type PosterVariant = 'thumb400' | 'card1200';
 export type PublicReasonCode =
   'none' | 'room' | 'speaker' | 'illness' | 'registration' | 'weather' | 'other';
-export type LockReason = 'in_review' | 'approved' | 'live_critical' | 'closed';
+
+/** What the server lets the person do with the dossier now (M5b contract 7.1); the client never works it out. */
+export type EventAction =
+  | 'publish'
+  | 'unpublish'
+  | 'archive'
+  | 'restore'
+  | 'cancel'
+  | 'postpone'
+  | 'reinstate'
+  | 'revert-revision'
+  | 'confirm-location'
+  | 'verify-howto'
+  | 'save-as-format'
+  | 'clone';
 
 export interface OrgRef {
   id: string;
@@ -92,18 +87,12 @@ export interface Attachment {
   sizeBytes: number;
   sha256: string;
   scanStatus: ScanStatus;
-  altText: string;
-  credit: string;
+  altText: string | null;
+  credit: string | null;
   rightsBasis: RightsBasis;
   derivatives: { thumb400: Derivative; card1200: Derivative; og1200x630: Derivative } | null;
   supersedesId: string | null;
   createdAt: string;
-}
-
-export interface ImageException {
-  grantedBy: string;
-  reason: string;
-  at: string;
 }
 
 export interface PublicReason {
@@ -130,25 +119,18 @@ export interface EventDto {
   costText?: string | null;
   ticketUrl?: string | null;
   websiteUrl?: string | null;
-  publishAt?: string | null;
   publicReason?: PublicReason | null;
   endEstimated?: boolean;
-  textReviewedRev?: number;
-  publishedRev?: number | null;
-  flyerCheckedAt?: string | null;
   primaryCategory: CategoryRef | null;
   poster: Attachment | null;
-  imageException: ImageException | null;
   rev: number;
   createdBy: string;
-  submittedBy: string | null;
-  approvedBy: string | null;
   createdAt: string;
   updatedAt: string;
-  allowedTransitions: TransitionId[];
-  allowedActions?: string[];
-  editableFields?: string[];
-  lockReason?: LockReason | null;
+  allowedActions: EventAction[];
+  editableFields: string[];
+  /** Number of `warn` hints (`GET .../hints` lists them). */
+  hintCount: number;
   /** Set on the answer of a save that moved the start: how many checklist due dates were recomputed. */
   checklistRecomputed?: number;
   outcome?: Outcome | null;
@@ -196,15 +178,23 @@ export interface EventFields {
 
 export interface EventPatch extends EventFields {
   note?: string;
+  /** Only the editorial team, only while the dossier has no organization (M5b contract 7.1). */
+  organizationId?: string;
 }
 
-export type Reason = ProblemReason;
+export type HintSeverity = 'info' | 'warn';
 
-export interface GuardResult {
-  transition: TransitionId;
-  allowed: boolean;
-  reasons: Reason[];
+/** One line of "Fehlt noch" (`GET /api/events/{id}/hints`); the text comes from the catalog, `hints.<code>`. */
+export interface Hint {
+  code: string;
+  severity: HintSeverity;
+  field: string | null;
 }
+
+export interface HintsOut {
+  items: Hint[];
+}
+
 
 export interface Page<T> {
   items: T[];
@@ -214,14 +204,10 @@ export interface Page<T> {
 }
 
 export interface PosterMeta {
-  altText: string;
-  credit: string;
+  altText?: string;
+  credit?: string;
   rightsBasis: RightsBasis;
   personsDepicted?: boolean;
   consentNote?: string;
 }
 
-export interface TransitionIn {
-  note?: string;
-  publishAt?: string;
-}

@@ -1,0 +1,46 @@
+<section class="ps" aria-labelledby="poster-heading">
+  <h2 class="sec" id="poster-heading" tabindex="-1">{{ 'detail.poster' | t }}</h2>
+  @if (poster(); as p) {
+    <figure class="ps__figure" [style.aspect-ratio]="ratio()">
+      @if (failed()) {
+        <app-icon name="image" [size]="48" />
+      } @else {
+        <img class="ps__img" [src]="src()" [alt]="p.altText ?? ''" (error)="failed.set(true)" />
+      }
+    </figure>
+    <div class="ps__meta">
+      @if (p.altText) {
+        <span>{{ p.altText }}</span>
+      }
+      @if (p.credit) {
+        <span class="ps__muted">{{ 'detail.credit' | t }}: {{ p.credit }}</span>
+      }
+      @if (p.scanStatus === 'pending') {
+        <app-status-text kind="warn">{{ 'detail.posterReview' | t }}</app-status-text>
+      } @else if (p.scanStatus === 'infected' || p.scanStatus === 'error') {
+        <app-status-text kind="error">{{ 'detail.posterInfected' | t }}</app-status-text>
+      }
+    </div>
+    @if (canEdit() && !replacing()) {
+      <div class="ps__actions">
+        <app-button variant="tonal" (click)="replacing.set(true)">{{
+          'detail.posterReplace' | t
+        }}</app-button>
+        <app-button variant="text" [disabled]="busy()" (click)="removed.emit()">{{
+          'detail.posterRemove' | t
+        }}</app-button>
+      </div>
+    }
+  } @else {
+    <div class="ps__empty" [style.aspect-ratio]="showUpload() ? null : ratio()">
+      <app-icon name="image" [size]="40" />
+      <p class="ps__noimage">{{ 'detail.noImage' | t }}</p>
+    </div>
+  }
+  @if (showUpload()) {
+    <app-poster-upload [busy]="busy()" (submitted)="send($event)" />
+    @if (replacing()) {
+      <app-button variant="text" (click)="replacing.set(false)">{{ 'action.cancel' | t }}</app-button>
+    }
+  }
+</section>

@@ -3,7 +3,6 @@
  * People are addressed with "du" and gendered with a colon or neutral.
  */
 export const calendarDe = {
-  'nav.calendar': 'Kalender',
   'calendar.title': 'Kalender',
   'calendar.gridLabel': 'Termine im Kalender',
   'calendar.agenda': 'Termine nach Tagen',

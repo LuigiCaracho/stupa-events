@@ -1,0 +1,80 @@
+<section class="of" aria-labelledby="fu-outcome-heading">
+  <h3 class="sec" id="fu-outcome-heading" tabindex="-1">{{ 'outcome.title' | t }}</h3>
+  @if (stale()) {
+    <app-note kind="error" role="alert">{{ 'outcome.stale' | t }}</app-note>
+  }
+  @if (!canEdit()) {
+    @if (stored(); as o) {
+      @if (o.waived) {
+        <p class="of__text">{{ 'outcome.waivedShown' | t: { reason: o.reason ?? '' } }}</p>
+      } @else {
+        <dl class="of__list">
+          <div>
+            <dt>{{ 'outcome.attendance' | t }}</dt>
+            <dd class="num">{{ o.attendance }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'outcome.costs' | t }}</dt>
+            <dd class="num">{{ o.costs }}</dd>
+          </div>
+          <div>
+            <dt>{{ 'outcome.revenue' | t }}</dt>
+            <dd class="num">{{ o.revenue }}</dd>
+          </div>
+        </dl>
+      }
+      @if (o.notes) {
+        <p class="of__text">{{ o.notes }}</p>
+      }
+    } @else {
+      <p class="of__muted">{{ 'outcome.none' | t }}</p>
+    }
+  } @else {
+  <form class="of__form" [formGroup]="form" (ngSubmit)="save()" novalidate>
+    <app-switch formControlName="waived" [ariaLabel]="'outcome.waived' | t">{{
+      'outcome.waived' | t
+    }}</app-switch>
+    @if (waived()) {
+      <app-textarea
+        formControlName="waivedReason"
+        [label]="'outcome.waivedReason' | t"
+        [hint]="'outcome.waivedHint' | t"
+        [rows]="2"
+        [error]="message('waivedReason')"
+      />
+    } @else {
+      <div class="of__numbers">
+        <app-input
+          formControlName="attendance"
+          type="number"
+          [label]="'outcome.attendance' | t"
+          [error]="message('attendance')"
+        />
+        <app-currency-input
+          formControlName="costs"
+          [label]="'outcome.costs' | t"
+          [hint]="'outcome.costsHint' | t"
+          [error]="message('costs')"
+        />
+        <app-currency-input
+          formControlName="revenue"
+          [label]="'outcome.revenue' | t"
+          [error]="message('revenue')"
+        />
+      </div>
+    }
+    <app-textarea
+      formControlName="notes"
+      [label]="'outcome.notes' | t"
+      [hint]="'outcome.notesHint' | t"
+      [rows]="3"
+      [error]="message('notes')"
+    />
+    <div class="of__actions">
+      <app-button type="submit" variant="fill" [loading]="busy()">{{
+        'outcome.save' | t
+      }}</app-button>
+    </div>
+  </form>
+  }
+</section>

@@ -1,13 +1,14 @@
 /**
- * Head of the dossier page (I07): title, state, public status with its public reason as text, organization and
- * time, the primary button of the state (`idea: T01, planning: T02, in_review: T04, approved: T05, followup: T09`, only when
- * the server allows it) and the menu "Mehr" with the other transitions and the actions. The page runs the commands.
+ * Head of the dossier page (M5b contract 10.1): title, state as text (plus "Abgesagt"/"Verschoben" with its public
+ * reason), time, organization, venue and category, and the action bar. The bar shows exactly the actions the server
+ * lists in `allowedActions`; the page runs them. "Als Format speichern" and "Ort bestätigen" sit in the menu "Mehr".
  */
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
-import { type EventState, eventStateStatus } from '@shared/status-kind.util';
+import type { TranslationKey } from '@core/i18n/translations';
+import { eventStateStatus } from '@shared/status-kind.util';
 import {
   RowMenuComponent,
   type RowMenuItem,
@@ -16,43 +17,31 @@ import {
 import { StatusTextComponent } from '@shared/ui/status-text/status-text.component';
 import { ButtonComponent } from '@stupa-makers/ui-kit';
 import { formatEventTime } from '../api/event-time';
-import type { EventDto, TransitionId } from '../api/event.models';
-import { TRANSITION_LABEL } from '../api/transition-label';
-import { PRIMARY_TRANSITION, menuTransitions } from '../api/transitions';
+import type { EventAction, EventDto } from '../api/event.models';
 
-const PATH: readonly EventState[] = [
-  'idea',
-  'planning',
-  'in_review',
-  'approved',
-  'live',
-  'followup',
+export type HeadCommand = Exclude<EventAction, 'revert-revision' | 'verify-howto'>;
+
+interface Bar {
+  action: HeadCommand;
+  label: TranslationKey;
+  variant: 'fill' | 'tonal' | 'text';
+}
+
+const BAR: readonly Bar[] = [
+  { action: 'publish', label: 'head.publish', variant: 'fill' },
+  { action: 'restore', label: 'head.restore', variant: 'fill' },
+  { action: 'unpublish', label: 'head.unpublish', variant: 'tonal' },
+  { action: 'cancel', label: 'head.cancel', variant: 'tonal' },
+  { action: 'postpone', label: 'head.postpone', variant: 'tonal' },
+  { action: 'reinstate', label: 'head.reinstate', variant: 'tonal' },
+  { action: 'archive', label: 'head.archive', variant: 'tonal' },
+  { action: 'clone', label: 'head.clone', variant: 'text' },
 ];
 
-export type HeadAction =
-  | 'cancel'
-  | 'reinstate'
-  | 'exception'
-  | 'assign'
-  | 'confirm-flyer'
-  | 'confirm-location'
-  | 'clone'
-  | 'save-as-format';
-
-export type HeadCommand =
-  { kind: 'transition'; id: TransitionId } | { kind: 'action'; name: HeadAction };
-
-const ACTION_OF: Record<string, HeadAction> = {
-  cancel: 'cancel',
-  postpone: 'cancel',
-  reinstate: 'reinstate',
-  'image-exception': 'exception',
-  'assign-organization': 'assign',
-  'confirm-flyer': 'confirm-flyer',
-  'confirm-location': 'confirm-location',
-  clone: 'clone',
-  'save-as-format': 'save-as-format',
-};
+const MENU: readonly { action: HeadCommand; label: TranslationKey }[] = [
+  { action: 'confirm-location', label: 'head.confirmLocation' },
+  { action: 'save-as-format', label: 'head.saveAsFormat' },
+];
 
 @Component({
   selector: 'app-dossier-head',
@@ -66,10 +55,10 @@ export class DossierHeadComponent {
   private readonly i18n = inject(I18nService);
 
   readonly event = input.required<EventDto>();
-  /** The action names the page offers (`allowedActions` of the server). */
-  readonly actions = input<readonly string[]>([]);
   /** The archived dossier has a howto nobody checked (derived by the page, M5 contract 3.2). */
   readonly howtoUnverified = input(false);
+  /** A call runs; the bar waits. */
+  readonly busy = input(false);
 
   readonly command = output<HeadCommand>();
 
@@ -78,22 +67,10 @@ export class DossierHeadComponent {
     () =>
       `${formatEventTime(this.event().startsAt, this.event().tzid)} – ${formatEventTime(this.event().endsAt, this.event().tzid)}`,
   );
-  /** The states of the main path with the position of the current one; archived and withdrawn show no bar. */
-  protected readonly steps = computed(() => {
-    const at = PATH.indexOf(this.event().state);
-    if (at < 0) return [];
-    return PATH.map((state, i) => ({
-      key: eventStateStatus(state).key,
-      current: i === at,
-      done: i < at,
-    }));
-  });
-  protected readonly primary = computed<TransitionId | null>(() => {
+  protected readonly where = computed(() => {
     const e = this.event();
-    const t = PRIMARY_TRANSITION[e.state];
-    return t && e.allowedTransitions.includes(t) ? t : null;
+    return e.venue?.name ?? e.venueText;
   });
-  protected readonly label = TRANSITION_LABEL;
 
   protected readonly publicLine = computed(() => {
     const e = this.event();
@@ -107,41 +84,20 @@ export class DossierHeadComponent {
     return { kind, text: [status, reason, e.publicReason?.text].filter(Boolean).join(' · ') };
   });
 
+  protected readonly bar = computed(() =>
+    BAR.filter((b) => this.event().allowedActions.includes(b.action)),
+  );
+
   protected readonly sections = computed<RowMenuSection[]>(() => {
-    const e = this.event();
-    const t = this.i18n.translate.bind(this.i18n);
-    const transitions: RowMenuItem[] = menuTransitions(e.state, e.allowedTransitions).map((id) => ({
-      id: `T:${id}`,
-      label: t(TRANSITION_LABEL[id]),
-      danger: id === 'T11',
+    const allowed = this.event().allowedActions;
+    const items: RowMenuItem[] = MENU.filter((m) => allowed.includes(m.action)).map((m) => ({
+      id: m.action,
+      label: this.i18n.translate(m.label),
     }));
-    const names = new Set(
-      this.actions()
-        .map((a) => ACTION_OF[a])
-        .filter(Boolean),
-    );
-    const actions: RowMenuItem[] = [];
-    if (names.has('cancel')) actions.push({ id: 'A:cancel', label: t('head.cancel') });
-    if (names.has('reinstate') && e.publicStatus !== 'scheduled')
-      actions.push({ id: 'A:reinstate', label: t('head.reinstate') });
-    if (names.has('confirm-flyer'))
-      actions.push({ id: 'A:confirm-flyer', label: t('head.confirmFlyer') });
-    if (names.has('confirm-location'))
-      actions.push({ id: 'A:confirm-location', label: t('head.confirmLocation') });
-    if (names.has('exception')) actions.push({ id: 'A:exception', label: t('detail.exception') });
-    if (names.has('clone')) actions.push({ id: 'A:clone', label: t('head.clone') });
-    if (names.has('save-as-format'))
-      actions.push({ id: 'A:save-as-format', label: t('head.saveAsFormat') });
-    if (names.has('assign')) actions.push({ id: 'A:assign', label: t('head.assign') });
-    return [{ items: actions }, { items: transitions }].filter((s) => s.items.length > 0);
+    return items.length > 0 ? [{ items }] : [];
   });
 
   protected selected(item: RowMenuItem): void {
-    const [kind, value] = item.id.split(':');
-    this.command.emit(
-      kind === 'T'
-        ? { kind: 'transition', id: value as TransitionId }
-        : { kind: 'action', name: value as HeadAction },
-    );
+    this.command.emit(item.id as HeadCommand);
   }
 }

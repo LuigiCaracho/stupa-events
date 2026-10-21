@@ -11,7 +11,7 @@ import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { SelectFieldComponent, type SelectFieldOption } from '@shared/ui/select/select.component';
 import { ButtonComponent, DialogComponent, ToastService } from '@stupa-makers/ui-kit';
 import { catchError, of } from 'rxjs';
-import type { CardPage } from '../../dossiers/api/board.models';
+import type { CardPage } from '../../dossiers/api/card.models';
 import { EventsApi } from '../../dossiers/api/events-api.service';
 import { problemMessage } from '../../dossiers/api/problem-message';
 import { LibraryApi } from '../api/library-api.service';
@@ -43,7 +43,7 @@ export class AdoptDialogComponent {
   protected readonly dossiers = rxResource({
     stream: () =>
       this.events
-        .listCards({ mine: true, state: ['idea', 'planning', 'in_review', 'approved', 'live', 'followup'], limit: 100 })
+        .listCards({ mine: true, state: ['draft', 'published'], limit: 100 })
         .pipe(catchError(() => of(EMPTY))),
   });
   protected readonly options = computed<SelectFieldOption[]>(() =>

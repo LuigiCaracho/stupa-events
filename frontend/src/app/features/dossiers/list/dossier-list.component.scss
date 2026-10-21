@@ -2,24 +2,32 @@
   display: block;
 }
 
+.dl__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.dl__views {
+  margin-left: auto;
+}
+
 .dl__list {
-  margin: 0;
+  display: grid;
+  gap: var(--space-1);
+  margin: var(--space-3) 0 0;
   padding: 0;
   list-style: none;
-}
-
-.dl__when {
-  color: var(--color-text-muted);
-  white-space: nowrap;
-}
-
-.dl__blockers {
-  color: var(--color-danger);
-  font-size: var(--fs-small);
-  white-space: nowrap;
 }
 
 .dl__more {
   display: block;
   margin-top: var(--space-3);
+}
+
+@media (max-width: 599px) {
+  .dl__views {
+    margin-left: 0;
+  }
 }

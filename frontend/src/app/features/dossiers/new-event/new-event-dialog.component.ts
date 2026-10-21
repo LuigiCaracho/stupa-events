@@ -1,7 +1,7 @@
 /**
- * I05: dialog "Neues Event" or "Vorschlag". Creates a dossier in state `idea` (T00) with title, organization,
- * start and optional end (the server adds two hours). A person without an organization of their own makes a proposal:
- * the organization field is fixed and locked, the editorial staff assigns one later; five open proposals at most.
+ * I05: dialog "Neues Event". Creates a dossier in state `draft` with title, organization, start and optional end (the
+ * server adds two hours). The organizations are the ones the person may create events in; without one the dialog says
+ * so (M5b has no proposals without an organization).
  */
 import {
   ChangeDetectionStrategy,
@@ -13,11 +13,11 @@ import {
   signal,
 } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { FormBuilder, FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { problemOf } from '@core/api/problem';
-import { AuthService } from '@core/auth/auth.service';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
+import { NoteComponent } from '@shared/ui/note/note.component';
 import { SelectFieldComponent, type SelectFieldOption } from '@shared/ui/select/select.component';
 import {
   ButtonComponent,
@@ -49,6 +49,7 @@ const TZID = 'Europe/Berlin';
     DatepickerComponent,
     DialogComponent,
     InputComponent,
+    NoteComponent,
     SegmentedComponent,
     SelectFieldComponent,
     TimeInputComponent,
@@ -58,7 +59,6 @@ const TZID = 'Europe/Berlin';
 })
 export class NewEventDialogComponent {
   private readonly api = inject(EventsApi);
-  private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(I18nService);
 
@@ -77,11 +77,6 @@ export class NewEventDialogComponent {
       }),
   });
 
-  protected readonly proposalOrg = new FormControl({
-    value: this.i18n.translate('new.proposalOrg'),
-    disabled: true,
-  });
-
   protected readonly form = inject(FormBuilder).nonNullable.group({
     title: ['', [Validators.required, Validators.maxLength(200)]],
     organizationId: [''],
@@ -93,16 +88,15 @@ export class NewEventDialogComponent {
     endTime: [''],
   });
 
-  protected readonly orgOptions = computed<SelectFieldOption[]>(() => {
-    const own = new Set(this.auth.organizations().map((o) => o.slug));
-    const global = this.auth.can('event.read_all');
-    return (this.lookups.hasValue() ? this.lookups.value().orgs : [])
-      .filter((o) => global || own.has(o.slug))
-      .map((o) => ({ value: o.id, label: o.name }));
-  });
+  protected readonly orgOptions = computed<SelectFieldOption[]>(() =>
+    (this.lookups.hasValue() ? this.lookups.value().orgs : []).map((o) => ({
+      value: o.id,
+      label: o.name,
+    })),
+  );
 
-  /** No organization to choose from: the dossier is a proposal. */
-  protected readonly proposal = computed(
+  /** The lookup is done and offers no organization: nothing can be created. */
+  protected readonly noOrg = computed(
     () => !this.lookups.isLoading() && this.orgOptions().length === 0,
   );
 
@@ -120,8 +114,7 @@ export class NewEventDialogComponent {
   }
 
   protected invalid(name: 'title' | 'organizationId' | 'startDate' | 'startTime'): boolean {
-    if (name === 'organizationId')
-      return this.attempted() && !this.proposal() && !this.form.controls[name].value;
+    if (name === 'organizationId') return this.attempted() && !this.form.controls[name].value;
     return this.attempted() && this.form.controls[name].invalid;
   }
 
@@ -145,7 +138,7 @@ export class NewEventDialogComponent {
     this.attempted.set(true);
     const v = this.form.getRawValue();
     if (this.form.invalid || this.endBeforeStart() || this.busy()) return;
-    if (!this.proposal() && !v.organizationId) return;
+    if (!v.organizationId) return;
     const endsAt = this.endIso();
     const body: EventCreate = {
       title: v.title.trim(),
@@ -153,7 +146,7 @@ export class NewEventDialogComponent {
       ...(endsAt && { endsAt }),
       tzid: TZID,
       allDay: false,
-      ...(!this.proposal() && { organizationId: v.organizationId }),
+      organizationId: v.organizationId,
       ...(v.venueText.trim() && { venueText: v.venueText.trim() }),
       ...(v.primaryCategoryId && { primaryCategoryId: v.primaryCategoryId }),
     };
@@ -161,16 +154,14 @@ export class NewEventDialogComponent {
     this.api.create(body).subscribe({
       next: (event) => {
         this.busy.set(false);
-        this.toast.success(
-          this.i18n.translate(this.proposal() ? 'new.createdProposal' : 'new.created'),
-        );
+        this.toast.success(this.i18n.translate('new.created'));
         this.created.emit(event);
       },
       error: (err: unknown) => {
         this.busy.set(false);
         const problem = problemOf(err);
         this.toast.error(
-          problem.status === 404 && !this.proposal()
+          problem.status === 404
             ? this.i18n.translate('new.errOrgScope')
             : problemMessage(this.i18n, problem),
         );

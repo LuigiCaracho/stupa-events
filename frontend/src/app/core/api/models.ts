@@ -1,13 +1,12 @@
 /** Wire models of the shell endpoints (`/api/auth/*`). Feature models live in `features/**`. */
 
-/** Membership of the principal in one organization; `role` is the effective one (an approver of an untrusted organization shows as organizer). */
+/** Membership of the principal in one organization. */
 export interface MeOrganization {
   slug: string;
   role: string;
   organizationId: string;
   name: string;
   short: string;
-  trusted: boolean;
 }
 
 /** The signed-in principal (`GET /api/auth/me`). Permissions are UX hints, the server decides. */
@@ -26,7 +25,7 @@ export interface LogoutResult {
   logoutUrl: string | null;
 }
 
-/** RFC 9457 problem detail, with the `reasons[]` extension of the guard answers. */
+/** RFC 9457 problem detail, with the `reasons[]` extension of `publish_incomplete`. */
 export interface Problem {
   type?: string;
   title?: string;
@@ -49,32 +48,8 @@ export interface ProblemFieldError {
   msg: string;
 }
 
-/** One blocker or warning of a refused transition. `messageKey` is an i18n key. */
+/** One missing piece of a refused publication (`publish_incomplete`): the field that is empty. */
 export interface ProblemReason {
   code: string;
   field: string | null;
-  severity: 'blocker' | 'warning';
-  messageKey: string;
-  fixAction: FixAction | null;
 }
-
-/** The one-click fixes of a reason (M3 contract 2.3); an unknown value shows no button. */
-export type FixAction =
-  | 'fill_field'
-  | 'change_date'
-  | 'upload_poster'
-  | 'pick_venue'
-  | 'fill_rights'
-  | 'review_duplicate'
-  | 'mark_cancellation'
-  | 'open_comment'
-  | 'confirm_flyer'
-  | 'confirm_location'
-  | 'fill_facts'
-  | 'open_checklist'
-  | 'confirm_time'
-  | 'set_end'
-  | 'make_offer'
-  | 'fill_retrospective'
-  | 'fill_outcome'
-  | 'verify_howto';

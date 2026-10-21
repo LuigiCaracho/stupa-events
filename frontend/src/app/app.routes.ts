@@ -3,7 +3,7 @@
  * Routing skeleton. Rewritten from the workflow tool:
  * one `ShellComponent` frames every route. `authGuard` protects the OIDC areas; the
  * feature areas come from `feature-routes.ts`. Route data: `title` (i18n key, breadcrumb
- * and tab), `wide`, `fab`, `footer` and `chrome: false`, read by the shell.
+ * and tab), `wide`, `footer` and `chrome: false`, read by the shell.
  */
 import type { Routes } from '@angular/router';
 import { authGuard } from '@core/auth/auth.guard';

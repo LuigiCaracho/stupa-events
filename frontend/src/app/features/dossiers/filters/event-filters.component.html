@@ -1,0 +1,55 @@
+<div class="pf" role="search" [attr.aria-label]="'filters.label' | t">
+  <app-search-pill
+    class="pf__search"
+    [clearable]="true"
+    [placeholder]="'filters.search' | t"
+    [value]="filters().q"
+    (valueChange)="set('q', $event)"
+  />
+  <div class="pf__chips">
+    <app-filter-select
+      [label]="'filters.org' | t"
+      [options]="orgOptions()"
+      [active]="!!filters().organization"
+      [value]="filters().organization"
+      (valueChange)="set('organization', $event)"
+    />
+    <app-filter-select
+      [label]="'filters.category' | t"
+      [options]="categoryOptions()"
+      [active]="!!filters().category"
+      [value]="filters().category"
+      (valueChange)="set('category', $event)"
+    />
+    <app-filter-select
+      [label]="'filters.state' | t"
+      [options]="stateOptions()"
+      [active]="!!filters().state"
+      [value]="filters().state"
+      (valueChange)="setState($event)"
+    />
+    @if (filters().view === 'list') {
+      <app-filter-select
+        [label]="'filters.year' | t"
+        [options]="yearOptions()"
+        [active]="!!filters().year"
+        [value]="filters().year"
+        (valueChange)="set('year', $event)"
+      />
+    }
+    <button
+      type="button"
+      class="chip"
+      [class.on]="filters().mine"
+      [attr.aria-pressed]="filters().mine"
+      (click)="set('mine', !filters().mine)"
+    >
+      {{ 'filters.mine' | t }}
+    </button>
+    @if (count() > 0) {
+      <app-button variant="text" size="sm" (click)="reset()">{{
+        'dossiers.resetFilters' | t
+      }}</app-button>
+    }
+  </div>
+</div>

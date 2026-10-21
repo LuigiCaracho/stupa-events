@@ -1,35 +1,6 @@
 <header class="dh">
-  <div class="dh__top">
-    <h1 class="dh__title">{{ event().title }}</h1>
-    <div class="dh__actions">
-      @if (primary(); as t) {
-        <app-button variant="fill" (click)="command.emit({ kind: 'transition', id: t })">{{
-          label[t] | t
-        }}</app-button>
-      }
-      @if (sections().length > 0) {
-        <app-row-menu
-          [label]="'transition.more' | t"
-          [sections]="sections()"
-          (selected)="selected($event)"
-        />
-      }
-    </div>
-  </div>
-  @if (steps().length > 0) {
-    <ol class="dh__steps" [attr.aria-label]="'head.steps' | t">
-      @for (step of steps(); track step.key) {
-        <li
-          class="dh__step"
-          [class.dh__step--current]="step.current"
-          [class.dh__step--done]="step.done"
-          [attr.aria-current]="step.current ? 'step' : null"
-        >
-          {{ step.key | t }}
-        </li>
-      }
-    </ol>
-  }
+  <a class="dh__back" routerLink="/dossiers">{{ 'detail.back' | t }}</a>
+  <h1 class="dh__title">{{ event().title }}</h1>
   <p class="dh__meta">
     <app-status-text [kind]="state().kind">{{ state().key | t }}</app-status-text>
     @if (publicLine(); as p) {
@@ -40,8 +11,30 @@
     }
     <span class="num">{{ when() }}</span>
     <span>{{ event().organization?.name ?? ('dossiers.noOrg' | t) }}</span>
+    @if (where(); as place) {
+      <span>{{ place }}</span>
+    }
+    @if (event().primaryCategory; as c) {
+      <span>{{ c.name }}</span>
+    }
     @if (event().format; as f) {
       <a class="dh__format" [routerLink]="['/formate', f.slug]">{{ f.title }}</a>
     }
   </p>
+  @if (bar().length > 0 || sections().length > 0) {
+    <div class="dh__actions" role="group" [attr.aria-label]="'head.actions' | t">
+      @for (b of bar(); track b.action) {
+        <app-button [variant]="b.variant" [disabled]="busy()" (click)="command.emit(b.action)">{{
+          b.label | t
+        }}</app-button>
+      }
+      @if (sections().length > 0) {
+        <app-row-menu
+          [label]="'head.more' | t"
+          [sections]="sections()"
+          (selected)="selected($event)"
+        />
+      }
+    </div>
+  }
 </header>

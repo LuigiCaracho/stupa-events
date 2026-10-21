@@ -93,7 +93,6 @@ export const archiveDe = {
   'clone.part.howto': 'Anleitung',
   'clone.part.checklist': 'Checkliste',
   'clone.part.poster': 'Poster',
-  'clone.part.image_exception': 'Ausnahme ohne Bild',
   'clone.part.files': 'Dateien und Angebote',
   'clone.part.social_posts': 'Social-Post-Texte',
   'clone.part.links': 'Links',

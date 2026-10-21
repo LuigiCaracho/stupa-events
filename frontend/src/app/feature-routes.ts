@@ -1,9 +1,9 @@
 /**
  * Feature areas of the signed-in frame (children of the shell route). Each entry shows
- * the lazy routes of its feature area. Paths, titles, guards and layout flags (`wide`, `fab`)
- * stay here, so the shell owns the frame contract. `dossiers/:id` is a child route of the dossier list (list and
- * detail side by side, see `dossiers.routes.ts`); `dossiers/neu` opens the dialog over the list (with `?vorlage=<id>` the clone dialog I06). M5 adds `kalender`, `archiv`, `formate`
- * and `bibliothek`. `verwaltung` adds
+ * the lazy routes of its feature area. Paths, titles, guards and layout flags (`wide`)
+ * stay here, so the shell owns the frame contract. `dossiers` is the start page (the event list with its
+ * calendar), `dossiers/:id` the dossier page (see `dossiers.routes.ts`); `dossiers/neu` opens the dialog over the
+ * list (with `?vorlage=<id>` the clone dialog I06). `archiv`, `formate` and `bibliothek` follow. `verwaltung` adds
  * its permission guard to the session guard.
  */
 import type { Routes } from '@angular/router';
@@ -13,18 +13,6 @@ import { ADMIN_PERMISSIONS } from './features/admin/admin-tabs';
 
 export const FEATURE_ROUTES: Routes = [
   {
-    path: 'aufgaben',
-    data: { title: 'nav.tasks', fab: true },
-    canActivate: [authGuard],
-    loadChildren: () => import('./features/tasks/tasks.routes'),
-  },
-  {
-    path: 'pipeline',
-    data: { title: 'nav.pipeline', wide: true, fab: true },
-    canActivate: [authGuard],
-    loadChildren: () => import('./features/pipeline/pipeline.routes'),
-  },
-  {
     path: 'dossiers/neu',
     data: { title: 'new.title', parent: ['dossiers'], wide: true, newEvent: true },
     canActivate: [authGuard],
@@ -32,15 +20,9 @@ export const FEATURE_ROUTES: Routes = [
   },
   {
     path: 'dossiers',
-    data: { title: 'nav.dossiers', wide: true },
+    data: { title: 'nav.events', wide: true },
     canActivate: [authGuard],
     loadChildren: () => import('./features/dossiers/dossiers.routes'),
-  },
-  {
-    path: 'kalender',
-    data: { title: 'nav.calendar', wide: true },
-    canActivate: [authGuard],
-    loadChildren: () => import('./features/calendar/calendar.routes'),
   },
   {
     path: 'archiv',

@@ -8,8 +8,8 @@
  * path, for example `@shared/ui/empty-state/empty-state.component`. When the initial
  * bundle imports this barrel, every block that a lazy page uses goes into it too.
  *
- * New blocks of the event pipeline (`app-guard-list`, `app-poster-upload`, ...) have their
- * own directory here and join this barrel when they exist.
+ * New blocks (`app-poster-upload`, ...) have their own directory here and join this barrel
+ * when they exist.
  */
 export { DateBlockComponent } from './date-block/date-block.component';
 export { EmptyStateComponent } from './empty-state/empty-state.component';
@@ -35,7 +35,5 @@ export type { SkeletonVariant } from './skeleton/skeleton.component';
 export { StickyBarComponent } from './sticky-bar/sticky-bar.component';
 export { StatusTextComponent } from './status-text/status-text.component';
 export * from '../status-kind.util';
-export { GuardListComponent } from './guard-list/guard-list.component';
-export { fieldLabel, reasonText } from './guard-list/reason-text';
 export { PosterUploadComponent } from './poster-upload/poster-upload.component';
 export type { PosterRights, PosterSubmission } from './poster-upload/poster-upload.component';

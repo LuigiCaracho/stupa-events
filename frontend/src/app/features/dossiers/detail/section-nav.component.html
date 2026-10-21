@@ -1,0 +1,19 @@
+<nav class="sn" [attr.aria-label]="label()">
+  <ul class="sn__list">
+    @for (link of links(); track link.id) {
+      <li>
+        <a
+          class="sn__link"
+          [attr.href]="'#' + link.id"
+          [attr.aria-current]="current() === link.id ? 'location' : null"
+          (click)="go($event, link.id)"
+        >
+          {{ link.label }}
+          @if (link.count) {
+            <span class="sn__count num">{{ link.count }}</span>
+          }
+        </a>
+      </li>
+    }
+  </ul>
+</nav>

@@ -1,10 +1,15 @@
 /** Builds the entries of the I12 timeline from event revisions, document revisions and comments (pure functions). */
 import type { I18nService } from '@core/i18n/i18n.service';
-import { fieldLabel } from '@shared/ui/guard-list/reason-text';
+import { fieldLabel } from '../hints/field-label';
 import type { HistoryEntry } from '@shared/ui/history/history.component';
 import type { RevisionOut } from '../api/action.models';
 import type { CommentThread } from '../model/comment.models';
 import type { DocumentRevisionOut } from '../model/document.models';
+
+/** A revision that moved the dossier between states changed the field `state` of its snapshot. */
+export function isStateChange(revision: RevisionOut): boolean {
+  return revision.changedFields.includes('state');
+}
 
 export function revisionEntries(
   i18n: I18nService,
@@ -12,11 +17,10 @@ export function revisionEntries(
 ): HistoryEntry[] {
   return revisions.map((r) => ({
     at: r.at,
-    icon: r.fieldClass === 'state' ? 'flow' : 'edit',
-    title:
-      r.fieldClass === 'state'
-        ? i18n.translate('activity.transition', { rev: r.rev })
-        : i18n.translate('activity.revision', { rev: r.rev }),
+    icon: isStateChange(r) ? 'flow' : 'edit',
+    title: isStateChange(r)
+      ? i18n.translate('activity.transition', { rev: r.rev })
+      : i18n.translate('activity.revision', { rev: r.rev }),
     actor: r.actorType === 'system' ? i18n.translate('history.system') : r.actor.displayName,
     body: r.changeNote,
     changes: r.changedFields.map((f) => ({

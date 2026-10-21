@@ -1,0 +1,89 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.ec {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  transition: background-color var(--motion-fast) var(--ease-standard);
+}
+
+.ec:hover {
+  background: var(--color-surface-2);
+}
+
+.ec__thumb {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 6rem;
+  height: 4.5rem;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+}
+
+.ec__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ec__body {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+/* The title link covers the whole card, so the card is one target. */
+.ec__title {
+  overflow: hidden;
+  color: var(--color-text);
+  font-weight: var(--fw-semibold);
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ec__title::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+}
+
+.ec__title:focus-visible {
+  outline: none;
+}
+
+.ec:has(.ec__title:focus-visible) {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+.ec__sub,
+.ec__marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  font-size: var(--fs-small);
+}
+
+.ec__sub {
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 599px) {
+  .ec__thumb {
+    width: 4.5rem;
+    height: 3.5rem;
+  }
+}

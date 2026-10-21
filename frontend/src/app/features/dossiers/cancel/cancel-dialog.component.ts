@@ -1,7 +1,7 @@
 /**
- * I14: cancel or postpone a live event. An internal reason (required, never public), a public reason from a fixed list
- * with a short public text (editorial approval only), for a postponement the new date (only with the right to change
- * critical fields) or "neuer Termin folgt", and a preview of what the public status will say.
+ * The small dialog of the three marks of a published event (M5b contract 7.1): "Absagen", "Verschieben" and "Wieder
+ * ansetzen". An internal note (optional, never public), the public reason from a fixed list with a short public text,
+ * for a postponement the new date (or "neuer Termin folgt") and a preview of what the public status will say.
  */
 import {
   ChangeDetectionStrategy,
@@ -23,9 +23,10 @@ import {
   ButtonComponent,
   DialogComponent,
   InputComponent,
-  SegmentedComponent,
   ToastService,
 } from '@stupa-makers/ui-kit';
+import type { Observable } from 'rxjs';
+import type { CancelBody, PostponeBody } from '../api/action.models';
 import type { EventDto, PublicReasonCode } from '../api/event.models';
 import { EventsApi } from '../api/events-api.service';
 import { problemMessage } from '../api/problem-message';
@@ -37,6 +38,24 @@ import {
   cancelBody,
   cancelError,
 } from './cancel-request';
+
+const TITLE = {
+  cancel: 'cancel.titleCancel',
+  postpone: 'cancel.titlePostpone',
+  reinstate: 'cancel.titleReinstate',
+} as const;
+
+const SUBMIT = {
+  cancel: 'cancel.submitCancel',
+  postpone: 'cancel.submitPostpone',
+  reinstate: 'cancel.submitReinstate',
+} as const;
+
+const DONE = {
+  cancel: 'cancel.doneCancel',
+  postpone: 'cancel.donePostpone',
+  reinstate: 'cancel.doneReinstate',
+} as const;
 
 @Component({
   selector: 'app-cancel-dialog',
@@ -50,7 +69,6 @@ import {
     DialogComponent,
     InputComponent,
     NoteComponent,
-    SegmentedComponent,
     SelectFieldComponent,
   ],
   templateUrl: './cancel-dialog.component.html',
@@ -62,33 +80,22 @@ export class CancelDialogComponent {
   private readonly i18n = inject(I18nService);
 
   readonly event = input.required<EventDto>();
+  readonly mode = input.required<CancelMode>();
   readonly done = output<EventDto>();
   readonly stale = output<void>();
   readonly closed = output<void>();
 
-  protected readonly mode = signal<CancelMode>('cancel');
   protected readonly reason = signal('');
   protected readonly code = signal<PublicReasonCode>('none');
   protected readonly publicText = signal('');
   protected readonly newDate = signal('');
   protected readonly newTime = signal('');
-  protected readonly attempted = signal(false);
   protected readonly busy = signal(false);
 
-  protected readonly mayWriteText = computed(() =>
-    (this.event().allowedActions ?? []).includes('public-text'),
-  );
-  protected readonly mayMove = computed(() =>
-    (this.event().allowedActions ?? []).includes('postpone-with-date'),
-  );
   protected readonly textMax = PUBLIC_TEXT_MAX;
+  protected readonly TITLE = TITLE;
+  protected readonly SUBMIT = SUBMIT;
 
-  protected readonly modeOptions = computed(() =>
-    (['cancel', 'postpone'] as const).map((value) => ({
-      value,
-      label: this.i18n.translate(`cancel.mode.${value}`),
-    })),
-  );
   protected readonly codeOptions = computed<SelectFieldOption[]>(() =>
     PUBLIC_REASON_CODES.map((value) => ({
       value,
@@ -110,26 +117,32 @@ export class CancelDialogComponent {
 
   protected readonly preview = computed(() => {
     const status = this.i18n.translate(
-      this.mode() === 'cancel' ? 'publicStatus.cancelled' : 'publicStatus.postponed',
+      this.mode() === 'postpone' ? 'publicStatus.postponed' : 'publicStatus.cancelled',
     );
     const why = this.i18n.translate(`publicReason.${this.code()}`);
     return this.code() === 'none' ? status : `${status} · ${why}`;
   });
 
+  private call(e: EventDto, body: ReturnType<typeof cancelBody>): Observable<EventDto> {
+    switch (this.mode()) {
+      case 'cancel':
+        return this.api.cancel(e.id, e.rev, body as CancelBody);
+      case 'postpone':
+        return this.api.postpone(e.id, e.rev, body as PostponeBody);
+      case 'reinstate':
+        return this.api.reinstate(e.id, e.rev, body);
+    }
+  }
+
   protected submit(): void {
-    this.attempted.set(true);
     if (this.error() || this.busy()) return;
     this.busy.set(true);
     const e = this.event();
-    const body = cancelBody(this.form(), this.mayWriteText());
-    this.api.action(e.id, this.mode(), body, e.rev).subscribe({
+    const body = cancelBody(this.form());
+    this.call(e, body).subscribe({
       next: (updated) => {
         this.busy.set(false);
-        this.toast.success(
-          this.i18n.translate(
-            this.mode() === 'cancel' ? 'cancel.doneCancel' : 'cancel.donePostpone',
-          ),
-        );
+        this.toast.success(this.i18n.translate(DONE[this.mode()]));
         this.done.emit(updated);
       },
       error: (err: unknown) => {

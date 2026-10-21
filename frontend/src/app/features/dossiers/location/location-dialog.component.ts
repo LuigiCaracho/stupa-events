@@ -8,7 +8,7 @@ import { problemOf } from '@core/api/problem';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { ButtonComponent, DialogComponent, SegmentedComponent, ToastService } from '@stupa-makers/ui-kit';
-import { FollowupApi } from '../api/followup-api.service';
+import { OutcomeApi } from '../api/outcome-api.service';
 import type { EventDto } from '../api/event.models';
 import { problemMessage } from '../api/problem-message';
 
@@ -21,7 +21,7 @@ import { problemMessage } from '../api/problem-message';
   styleUrl: './location-dialog.component.scss',
 })
 export class LocationDialogComponent {
-  private readonly api = inject(FollowupApi);
+  private readonly api = inject(OutcomeApi);
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(I18nService);
 

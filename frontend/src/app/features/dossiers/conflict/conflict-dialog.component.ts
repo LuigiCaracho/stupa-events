@@ -14,7 +14,7 @@ import {
 } from '@angular/core';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
-import { fieldLabel } from '@shared/ui/guard-list/reason-text';
+import { fieldLabel } from '../hints/field-label';
 import { NoteComponent } from '@shared/ui/note/note.component';
 import {
   ButtonComponent,

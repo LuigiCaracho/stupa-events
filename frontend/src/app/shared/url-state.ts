@@ -1,7 +1,7 @@
 /**
  * State of a filter row that lives in the URL: the value as shown, the value applied to the data (typing in the search
- * text waits 250 ms), and the query string as the third copy so a reload and "back" keep the filters. The generic
- * sibling of `features/pipeline/filters/filter-state.ts`, for pages with their own filter shape.
+ * text waits 250 ms), and the query string as the third copy so a reload and "back" keep the filters. For pages with
+ * their own filter shape.
  */
 import { DestroyRef, type Signal, inject, signal } from '@angular/core';
 import { ActivatedRoute, type ParamMap, type Params, Router } from '@angular/router';

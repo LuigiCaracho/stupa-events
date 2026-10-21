@@ -20,7 +20,6 @@ const BY_CODE: Record<string, { field: string; key: TranslationKey }> = {
   duplicate_group: { field: 'oidcGroup', key: 'admin.err.duplicateGroup' },
   organization_required: { field: 'organizationId', key: 'admin.err.organizationRequired' },
   organization_forbidden: { field: 'organizationId', key: 'admin.err.organizationForbidden' },
-  approver_requires_trusted: { field: 'role', key: 'admin.err.approverRequiresTrusted' },
   implicit_role: { field: 'role', key: 'admin.err.implicitRole' },
   unknown_organization: { field: 'organizationId', key: 'admin.err.unknownOrganization' },
 };

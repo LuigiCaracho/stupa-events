@@ -49,7 +49,7 @@ export class CalendarEntryComponent {
     const e = this.entry();
     if (e.publicStatus === 'cancelled') return { kind: 'error', key: 'publicStatus.cancelled' };
     if (e.publicStatus === 'postponed') return { kind: 'warn', key: 'publicStatus.postponed' };
-    if (e.state === 'live' || e.state === 'approved') return null;
+    if (e.state === 'published') return null;
     const status = eventStateStatus(e.state);
     return { kind: status.kind, key: status.key };
   });

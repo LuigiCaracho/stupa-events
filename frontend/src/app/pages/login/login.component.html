@@ -4,7 +4,7 @@
       <img class="login__mark" [src]="mark" alt="" width="56" height="56" />
       <h1>{{ 'app.title' | t }}</h1>
       <p>{{ 'app.tagline' | t }}</p>
-      <app-button variant="fill" size="lg" [block]="true" (click)="auth.login('/aufgaben')">
+      <app-button variant="fill" size="lg" [block]="true" (click)="auth.login('/dossiers')">
         {{ 'login.button' | t }}
       </app-button>
       <a routerLink="/">{{ 'login.public' | t }}</a>

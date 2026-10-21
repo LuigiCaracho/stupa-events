@@ -1,0 +1,23 @@
+<app-dialog
+  [open]="true"
+  [title]="'history.revertTitle' | t"
+  [subtitle]="subtitle()"
+  [closeLabel]="'action.close' | t"
+  (closed)="closed.emit()"
+>
+  <div class="rv">
+    <app-input
+      [label]="'history.revertNote' | t"
+      [hint]="'history.revertNoteHint' | t"
+      [error]="tooLong() ? ('history.errNoteLong' | t) : ''"
+      [ngModel]="note()"
+      (ngModelChange)="note.set($event)"
+    />
+  </div>
+  <div dialog-footer class="rv__footer">
+    <app-button variant="text" (click)="closed.emit()">{{ 'action.cancel' | t }}</app-button>
+    <app-button variant="fill" [loading]="busy()" (click)="submit()">{{
+      'history.revert' | t
+    }}</app-button>
+  </div>
+</app-dialog>

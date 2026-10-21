@@ -1,8 +1,7 @@
 /**
- * The dossier form (I07). Every field the server does not list in `editableFields` is locked and says why
- * (`lockReason`). The form reports its complete set of changes against the event on every keystroke; the page feeds
- * that to the autosave and sends it on "Speichern". Critical fields (title, time, venue, category, links) and text
- * fields (summary, description, cost) are two groups because the rules differ after publishing (E07).
+ * The dossier form (I07). Every field the server does not list in `editableFields` is locked; an archived dossier says
+ * why. The form reports its complete set of changes against the event on every keystroke; the page feeds that to the
+ * autosave and sends it on "Speichern". Time, place and links form one group, the texts another.
  */
 import {
   ChangeDetectionStrategy,
@@ -89,10 +88,9 @@ export class EventFormComponent {
     this.venues().map((v) => ({ value: v.id, label: v.name })),
   );
   protected readonly editable = computed(() => new Set(editableFields(this.event())));
-  protected readonly lockKey = computed<TranslationKey | null>(() => {
-    const reason = this.event().lockReason;
-    return reason ? (`lock.short.${reason}` as TranslationKey) : null;
-  });
+  protected readonly lockKey = computed<TranslationKey | null>(() =>
+    this.event().state === 'archived' ? 'lock.archived' : null,
+  );
   protected readonly anyEditable = computed(() => this.editable().size > 0);
 
   constructor() {

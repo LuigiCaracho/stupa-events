@@ -41,7 +41,7 @@ export function toGroups(items: readonly PaletteItem[]): PaletteGroup[] {
   })).filter((g) => g.items.length > 0);
 }
 
-/** The dossier id of a URL such as `/dossiers/<id>/nachbereitung`, or `null` outside a dossier. */
+/** The dossier id of a URL such as `/dossiers/<id>`, or `null` outside a dossier. */
 export function dossierIdOf(url: string): string | null {
   const m = /^\/dossiers\/([^/?#]+)/.exec(url);
   return m && m[1] !== 'neu' ? m[1] : null;

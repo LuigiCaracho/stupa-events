@@ -6,7 +6,7 @@ import { AuthService } from './auth.service';
 
 /**
  * Home-page switch. `/` is the public landing page. A logged-in user does not
- * belong there. The guard sends that user to `/aufgaben`.
+ * belong there. The guard sends that user to `/dossiers`.
  *
  * It reuses `ensureLoaded()`, the one-time `/me` probe that the app start caches
  * with `shareReplay`. Without a session the landing page stays open. This is a
@@ -18,5 +18,5 @@ export const homeRedirectGuard: CanActivateFn = () => {
 
   return auth
     .ensureLoaded()
-    .pipe(map((principal) => (principal ? router.createUrlTree(['/aufgaben']) : true)));
+    .pipe(map((principal) => (principal ? router.createUrlTree(['/dossiers']) : true)));
 };

@@ -1,22 +1,6 @@
-/** Wire models of the list and board views of `GET /api/events` (M3 contract 5.1). */
-import type { ProblemReason } from '@core/api/models';
+/** Wire models of the list view of `GET /api/events` (M5b contract 7.1). */
 import type { EventState } from '@shared/status-kind.util';
-import type { CategoryRef, OrgRef, Page, PublicStatus, TransitionId } from './event.models';
-
-export type ColumnKey =
-  'idea' | 'planning' | 'in_review' | 'published' | 'followup' | 'archived' | 'withdrawn';
-
-/** The board column that shows a state; `approved` and `live` share "Veröffentlicht". */
-export const COLUMN_OF_STATE: Record<EventState, ColumnKey> = {
-  idea: 'idea',
-  planning: 'planning',
-  in_review: 'in_review',
-  approved: 'published',
-  live: 'published',
-  followup: 'followup',
-  archived: 'archived',
-  withdrawn: 'withdrawn',
-};
+import type { CategoryRef, OrgRef, Page, PublicStatus } from './event.models';
 
 export interface PersonRef {
   sub: string;
@@ -31,39 +15,20 @@ export interface EventCard {
   startsAt: string;
   endsAt: string;
   tzid: string;
+  allDay: boolean;
   organization: OrgRef | null;
   venueLabel: string | null;
   primaryCategory: CategoryRef | null;
-  publishAt: string | null;
   hasPoster: boolean;
   createdBy: PersonRef;
   rev: number;
-  allowedTransitions: TransitionId[];
-  nextTransition: TransitionId | null;
-  blockers: ProblemReason[];
-  blockerCount: number;
-  moves: Partial<Record<ColumnKey, TransitionId>>;
   openQuestions: number;
-  /** M5: the format of the dossier and the mark "Anleitung ungeprüft" of an archived one (contract 3.2, 3.4). */
-  formatSlug?: string | null;
-  howtoUnverified?: boolean;
-}
-
-export interface BoardColumn {
-  key: ColumnKey;
-  states: EventState[];
-  total: number;
-  items: EventCard[];
-  truncated: boolean;
-}
-
-export interface BoardOut {
-  columns: BoardColumn[];
-  generatedAt: string;
+  formatSlug: string | null;
+  /** An archived dossier with a howto nobody checked (M5 contract 3.2). */
+  howtoUnverified: boolean;
 }
 
 export interface EventQuery {
-  view?: 'list' | 'board';
   state?: readonly EventState[];
   organization?: string;
   category?: string;
@@ -74,7 +39,6 @@ export interface EventQuery {
   sort?: 'startsAt' | '-startsAt';
   limit?: number;
   offset?: number;
-  columnLimit?: number;
 }
 
 export type CardPage = Page<EventCard>;

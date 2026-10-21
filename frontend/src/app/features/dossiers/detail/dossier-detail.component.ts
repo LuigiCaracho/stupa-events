@@ -1,7 +1,8 @@
 /**
- * I07: the dossier page (`/dossiers/:id`): head with the state buttons, overview with "Fehlt noch", the form with its
- * locks and autosave, the poster block, the tab "Verlauf" and the dialogs I13 to I15, the conflict dialog and the
- * leave question. The server decides every action; `allowedTransitions`, `allowedActions` and `editableFields` only shape the UI.
+ * The dossier page `/dossiers/:id` (M5b contract 10.1): one page from the head with its action bar over the poster slot
+ * and the anchor navigation to the sections Eckdaten, Doku, Anhänge, Checkliste, Mails, Angebote, So lief es and Verlauf.
+ * The server decides every action (`allowedActions`, `editableFields`); the page only runs them. Hints ("Fehlt noch")
+ * never block. The form saves as a draft by itself; the conflict dialog and the leave question stay.
  */
 import {
   ChangeDetectionStrategy,
@@ -17,71 +18,87 @@ import {
   untracked,
 } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
-import type { ProblemReason } from '@core/api/models';
+import { Router } from '@angular/router';
 import { problemOf } from '@core/api/problem';
-import type { PendingChanges } from '@core/auth/pending-changes.guard';
 import { AuthService } from '@core/auth/auth.service';
+import type { PendingChanges } from '@core/auth/pending-changes.guard';
 import { I18nService } from '@core/i18n/i18n.service';
-import type { TranslationKey } from '@core/i18n/translations';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
-import { ActivityTabComponent } from '../activity/activity-tab.component';
+import type { TranslationKey } from '@core/i18n/translations';
+import type { PosterSubmission } from '@shared/ui/poster-upload/poster-upload.component';
+import {
+  FieldGroupComponent,
+  FieldRowComponent,
+} from '@shared/ui/field-group/field-group.component';
+import { NoteComponent } from '@shared/ui/note/note.component';
+import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
+import { ButtonComponent, ToastService } from '@stupa-makers/ui-kit';
+import { catchError, forkJoin, map, of } from 'rxjs';
 import { FieldQuestionsComponent } from '../activity/field-questions.component';
-import { DossierCommands } from '../api/dossier-commands';
-import { FollowupApi } from '../api/followup-api.service';
-import { FactsFormComponent } from '../facts/facts-form.component';
-import { FollowupTabComponent } from '../followup/followup-tab.component';
-import { FormatSaveDialogComponent } from '../format-save/format-save-dialog.component';
-import { LocationDialogComponent } from '../location/location-dialog.component';
-import { LastTimeBlockComponent } from '../overview/last-time-block.component';
-import { TemplatePanelComponent } from '../overview/template-panel.component';
+import { ActivityTabComponent } from '../activity/activity-tab.component';
 import { AttachmentsApi } from '../api/attachments-api.service';
 import { CommentsApi } from '../api/comments-api.service';
+import { DossierCommands } from '../api/dossier-commands';
+import { formatEventTime } from '../api/event-time';
+import type { EventDto, EventFields, Hint } from '../api/event.models';
+import { EventsApi } from '../api/events-api.service';
+import { OutcomeApi } from '../api/outcome-api.service';
+import { problemMessage } from '../api/problem-message';
 import { AttachmentsTabComponent } from '../attachments/attachments-tab.component';
+import { QuotesTabComponent } from '../attachments/quotes-tab.component';
+import { AutosaveIndicatorComponent } from '../autosave/autosave-indicator.component';
+import { DraftAutosave } from '../autosave/draft-autosave';
+import type { CancelMode } from '../cancel/cancel-request';
+import { CancelDialogComponent } from '../cancel/cancel-dialog.component';
 import { ChecklistTabComponent } from '../checklist/checklist-tab.component';
+import { ConflictDialogComponent } from '../conflict/conflict-dialog.component';
+import { FactsFormComponent } from '../facts/facts-form.component';
+import { OutcomeSectionComponent } from '../outcome/outcome-section.component';
+import { EventFormComponent } from '../form/event-form.component';
+import { FormatSaveDialogComponent } from '../format-save/format-save-dialog.component';
+import { type HeadCommand, DossierHeadComponent } from '../head/dossier-head.component';
+import { RevertDialogComponent } from '../history/revert-dialog.component';
+import { HintListComponent } from '../hints/hint-list.component';
 import { HowtoTabComponent } from '../howto/howto-tab.component';
+import { LocationDialogComponent } from '../location/location-dialog.component';
 import { MailsTabComponent } from '../mails/mails-tab.component';
 import type { CommentThread } from '../model/comment.models';
-import { ImageThumbComponent } from '@shared/ui/image-thumb/image-thumb.component';
-import { NoteComponent } from '@shared/ui/note/note.component';
-import {
-  PosterUploadComponent,
-  type PosterSubmission,
-} from '@shared/ui/poster-upload/poster-upload.component';
-import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
-import { StatusTextComponent } from '@shared/ui/status-text/status-text.component';
-import { ButtonComponent, TabsComponent, ToastService, type TabItem } from '@stupa-makers/ui-kit';
-import { forkJoin, of, type Observable } from 'rxjs';
-import { catchError } from 'rxjs/operators';
-import type { RevisionOut } from '../api/action.models';
-import type { EventDto, EventFields, TransitionId } from '../api/event.models';
-import { EventsApi } from '../api/events-api.service';
-import { problemMessage } from '../api/problem-message';
-import { PRIMARY_TRANSITION } from '../api/transitions';
-import { DraftAutosave } from '../autosave/draft-autosave';
-import { AutosaveIndicatorComponent } from '../autosave/autosave-indicator.component';
-import { EventFormComponent } from '../form/event-form.component';
-import { type HeadCommand, DossierHeadComponent } from '../head/dossier-head.component';
-import { DossierOverviewComponent } from '../overview/dossier-overview.component';
-import {
-  DetailDialogsComponent,
-  type DialogState,
-  type LeaveChoice,
-} from './detail-dialogs.component';
+import { LastTimeBlockComponent } from '../overview/last-time-block.component';
+import { TemplatePanelComponent } from '../overview/template-panel.component';
+import { PosterSlotComponent } from '../poster/poster-slot.component';
 import { focusField } from './focus-field';
+import { type LeaveChoice, LeaveDialogComponent } from './leave-dialog.component';
+import { SectionNavComponent, type SectionLink } from './section-nav.component';
 
-type DetailTab =
-  'overview' | 'attachments' | 'howto' | 'checklist' | 'mails' | 'followup' | 'history';
+type DialogState =
+  | null
+  | { kind: 'lifecycle'; mode: CancelMode }
+  | { kind: 'revert'; rev: number }
+  | { kind: 'conflict'; current: EventDto; mine: EventFields; base: Record<string, unknown> | null }
+  | { kind: 'leave'; resolve: (go: boolean) => void };
 
-const FOLLOWUP_FIX: ReadonlySet<string> = new Set(['fill_retrospective', 'fill_outcome', 'verify_howto']);
-const FOLLOWUP_ANCHOR: Record<string, string> = {
-  fill_retrospective: '#fu-retro-heading',
-  fill_outcome: '#fu-outcome-heading',
-  verify_howto: '#fu-howto-heading',
+type LifecycleCall = 'publish' | 'unpublish' | 'archive' | 'restore';
+
+const DONE: Record<LifecycleCall, TranslationKey> = {
+  publish: 'detail.published',
+  unpublish: 'detail.unpublished',
+  archive: 'detail.archived',
+  restore: 'detail.restored',
 };
 
-const POSTER_STATES: readonly string[] = ['idea', 'planning', 'in_review'];
-const SAVE_BEFORE_TRANSITION: readonly string[] = ['idea', 'planning'];
+const POSTER_CODES: ReadonlySet<string> = new Set([
+  'no_poster',
+  'poster_alt_missing',
+  'poster_credit_missing',
+  'poster_consent_missing',
+  'poster_not_ready',
+]);
+
+const FIELD_OF_CODE: Record<string, string> = {
+  no_summary: 'summary',
+  no_category: 'primaryCategoryId',
+  no_venue: 'venueId',
+};
 
 @Component({
   selector: 'app-dossier-detail',
@@ -92,27 +109,31 @@ const SAVE_BEFORE_TRANSITION: readonly string[] = ['idea', 'planning'];
     ActivityTabComponent,
     AttachmentsTabComponent,
     AutosaveIndicatorComponent,
-    ChecklistTabComponent,
-    FieldQuestionsComponent,
-    HowtoTabComponent,
-    MailsTabComponent,
     ButtonComponent,
-    DetailDialogsComponent,
+    CancelDialogComponent,
+    ChecklistTabComponent,
+    ConflictDialogComponent,
     DossierHeadComponent,
-    DossierOverviewComponent,
     EventFormComponent,
     FactsFormComponent,
-    FollowupTabComponent,
+    FieldGroupComponent,
+    FieldQuestionsComponent,
+    FieldRowComponent,
     FormatSaveDialogComponent,
-    ImageThumbComponent,
+    HintListComponent,
+    HowtoTabComponent,
     LastTimeBlockComponent,
+    LeaveDialogComponent,
     LocationDialogComponent,
-    TemplatePanelComponent,
+    MailsTabComponent,
     NoteComponent,
-    PosterUploadComponent,
+    OutcomeSectionComponent,
+    PosterSlotComponent,
+    QuotesTabComponent,
+    RevertDialogComponent,
+    SectionNavComponent,
     SkeletonComponent,
-    StatusTextComponent,
-    TabsComponent,
+    TemplatePanelComponent,
   ],
   host: {
     '(window:online)': 'autosave.flush()',
@@ -125,14 +146,13 @@ export class DossierDetailComponent implements PendingChanges {
   private readonly api = inject(EventsApi);
   private readonly attachmentsApi = inject(AttachmentsApi);
   private readonly commentsApi = inject(CommentsApi);
+  private readonly outcomeApi = inject(OutcomeApi);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(I18nService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
-  private readonly followupApi = inject(FollowupApi);
   private readonly commands = inject(DossierCommands);
   private readonly router = inject(Router);
-  private readonly route = inject(ActivatedRoute);
 
   readonly id = input.required<string>();
 
@@ -152,17 +172,18 @@ export class DossierDetailComponent implements PendingChanges {
   });
 
   protected readonly dialog = signal<DialogState>(null);
-  protected readonly tab = signal<DetailTab>(
-    this.route.snapshot.data['tab'] === 'followup' ? 'followup' : 'overview',
-  );
   protected readonly formatDialog = signal(false);
   protected readonly locationDialog = signal(false);
   protected readonly refreshTick = signal(0);
   protected readonly recomputed = signal(0);
-  protected readonly posterOpen = signal(false);
   protected readonly busy = signal(false);
   protected readonly draft = signal<EventFields | null>(null);
   protected readonly restoredAt = signal<Date | null>(null);
+  private readonly state = computed(() => this.event()?.state);
+  protected readonly basicsOpen = linkedSignal({
+    source: this.state,
+    computation: (state) => state === 'draft',
+  });
 
   protected readonly autosave = new DraftAutosave({
     api: this.api,
@@ -174,46 +195,35 @@ export class DossierDetailComponent implements PendingChanges {
     onError: (err) => this.toast.error(problemMessage(this.i18n, problemOf(err))),
   });
 
-  protected readonly next = computed<TransitionId | null>(() => {
-    const e = this.event();
-    const t = e ? PRIMARY_TRANSITION[e.state] : undefined;
-    return e && t && e.allowedTransitions.includes(t) ? t : null;
-  });
-  protected readonly guards = rxResource({
+  protected readonly editable = computed(() => (this.event()?.editableFields ?? []).length > 0);
+  protected readonly canWrite = computed(() => this.editable() || this.auth.can('event.edit'));
+  protected readonly canComment = computed(() => this.canWrite() || this.auth.can('comment.write'));
+  protected readonly canRevert = computed(
+    () => this.event()?.allowedActions.includes('revert-revision') ?? false,
+  );
+
+  protected readonly hints = rxResource({
     params: () => {
       const e = this.event();
-      const t = this.next();
-      return e && t ? { id: e.id, transition: t, rev: e.rev } : undefined;
+      return e ? { id: e.id, rev: e.rev, tick: this.refreshTick() } : undefined;
     },
-    stream: ({ params }) => this.api.guards(params.id, params.transition),
+    stream: ({ params }) =>
+      this.api.hints(params.id).pipe(
+        map((out) => out.items),
+        catchError(() => of([] as Hint[])),
+      ),
   });
-
-  protected readonly actions = computed<string[]>(() => {
-    const e = this.event();
-    if (!e) return [];
-    return (
-      e.allowedActions ??
-      (this.auth.can('event.image_exception') && !e.imageException ? ['image-exception'] : [])
-    );
-  });
-  protected readonly editable = computed(
-    () => (this.event()?.editableFields ?? ['title']).length > 0,
+  protected readonly hintList = computed(() => (this.hints.hasValue() ? this.hints.value() : []));
+  protected readonly posterMissingWarn = computed(
+    () => this.event()?.state === 'published' && !this.event()?.poster,
   );
-  protected readonly canPoster = computed(() =>
-    POSTER_STATES.includes(this.event()?.state ?? 'live'),
-  );
-  protected readonly showUpload = computed(
-    () => this.canPoster() && (this.posterOpen() || !this.event()?.poster),
-  );
-  protected readonly canRevert = computed(() => this.actions().includes('revert-revision'));
 
   protected readonly counts = rxResource({
     params: () => {
       const e = this.event();
       return e ? { id: e.id, tick: this.refreshTick() } : undefined;
     },
-    stream: ({ params }) =>
-      this.attachmentsApi.counts(params.id).pipe(catchError(() => of(null))),
+    stream: ({ params }) => this.attachmentsApi.counts(params.id).pipe(catchError(() => of(null))),
   });
   protected readonly threads = rxResource<CommentThread[], { id: string; tick: number } | undefined>({
     params: () => {
@@ -224,54 +234,31 @@ export class DossierDetailComponent implements PendingChanges {
       params ? this.commentsApi.list(params.id).pipe(catchError(() => of([]))) : of([]),
   });
   protected readonly threadList = computed(() => (this.threads.hasValue() ? this.threads.value() : []));
-  protected readonly canComment = computed(() => this.editable() || this.auth.can('comment.write'));
 
-  /** The tab shows from the end of a live event on; only called while a dossier is loaded. */
-  protected readonly showFollowup = computed(() => {
-    const e = this.event() as EventDto;
-    return (
-      e.state === 'followup' ||
-      e.state === 'archived' ||
-      (e.state === 'live' && Date.parse(e.endsAt) <= Date.now())
-    );
-  });
-  protected readonly canWrite = computed(() => this.auth.can('event.edit'));
-
-  protected readonly tabs = computed<TabItem[]>(() => {
+  protected readonly links = computed<SectionLink[]>(() => {
     const c = this.counts.hasValue() ? this.counts.value() : null;
-    const tab = (id: DetailTab, key: TranslationKey, count?: number): TabItem => ({
+    const link = (id: string, key: TranslationKey, count?: number): SectionLink => ({
       id,
       label: this.i18n.translate(key),
       ...(count ? { count } : {}),
     });
     return [
-      tab('overview', 'detail.tabOverview'),
-      tab('attachments', 'detail.tabAttachments', c?.attachments),
-      tab('howto', 'detail.tabHowto', c?.howto),
-      tab('checklist', 'detail.tabChecklist', c?.openChecklist),
-      tab('mails', 'detail.tabMails', c?.mailTemplates),
-      ...(this.showFollowup() ? [tab('followup', 'detail.tabFollowup', c?.followupOpen)] : []),
-      tab('history', 'detail.tabHistory', c?.openComments),
+      link('eckdaten', 'detail.data'),
+      link('doku', 'detail.tabHowto'),
+      link('anhaenge', 'detail.tabAttachments', c?.attachments),
+      link('checkliste', 'detail.tabChecklist', c?.openChecklist),
+      link('mails', 'detail.tabMails', c?.mailTemplates),
+      link('angebote', 'detail.tabQuotes', c?.quotes),
+      link('so-lief-es', 'detail.tabOutcome'),
+      link('verlauf', 'detail.tabHistory', c?.openComments),
     ];
   });
 
-  protected readonly changes = rxResource({
-    params: () => {
-      const e = this.event();
-      return e?.state === 'live' && this.auth.can('event.edit_critical_live')
-        ? { id: e.id, rev: e.rev, after: Math.max(e.publishedRev ?? 0, e.textReviewedRev ?? 0) }
-        : undefined;
-    },
-    stream: ({ params }) =>
-      this.api
-        .revisions(params.id, 50, 0, { fieldClass: 'text', minRev: params.after })
-        .pipe(catchError(() => of(null))),
-  });
-  protected readonly changedAfter = computed<RevisionOut[]>(() => {
+  protected readonly when = computed(() => {
     const e = this.event();
-    const page = this.changes.hasValue() ? this.changes.value() : null;
-    if (!e || !page) return [];
-    return page.items.filter((r) => r.actor.sub !== this.auth.userId());
+    return e
+      ? `${formatEventTime(e.startsAt, e.tzid)} – ${formatEventTime(e.endsAt, e.tzid)}`
+      : '';
   });
 
   constructor() {
@@ -285,12 +272,12 @@ export class DossierDetailComponent implements PendingChanges {
       if (!command || !e) return;
       untracked(() => {
         this.commands.clear();
-        if (command.name === 'save-as-format' && this.actions().includes('save-as-format'))
+        if (command.name === 'save-as-format' && e.allowedActions.includes('save-as-format'))
           this.formatDialog.set(true);
       });
     });
     effect(() => {
-      const actions = this.actions();
+      const actions = this.event()?.allowedActions ?? [];
       untracked(() => this.commands.allowed.set(actions));
     });
     inject(DestroyRef).onDestroy(() => {
@@ -315,27 +302,23 @@ export class DossierDetailComponent implements PendingChanges {
 
   protected changedKnowledge(): void {
     this.refreshTick.update((n) => n + 1);
-    this.guards.reload();
   }
 
   protected useBudget(cents: number): void {
     const e = this.event();
     if (!e) return;
-    this.followupApi
-      .putFacts(e.id, e.rev, { ...(e.facts ?? {}), budgetCents: cents })
-      .subscribe({
-        next: (updated) => {
-          this.event.set(updated);
-          this.toast.success(this.i18n.translate('facts.saved'));
-        },
-        error: (err: unknown) => this.failed(err),
-      });
+    this.outcomeApi.putFacts(e.id, e.rev, { ...(e.facts ?? {}), budgetCents: cents }).subscribe({
+      next: (updated) => {
+        this.event.set(updated);
+        this.toast.success(this.i18n.translate('facts.saved'));
+      },
+      error: (err: unknown) => this.failed(err),
+    });
   }
 
-  protected followupChanged(updated: EventDto | null): void {
+  protected outcomeChanged(updated: EventDto | null): void {
     if (updated) this.event.set(updated);
-    else
-      this.api.get(this.id()).subscribe({ next: (e) => this.event.set(e), error: () => undefined });
+    else this.api.get(this.id()).subscribe({ next: (e) => this.event.set(e), error: () => undefined });
     this.changedKnowledge();
   }
 
@@ -344,19 +327,16 @@ export class DossierDetailComponent implements PendingChanges {
   }
 
   protected command(c: HeadCommand): void {
-    if (c.kind === 'transition')
-      return this.saveFirst(() => this.dialog.set({ kind: 'transition', id: c.id }));
-    switch (c.name) {
+    switch (c) {
+      case 'publish':
+      case 'unpublish':
+      case 'archive':
+      case 'restore':
+        return this.lifecycle(c);
       case 'cancel':
-        return this.dialog.set({ kind: 'cancel' });
+      case 'postpone':
       case 'reinstate':
-        return this.dialog.set({ kind: 'reinstate' });
-      case 'exception':
-        return this.dialog.set({ kind: 'exception' });
-      case 'assign':
-        return this.dialog.set({ kind: 'assign' });
-      case 'confirm-flyer':
-        return this.confirmFlyer();
+        return this.dialog.set({ kind: 'lifecycle', mode: c });
       case 'confirm-location':
         return this.locationDialog.set(true);
       case 'save-as-format':
@@ -366,40 +346,70 @@ export class DossierDetailComponent implements PendingChanges {
     }
   }
 
-  protected fix(reason: ProblemReason): void {
-    this.dialog.set(null);
-    const action = reason.fixAction;
-    if (action === 'upload_poster' || action === 'fill_rights') {
-      this.posterOpen.set(true);
-      setTimeout(() =>
-        this.host.nativeElement.querySelector('#poster-heading')?.scrollIntoView?.(),
-      );
-    } else if (action === 'confirm_flyer') {
-      this.confirmFlyer();
-    } else if (action === 'open_comment') {
-      this.tab.set('history');
-    } else if (action === 'open_checklist') {
-      this.tab.set('checklist');
-    } else if (action && FOLLOWUP_FIX.has(action)) {
-      this.tab.set('followup');
-      setTimeout(() =>
-        this.host.nativeElement.querySelector<HTMLElement>(FOLLOWUP_ANCHOR[action])?.focus(),
-      );
-    } else if (action === 'confirm_location') {
-      this.locationDialog.set(true);
-    } else if (action === 'fill_facts') {
-      this.tab.set('overview');
-      setTimeout(() => this.host.nativeElement.querySelector<HTMLElement>('#facts-heading')?.focus());
-    } else if (action) {
-      this.tab.set('overview');
-      setTimeout(() => focusField(this.host.nativeElement, action, reason.field));
+  private lifecycle(call: LifecycleCall): void {
+    const run = (e: EventDto): void => {
+      this.busy.set(true);
+      this.api[call](e.id, e.rev).subscribe({
+        next: (updated) => {
+          this.busy.set(false);
+          this.event.set(updated);
+          this.toast.success(this.i18n.translate(DONE[call]));
+        },
+        error: (err: unknown) => this.failed(err, true),
+      });
+    };
+    const e = this.event();
+    if (!e || this.busy()) return;
+    if (!this.autosave.dirty()) return run(e);
+    this.autosave.save().subscribe({
+      next: (updated) => {
+        this.draft.set(null);
+        this.event.set(updated);
+        run(updated);
+      },
+      error: (err: unknown) => this.failed(err),
+    });
+  }
+
+  protected fix(hint: Hint): void {
+    if (POSTER_CODES.has(hint.code)) return this.focusHeading('#poster-heading');
+    switch (hint.code) {
+      case 'location_unconfirmed':
+        return this.locationDialog.set(true);
+      case 'facts_incomplete':
+        this.basicsOpen.set(true);
+        return this.afterRender(() => this.focusHeading('#facts-heading'));
+      case 'howto_missing':
+        return this.goTo('doku');
+      case 'outcome_open':
+        return this.goTo('so-lief-es');
+      default: {
+        this.basicsOpen.set(true);
+        const field = FIELD_OF_CODE[hint.code] ?? hint.field;
+        this.afterRender(() => focusField(this.host.nativeElement, field));
+      }
     }
+  }
+
+  protected goTo(id: string): void {
+    const target = this.host.nativeElement.querySelector<HTMLElement>(`#${id}`);
+    target?.scrollIntoView?.({ block: 'start' });
+    target?.focus({ preventScroll: true });
+  }
+
+  private focusHeading(selector: string): void {
+    const heading = this.host.nativeElement.querySelector<HTMLElement>(selector);
+    heading?.scrollIntoView?.({ block: 'center' });
+    heading?.focus({ preventScroll: true });
+  }
+
+  private afterRender(step: () => void): void {
+    setTimeout(step);
   }
 
   protected locationConfirmed(updated: EventDto): void {
     this.locationDialog.set(false);
     this.event.set(updated);
-    this.guards.reload();
   }
 
   protected formatSaved(): void {
@@ -452,7 +462,6 @@ export class DossierDetailComponent implements PendingChanges {
     this.api.uploadPoster(e.id, sub.file, sub).subscribe({
       next: () => {
         this.busy.set(false);
-        this.posterOpen.set(false);
         this.toast.success(this.i18n.translate('detail.posterUploaded'));
         this.refresh();
       },
@@ -460,53 +469,36 @@ export class DossierDetailComponent implements PendingChanges {
     });
   }
 
-  private confirmFlyer(): void {
-    const e = this.event();
-    if (!e) return;
-    this.act(this.api.action(e.id, 'confirm-flyer', {}, e.rev), 'detail.flyerConfirmed');
+  protected removePoster(): void {
+    const poster = this.event()?.poster;
+    if (!poster || this.busy()) return;
+    this.busy.set(true);
+    this.attachmentsApi.retire(poster.id).subscribe({
+      next: () => {
+        this.busy.set(false);
+        this.toast.success(this.i18n.translate('detail.posterRemoved'));
+        this.refresh();
+      },
+      error: (err: unknown) => this.failed(err),
+    });
   }
 
   protected revertTo(rev: number): void {
     this.dialog.set({ kind: 'revert', rev });
   }
 
-  protected acknowledge(): void {
+  protected revert(note: string): void {
+    const state = this.dialog();
     const e = this.event();
-    if (e) this.act(this.api.action(e.id, 'acknowledge-changes', {}, e.rev), 'tasks.acknowledged');
-  }
-
-  protected revertBaseline(): void {
-    const e = this.event();
-    if (e)
-      this.dialog.set({
-        kind: 'revert',
-        rev: Math.max(e.publishedRev ?? 0, e.textReviewedRev ?? 0),
-      });
-  }
-
-  private act(
-    call: Observable<EventDto>,
-    done: 'detail.flyerConfirmed' | 'tasks.acknowledged',
-  ): void {
-    call.subscribe({
+    if (state?.kind !== 'revert' || !e) return;
+    this.busy.set(true);
+    this.api.revert(e.id, e.rev, { rev: state.rev, ...(note && { note }) }).subscribe({
       next: (updated) => {
-        this.event.set(updated);
-        this.toast.success(this.i18n.translate(done));
+        this.busy.set(false);
+        this.toast.success(this.i18n.translate('history.reverted'));
+        this.applied(updated);
       },
-      error: (err: unknown) => this.failed(err),
-    });
-  }
-
-  private saveFirst(next: () => void): void {
-    if (!this.autosave.dirty() || !SAVE_BEFORE_TRANSITION.includes(this.event()?.state ?? ''))
-      return next();
-    this.autosave.save().subscribe({
-      next: (updated) => {
-        this.draft.set(null);
-        this.event.set(updated);
-        next();
-      },
-      error: (err: unknown) => this.failed(err),
+      error: (err: unknown) => this.failed(err, true),
     });
   }
 
@@ -555,12 +547,12 @@ export class DossierDetailComponent implements PendingChanges {
     if (state?.kind === 'conflict') this.event.set(state.current);
   }
 
-  private failed(err: unknown): void {
+  private failed(err: unknown, report = false): void {
     this.busy.set(false);
     const problem = problemOf(err);
-    if (problem.code === 'conflict') return;
+    if (problem.code === 'conflict' && !report) return;
     this.toast.error(problemMessage(this.i18n, problem));
-    if (problem.status === 409) this.refresh();
+    if (problem.status === 409 || problem.status === 412) this.refresh();
   }
 
   protected warnUnload(event: BeforeUnloadEvent): void {
@@ -594,10 +586,6 @@ export class DossierDetailComponent implements PendingChanges {
   private finishLeave(state: { resolve: (go: boolean) => void }, go: boolean): void {
     this.dialog.set(null);
     state.resolve(go);
-  }
-
-  protected posterSrc(e: EventDto): string {
-    return this.api.posterUrl(e.id, 'thumb400');
   }
 
   protected restoredText(): string {

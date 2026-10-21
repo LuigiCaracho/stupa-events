@@ -29,7 +29,7 @@
     <app-note kind="error" role="alert">{{ 'attachment.loadFailed' | t }}</app-note>
   } @else if (!list.hasValue()) {
     <app-skeleton variant="rows" />
-  } @else if (groups().length === 0 && !quotes.value()) {
+  } @else if (groups().length === 0) {
     <app-empty-state [heading]="'attachment.empty' | t" [plain]="true" />
   }
 
@@ -73,15 +73,4 @@
     </section>
   }
 
-  @if (quotes.value(); as q) {
-    <app-quotes-section
-      [quotes]="q"
-      [canEdit]="canEdit()"
-      [busy]="busy()"
-      (add)="addQuote($event)"
-      (select)="selectQuote($event)"
-      (remove)="removeQuote($event)"
-      (budget)="budget.emit($event)"
-    />
-  }
 </section>

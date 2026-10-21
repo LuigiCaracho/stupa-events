@@ -1,6 +1,6 @@
 /**
  * "Rahmen" (M5 contract 3.6, 11.5): the facts block of the overview, with the fields of the profile of the main
- * category (generic, party, meeting, trip). A party needs an age limit before T02. Saves with `PUT /facts` and `If-Match`;
+ * category (generic, party, meeting, trip). A party without an age limit gets the hint `facts_incomplete`. Saves with `PUT /facts` and `If-Match`;
  * the page receives the updated dossier. Read only when the state locks it.
  */
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
@@ -11,7 +11,7 @@ import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { TextareaComponent } from '@shared/ui/textarea/textarea.component';
 import { SelectFieldComponent } from '@shared/ui/select/select.component';
 import { ButtonComponent, CheckboxComponent, CurrencyInputComponent, InputComponent, ToastService } from '@stupa-makers/ui-kit';
-import { FollowupApi } from '../api/followup-api.service';
+import { OutcomeApi } from '../api/outcome-api.service';
 import type { EventDto } from '../api/event.models';
 import { problemMessage } from '../api/problem-message';
 import { type FactKind, type FactsFormValue, fieldsOf, formFromFacts, toFacts } from './facts-profiles';
@@ -35,7 +35,7 @@ import type { TranslationKey } from '@core/i18n/translations';
   styleUrl: './facts-form.component.scss',
 })
 export class FactsFormComponent {
-  private readonly api = inject(FollowupApi);
+  private readonly api = inject(OutcomeApi);
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(I18nService);
 
