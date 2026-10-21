@@ -292,7 +292,7 @@ async def download_attachment(
     db: DbSession, storage: AttachmentStorage, principal: Reader, attachment_id: UUID
 ) -> Response:
     """Stream the file as a download; only clean files leave the quarantine."""
-    row, _ = await attachments.load_attachment(db, principal, attachment_id)
+    row, _ = await attachments.load_attachment(db, principal, attachment_id, archive=True)
     _check_scanned(row.scan_status)
     if storage is None or row.storage_key is None:
         raise ServiceUnavailableError("Object storage unavailable.")
@@ -317,7 +317,7 @@ async def preview_attachment(
     db: DbSession, storage: AttachmentStorage, principal: Reader, attachment_id: UUID
 ) -> Response:
     """Return the private WebP preview of an image, inline."""
-    row, _ = await attachments.load_attachment(db, principal, attachment_id)
+    row, _ = await attachments.load_attachment(db, principal, attachment_id, archive=True)
     _check_scanned(row.scan_status)
     if row.preview_key is None:
         raise NotFoundError("no preview")

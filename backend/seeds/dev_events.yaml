@@ -64,9 +64,50 @@ events:
     durationHours: 2
     venueText: "Maker Space 9-229"
     summary: "Abgeschlossen und im Archiv."
+    outcome: {attendance: 14, costsCents: 0}
+    retrospective: "Kurzes Treffen, alle Punkte besprochen."
   - title: "Vorschlag: Karaoke-Abend"
     category: get-together
     stage: idea
     startsInDays: 60
     durationHours: 3
     summary: "Ein Vorschlag von einer Person ohne Organisation."
+  - title: "Movienight WS25/26: Das große Kino"
+    organization: fsi
+    category: kino
+    format: movienight
+    stage: archived
+    archivedDaysAgo: 150
+    startsInDays: 1
+    durationHours: 3
+    venueText: "Kinosaal 9-133"
+    summary: "Der Filmabend im Wintersemester, abgeschlossen und archiviert."
+    outcome: {attendance: 72, costsCents: 18000, revenueCents: 9000, notes: "Beamer lief ohne Probleme."}
+    retrospective: "Gut besucht. Das Popcorn war nach einer Stunde aus; nächstes Mal die doppelte Menge einplanen."
+    howto: "# Movienight aufbauen\n\n1. Kinosaal beim Hausmeister anmelden.\n2. Beamer und Ton am Vortag testen.\n3. Popcornmaschine ausleihen."
+  - title: "Movienight SoSe26: Frühlingsfilm"
+    organization: fsi
+    category: kino
+    format: movienight
+    stage: archived
+    archivedDaysAgo: 75
+    startsInDays: 1
+    durationHours: 3
+    venueText: "Kinosaal 9-133"
+    summary: "Der Filmabend im Sommersemester."
+    outcome: {attendance: 87, costsCents: 24500, revenueCents: 13000, notes: "Mehr Stühle nötig."}
+    retrospective: "Der Saal war voll. Für die nächste Ausgabe mehr Stühle reservieren."
+    howto: "# Movienight aufbauen\n\n1. Kinosaal anmelden.\n2. Technik testen.\n3. Popcorn und Getränke besorgen."
+  - title: "Movienight: Das Finale"
+    organization: fsi
+    category: kino
+    format: movienight
+    stage: archived
+    archivedDaysAgo: 20
+    startsInDays: 1
+    durationHours: 3
+    venueText: "Kinosaal 9-133"
+    summary: "Der letzte Filmabend des Semesters."
+    outcome: {waived: true, waivedReason: "Zahlen wurden nicht erfasst, das Team war verhindert."}
+    retrospective: "Kurzer Abend, kaum Rückmeldungen gesammelt."
+    howto: "# Movienight aufbauen\n\nWie immer: Saal, Technik, Popcorn."

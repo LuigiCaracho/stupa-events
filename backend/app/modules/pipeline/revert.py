@@ -12,9 +12,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.audit.actions import AuditAction
 from app.modules.auth.principal import Principal
+from app.modules.events import allday
 from app.modules.events.access import guard_snapshot
 from app.modules.events.models import EventRevision
-from app.modules.events.service import locked_problem
+from app.modules.events.service import derived_values, locked_problem
 from app.modules.pipeline.action_base import finish, prepare
 from app.modules.pipeline.fieldclass import plan_patch
 from app.modules.pipeline.livecheck import enforce_live
@@ -38,6 +39,7 @@ CONTENT_FIELDS = (
 )
 REVERTIBLE = ("idea", "planning", "live")
 _TIMES = ("starts_at", "ends_at")
+TIME_FIELDS = frozenset(_TIMES)
 _IDS = ("venue_id", "primary_category_id")
 
 
@@ -89,6 +91,10 @@ async def revert_revision(
         raise ConflictError(
             "The poster of the old version was replaced.", code="revert_poster_replaced"
         )
+    if bool(target.snapshot.get("all_day")) != ctx.event.all_day:
+        raise ConflictError(
+            "The old version differs in all-day mode.", code="revert_allday_changed"
+        )
     plan = plan_patch(ctx.snapshot, ctx.actor, content_of(target.snapshot))
     if plan.locked:
         raise locked_problem(plan.locked)
@@ -98,6 +104,16 @@ async def revert_revision(
         )
         enforce_live(replace(moved, **plan.changes), ctx.actor, now or utcnow())
     values: dict[str, Any] = dict(plan.changes)
+    values |= await derived_values(session, ctx.event, plan.changes)
+    if TIME_FIELDS & values.keys():
+        values["end_estimated"] = False
+    if ctx.event.all_day and TIME_FIELDS & values.keys():
+        starts_on, ends_on = allday.days_of(
+            values.get("starts_at", ctx.event.starts_at),
+            values.get("ends_at", ctx.event.ends_at),
+            ctx.event.tzid,
+        )
+        values |= {"starts_on": starts_on, "ends_on": ends_on}
     if plan.bump_public_seq:
         values["public_seq"] = ctx.event.public_seq + 1
     return await finish(

@@ -29,6 +29,10 @@ class CardExtras:
     guard_data: dict[UUID, GuardData]
     entered_followup: dict[UUID, datetime]
 
+    def has_howto(self, event_id: UUID) -> bool:
+        """Tell if the dossier has a howto of its own or the master howto of its format."""
+        return self.guard_data.get(event_id, GuardData()).howto_present
+
     def snapshot(self, event: Event, poster: Attachment | None) -> Snapshot:
         """Build the full guard snapshot of one card."""
         return snapshot_with(

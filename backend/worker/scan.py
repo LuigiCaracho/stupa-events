@@ -35,6 +35,7 @@ from app.modules.audit.service import record as audit_record
 from app.modules.files.models import Attachment
 from app.modules.files.scanner import ScannerError, ScanVerdict, build_scanner
 from app.modules.files.storage import ObjectStorage, StorageError, build_object_storage
+from app.modules.pipeline.actions import invalidate_public
 from app.settings import Settings, load_settings
 from app.shared.timeutil import utcnow
 
@@ -92,16 +93,28 @@ async def scan_attachment(ctx: dict[str, Any], attachment_id: str) -> str:
             outcome = _retry_or_dead(ctx, settings, attachment_id, exc)
             await _store_error(session, attachment)
             await session.commit()
+            await _poster_changed(ctx, attachment)
             return outcome
         await _store_verdict(session, storage, attachment, verdict)
         if verdict.clean:
             await _retire_predecessor(session, attachment)
         await session.commit()
+    if not verdict.clean:
+        await _poster_changed(ctx, attachment)
     if verdict.clean and attachment.kind == "poster":
         await _enqueue_derive(ctx, aid)
     elif verdict.clean and attachment.mime.startswith("image/"):
         await _enqueue_job(ctx, PREVIEW_TASK_NAME, aid)
     return "clean" if verdict.clean else "infected"
+
+
+async def _poster_changed(ctx: dict[str, Any], attachment: Attachment) -> None:
+    """Bump the feed version: a poster that fails its scan drops out of the view.
+
+    A clean poster bumps it later, when `promote_poster` publishes the derivatives.
+    """
+    if attachment.kind == "poster":
+        await invalidate_public(ctx.get("redis"))
 
 
 async def _retire_predecessor(session: AsyncSession, attachment: Attachment) -> None:

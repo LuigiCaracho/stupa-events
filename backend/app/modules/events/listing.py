@@ -38,7 +38,7 @@ class Filters:
     end: date | None = None
 
 
-def _local_start(day: date) -> datetime:
+def local_start(day: date) -> datetime:
     return datetime.combine(day, time.min, ZoneInfo(DEFAULT_TZID)).astimezone(UTC)
 
 
@@ -63,9 +63,9 @@ def apply_filters(query: Select, filters: Filters, principal: Principal) -> Sele
             or_(Event.title.ilike(pattern, escape="\\"), Event.summary.ilike(pattern, escape="\\"))
         )
     if filters.start:
-        query = query.where(Event.starts_at >= _local_start(filters.start))
+        query = query.where(Event.starts_at >= local_start(filters.start))
     if filters.end:
-        query = query.where(Event.starts_at < _local_start(filters.end + timedelta(days=1)))
+        query = query.where(Event.starts_at < local_start(filters.end + timedelta(days=1)))
     return query
 
 

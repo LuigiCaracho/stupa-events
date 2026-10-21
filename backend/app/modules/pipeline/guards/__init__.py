@@ -8,6 +8,8 @@ the order of the guard table in the M3 contract, 2.3.
 from app.modules.pipeline.guards.common import FIELD_NAMES, Guard, system_only
 from app.modules.pipeline.guards.content import (
     checklist_done,
+    checklist_done_followup,
+    checklist_done_in,
     facts_valid,
     howto_verified,
     location_confirmed,
@@ -50,6 +52,8 @@ __all__ = [
     "Guard",
     "attachments_scanned",
     "checklist_done",
+    "checklist_done_followup",
+    "checklist_done_in",
     "date_in_future",
     "end_estimated",
     "ended_more_than",

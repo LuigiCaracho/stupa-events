@@ -10,11 +10,11 @@ from __future__ import annotations
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy import select
 
 from app.deps import DbSession, Principal, require_principal
-from app.modules.admin.patching import audit_config, changes, invalid, slug_taken
+from app.modules.admin.patching import audit_config, changes, invalid, invalidate_feed, slug_taken
 from app.modules.admin.schemas import AdminVenue, VenueCreate, VenuePatch
 from app.modules.taxonomy.models import Venue
 from app.modules.taxonomy.venues import normalize_room_key
@@ -94,7 +94,9 @@ async def create_venue(db: DbSession, principal: Manager, body: VenueCreate):
 
 
 @router.patch("/{venue_id}", response_model=AdminVenue, responses=_ERRORS)
-async def patch_venue(db: DbSession, principal: Manager, venue_id: UUID, body: VenuePatch):
+async def patch_venue(
+    request: Request, db: DbSession, principal: Manager, venue_id: UUID, body: VenuePatch
+):
     """Change a venue (the slug never changes)."""
     venue = await db.get(Venue, venue_id)
     if venue is None:
@@ -107,4 +109,5 @@ async def patch_venue(db: DbSession, principal: Manager, venue_id: UUID, body: V
     await db.refresh(venue)
     await audit_config(db, principal.sub, "venue", venue.id, list(values))
     await db.commit()
+    await invalidate_feed(request)
     return venue

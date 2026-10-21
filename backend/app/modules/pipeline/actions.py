@@ -35,9 +35,22 @@ class Committed:
 type Action = Callable[[Any, Committed], Awaitable[None]]
 
 
-async def invalidate_feed_cache(pool: Any, committed: Committed) -> None:
-    """Bump the feed version, so a cached feed knows it is stale."""
+REBUILD_JOB = "rebuild_public_cache"
+REBUILD_JOB_ID = "public_cache"
+
+
+async def request_rebuild(pool: Any) -> None:
+    """Queue the snapshot rebuild; one queued job at a time (`_job_id` debounces)."""
+    try:
+        await pool.enqueue_job(REBUILD_JOB, _job_id=REBUILD_JOB_ID)
+    except Exception:  # noqa: BLE001 - the cron rebuilds within the hour anyway
+        logger.warning("could not queue the public cache rebuild", exc_info=True)
+
+
+async def invalidate_feed_cache(pool: Any, committed: Committed | None) -> None:
+    """Bump the feed version, so a cached feed knows it is stale, and queue the rebuild."""
     await pool.incr(FEED_VERSION_KEY)
+    await request_rebuild(pool)
 
 
 async def ensure_derivatives(pool: Any, committed: Committed) -> None:
@@ -47,6 +60,20 @@ async def ensure_derivatives(pool: Any, committed: Committed) -> None:
     await pool.enqueue_job(
         DERIVE_TASK, str(committed.poster_id), _job_id=f"derive:{committed.poster_id}"
     )
+
+
+async def invalidate_public(pool: Any | None) -> None:
+    """Mark the public feed and calendar stale after a change that no single dossier owns.
+
+    Used by format edits, which show in the feed of every edition. A missing pool or a
+    Redis error is logged and swallowed like any post-commit action.
+    """
+    if pool is None:
+        return
+    try:
+        await invalidate_feed_cache(pool, None)
+    except Exception:  # noqa: BLE001 - never rolls back the commit
+        logger.exception("feed invalidation failed")
 
 
 ACTIONS: dict[str, Action] = {

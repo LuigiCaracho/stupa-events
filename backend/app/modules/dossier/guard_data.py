@@ -2,10 +2,13 @@
 
 `open_comments` counts open root comments, `open_hero_comments` those anchored on the
 poster field or on any file in the replacement chain of the current poster (so replacing the
-poster does not dissolve a question), `open_required_checklist` the required items of one
-phase, `quarantined_attachments` the unscanned posters, social posts and shared files except
-the hero (which `image_required` reports), and `poster_reused` the flyer check: the same
-file in a dossier of another year, or a printed date of another year.
+poster does not dissolve a question), `open_required_checklist` and `open_required_followup`
+the required items of the phases `planning` and `followup`, `quarantined_attachments` the
+unscanned posters, social posts and shared files except the hero (which `image_required`
+reports), `poster_reused` the flyer check: the same file in a dossier of another year, or a
+printed date of another year. M5 adds the follow-up inputs: `retrospective_filled` (a
+retrospective document with text), `howto_present` (a dossier howto or the master howto of
+its format) and the facts profile of the main category.
 """
 
 from __future__ import annotations
@@ -21,8 +24,11 @@ from sqlalchemy.orm import aliased
 
 from app.modules.dossier.models_checklist import ChecklistItem
 from app.modules.dossier.models_comments import Comment
+from app.modules.dossier.models_documents import Document
 from app.modules.events.models import Event
 from app.modules.files.models import Attachment
+from app.modules.formats.models import Format
+from app.modules.taxonomy.models import Category
 from app.shared.timeutil import DEFAULT_TZID, to_local
 
 _HERO_CHAIN = text(
@@ -53,8 +59,12 @@ class GuardData:
     open_comments: int = 0
     open_hero_comments: int = 0
     open_required_checklist: int = 0
+    open_required_followup: int = 0
     quarantined_attachments: int = 0
     poster_reused: bool = False
+    retrospective_filled: bool = False
+    howto_present: bool = False
+    required_profile: str = "generic"
 
 
 async def _counts(session: AsyncSession, statement: Select[UUID, int]) -> dict[UUID, int]:
@@ -90,11 +100,68 @@ async def _poster_reused(
     return reused
 
 
+async def _checklist_counts(session: AsyncSession, ids: list[UUID]) -> dict[tuple[UUID, str], int]:
+    rows = await session.execute(
+        select(ChecklistItem.event_id, ChecklistItem.phase, func.count())
+        .where(
+            ChecklistItem.event_id.in_(ids),
+            ChecklistItem.phase.in_(("planning", "followup")),
+            ChecklistItem.required.is_(True),
+            ChecklistItem.done_at.is_(None),
+            ChecklistItem.waived_reason.is_(None),
+        )
+        .group_by(ChecklistItem.event_id, ChecklistItem.phase)
+    )
+    return {(event_id, phase): count for event_id, phase, count in rows.all()}
+
+
+async def _retrospectives(session: AsyncSession, ids: list[UUID]) -> set[UUID]:
+    rows = await session.scalars(
+        select(Document.event_id).where(
+            Document.event_id.in_(ids),
+            Document.kind == "retrospective",
+            func.btrim(Document.body_md) != "",
+        )
+    )
+    return {i for i in rows if i is not None}
+
+
+async def howto_presence(session: AsyncSession, events: Sequence[Event]) -> set[UUID]:
+    own = await session.scalars(
+        select(Document.event_id).where(
+            Document.event_id.in_([e.id for e in events]), Document.kind == "howto"
+        )
+    )
+    format_ids = {e.format_id for e in events if e.format_id}
+    mastered = (
+        set(
+            await session.scalars(
+                select(Format.id).where(
+                    Format.id.in_(format_ids), Format.master_howto_document_id.is_not(None)
+                )
+            )
+        )
+        if format_ids
+        else set()
+    )
+    return {i for i in own if i is not None} | {e.id for e in events if e.format_id in mastered}
+
+
+async def _profiles(session: AsyncSession, events: Sequence[Event]) -> dict[UUID, str]:
+    category_ids = {e.primary_category_id for e in events if e.primary_category_id}
+    if not category_ids:
+        return {}
+    rows = await session.execute(
+        select(Category.id, Category.required_profile).where(Category.id.in_(category_ids))
+    )
+    by_category = dict(rows.all())
+    return {e.id: by_category[e.primary_category_id] for e in events if e.primary_category_id}
+
+
 async def load_guard_data(
     session: AsyncSession,
     events: Sequence[Event],
     *,
-    phase: str = "planning",
     starts_at: dict[UUID, datetime] | None = None,
 ) -> dict[UUID, GuardData]:
     """Read the guard inputs of `events`; `starts_at` carries starts that are about to apply."""
@@ -114,18 +181,7 @@ async def load_guard_data(
         event_id: count
         for event_id, count in (await session.execute(_HERO_CHAIN, {"ids": ids})).all()
     }
-    checklist = await _counts(
-        session,
-        select(ChecklistItem.event_id, func.count())
-        .where(
-            ChecklistItem.event_id.in_(ids),
-            ChecklistItem.phase == phase,
-            ChecklistItem.required.is_(True),
-            ChecklistItem.done_at.is_(None),
-            ChecklistItem.waived_reason.is_(None),
-        )
-        .group_by(ChecklistItem.event_id),
-    )
+    checklist = await _checklist_counts(session, ids)
     quarantined = await _counts(
         session,
         select(Attachment.event_id, func.count())
@@ -140,13 +196,22 @@ async def load_guard_data(
         .group_by(Attachment.event_id),
     )
     reused = await _poster_reused(session, events, starts_at or {})
+    retrospectives, howtos = (
+        await _retrospectives(session, ids),
+        await howto_presence(session, events),
+    )
+    profiles = await _profiles(session, events)
     return {
         i: GuardData(
             open_comments=open_comments.get(i, 0),
             open_hero_comments=hero_comments.get(i, 0),
-            open_required_checklist=checklist.get(i, 0),
+            open_required_checklist=checklist.get((i, "planning"), 0),
+            open_required_followup=checklist.get((i, "followup"), 0),
             quarantined_attachments=quarantined.get(i, 0),
             poster_reused=i in reused,
+            retrospective_filled=i in retrospectives,
+            howto_present=i in howtos,
+            required_profile=profiles.get(i, "generic"),
         )
         for i in ids
     }

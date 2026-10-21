@@ -289,8 +289,13 @@ async def _http_exception_handler(request: Request, exc: StarletteHTTPException)
     return _problem_response(problem)
 
 
-# All public routes without login (same prefix as `app.middleware`).
-PUBLIC_API_PREFIX = "/api/public/"
+# All public routes without login (the same list drives `app.middleware`).
+PUBLIC_PREFIXES: tuple[str, ...] = ("/api/public/", "/ics/")
+
+
+def is_public_path(path: str) -> bool:
+    """Tell if a request path belongs to the public routes: no cookie, noindex."""
+    return path.startswith(PUBLIC_PREFIXES)
 
 
 async def _unhandled_handler(request: Request, exc: Exception) -> JSONResponse:
@@ -306,7 +311,7 @@ async def _unhandled_handler(request: Request, exc: Exception) -> JSONResponse:
     )
     # The handler of `Exception` runs outside the middleware stack, so the security
     # middleware never sees this answer. A public route keeps its noindex here.
-    extra = {"X-Robots-Tag": "noindex"} if request.url.path.startswith(PUBLIC_API_PREFIX) else None
+    extra = {"X-Robots-Tag": "noindex"} if is_public_path(request.url.path) else None
     return _problem_response(problem, extra)
 
 

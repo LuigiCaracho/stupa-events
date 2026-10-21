@@ -17,6 +17,7 @@ from app.modules.pipeline.guards import (
     Guard,
     attachments_scanned,
     checklist_done,
+    checklist_done_followup,
     date_in_future,
     end_estimated,
     ended_more_than,
@@ -65,6 +66,8 @@ class Transition:
         sets: `(column, rule)` pairs written besides `state` and `rev`. Rules: `actor` (the
             firing sub), `null`, `plus_one`, `slug`, `new_rev` (the revision being written),
             `body` (taken from the request), `scheduled` (reset the public status).
+        checklist_phase: The checklist phase whose required items the guard `checklistDone`
+            reads (`planning` for T02, `followup` for T09).
     """
 
     id: str
@@ -79,6 +82,7 @@ class Transition:
     four_eyes: bool = False
     sets: tuple[tuple[str, str], ...] = ()
     actions: tuple[str, ...] = field(default=())
+    checklist_phase: str = "planning"
 
 
 def _may_withdraw(snapshot: Snapshot, actor: Actor) -> bool:
@@ -213,6 +217,7 @@ TRANSITIONS: Mapping[str, Transition] = {
             (ended_more_than(12), origin_is("internal", "mcp")),
             system=True,
             sets=(("published_rev", "null"),),
+            actions=(ACTION_FEED_INVALIDATE,),
         ),
         Transition(
             "T08b",
@@ -222,13 +227,21 @@ TRANSITIONS: Mapping[str, Transition] = {
             (ended_more_than(12), origin_is("imported", "legacy")),
             system=True,
             sets=(("published_rev", "null"),),
+            actions=(ACTION_FEED_INVALIDATE,),
         ),
         Transition(
             "T09",
             (S.FOLLOWUP,),
             S.ARCHIVED,
             "event.submit",
-            (checklist_done, retrospective_filled, outcome_set_or_waived, howto_verified),
+            (
+                checklist_done_followup,
+                retrospective_filled,
+                outcome_set_or_waived,
+                howto_verified,
+            ),
+            checklist_phase="followup",
+            actions=(ACTION_FEED_INVALIDATE,),
         ),
         Transition(
             "T09b",
@@ -237,8 +250,16 @@ TRANSITIONS: Mapping[str, Transition] = {
             None,
             (followup_older_than(30),),
             system=True,
+            actions=(ACTION_FEED_INVALIDATE,),
         ),
-        Transition("T10", (S.ARCHIVED,), S.FOLLOWUP, "event.restore", note_required=True),
+        Transition(
+            "T10",
+            (S.ARCHIVED,),
+            S.FOLLOWUP,
+            "event.restore",
+            note_required=True,
+            actions=(ACTION_FEED_INVALIDATE,),
+        ),
         Transition(
             "T11",
             (S.IDEA, S.PLANNING, S.IN_REVIEW, S.APPROVED),

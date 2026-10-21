@@ -33,6 +33,9 @@ class FixAction(StrEnum):
     CONFIRM_TIME = "confirm_time"
     SET_END = "set_end"
     MAKE_OFFER = "make_offer"
+    FILL_RETROSPECTIVE = "fill_retrospective"
+    FILL_OUTCOME = "fill_outcome"
+    VERIFY_HOWTO = "verify_howto"
 
 
 @dataclass(frozen=True, slots=True)

@@ -1,0 +1,53 @@
+# Starter formats for the migration 0006 and `ensure_formats` (idempotent over `slug`).
+# `organization` and `category` are the reference keys of `taxonomy/reference.py`; the
+# organization per format is a proposal that the editors check (M5 contract 2.1, D4).
+formats:
+  - slug: movienight
+    title: Movienight
+    organization: fsi
+    category: kino
+    durationMinutes: 180
+    checklistProfile: generic
+    description: "Der Filmabend der Fachschaft im Kinosaal."
+  - slug: offenes-praesidium
+    title: Offenes Präsidium
+    organization: praesidium
+    category: get-together
+    durationMinutes: 120
+    checklistProfile: generic
+    description: "Offene Sprechstunde des Präsidiums."
+  - slug: fsi-lan-party
+    title: FSI LAN-Party
+    organization: fsi
+    category: lan-party
+    durationMinutes: 600
+    checklistProfile: party
+    description: "Die LAN-Party der Fachschaft Informatik."
+  - slug: fsi-game-together
+    title: Game Together
+    organization: fsi
+    category: get-together
+    durationMinutes: 240
+    checklistProfile: generic
+    description: "Spieleabend der Fachschaft Informatik."
+  - slug: caipi-night
+    title: Caipi Night
+    organization: fsi
+    category: party
+    durationMinutes: 300
+    checklistProfile: party
+    description: "Die Caipi Night der Fachschaft."
+  - slug: campusfest
+    title: Campusfest
+    organization: stupa
+    category: campusfest
+    durationMinutes: 480
+    checklistProfile: party
+    description: "Das Campusfest der Hochschule."
+  - slug: skiausfahrt
+    title: Skiausfahrt
+    organization: stupa
+    category: skiausfahrt
+    durationMinutes: 4320
+    checklistProfile: trip
+    description: "Die Skiausfahrt der Studierendenvertretung."

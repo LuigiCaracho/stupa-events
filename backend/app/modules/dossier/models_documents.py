@@ -12,6 +12,7 @@ from datetime import datetime
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
+    Computed,
     DateTime,
     ForeignKey,
     Index,
@@ -21,7 +22,7 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base, UUIDPkMixin
@@ -29,6 +30,10 @@ from app.db import Base, UUIDPkMixin
 DOCUMENT_KINDS = ("howto", "retrospective", "notes", "mail_template")
 DOCUMENT_VISIBILITIES = ("team", "org", "shared")
 MAX_BODY_CHARS = 200_000
+DOCUMENT_SEARCH_TSV = (
+    "setweight(to_tsvector('de_unaccent'::regconfig, coalesce(title, '')), 'B') || "
+    "setweight(to_tsvector('de_unaccent'::regconfig, coalesce(body_md, '')), 'C')"
+)
 
 
 class Document(UUIDPkMixin, Base):
@@ -36,8 +41,11 @@ class Document(UUIDPkMixin, Base):
 
     __tablename__ = "document"
 
-    event_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("event.id", ondelete="RESTRICT"), nullable=False
+    event_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("event.id", ondelete="RESTRICT"), nullable=True
+    )
+    format_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("format.id", ondelete="RESTRICT"), nullable=True
     )
     kind: Mapped[str] = mapped_column(Text)
     title: Mapped[str] = mapped_column(Text)
@@ -51,8 +59,25 @@ class Document(UUIDPkMixin, Base):
     created_by: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    search_tsv: Mapped[str | None] = mapped_column(
+        TSVECTOR, Computed(DOCUMENT_SEARCH_TSV, persisted=True), nullable=True, deferred=True
+    )
 
     __table_args__ = (
+        CheckConstraint("num_nonnulls(event_id, format_id) = 1", name="owner"),
+        CheckConstraint("format_id IS NULL OR kind = 'howto'", name="format_howto"),
+        Index(
+            "uq_document_format_howto",
+            "format_id",
+            unique=True,
+            postgresql_where=text("kind = 'howto'"),
+        ),
+        Index(
+            "uq_document_event_retrospective",
+            "event_id",
+            unique=True,
+            postgresql_where=text("kind = 'retrospective'"),
+        ),
         CheckConstraint(
             "kind IN ('howto', 'retrospective', 'notes', 'mail_template')", name="kind"
         ),

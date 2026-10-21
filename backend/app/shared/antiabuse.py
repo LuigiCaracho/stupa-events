@@ -149,3 +149,24 @@ async def rate_limit_media_images(
         window=_HOUR,
         detail="Too many uploads. Try again later.",
     )
+
+
+async def rate_limit_search(
+    settings: SettingsDep,
+    limiter: RateLimiterDep,
+    principal: Annotated[Principal | None, Depends(get_current_principal)],
+) -> None:
+    """Throttle the internal search to ``rl_search_per_minute`` per principal.
+
+    The palette asks at every key press, so the budget is generous. The route answers 401
+    without a principal; this dependency then does nothing.
+    """
+    if principal is None:
+        return
+    await _enforce(
+        limiter,
+        f"search:principal:{principal.sub}",
+        limit=settings.rl_search_per_minute,
+        window=60,
+        detail="Too many searches. Try again later.",
+    )

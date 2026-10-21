@@ -9,12 +9,12 @@ from __future__ import annotations
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.deps import DbSession, Principal, require_principal
-from app.modules.admin.patching import audit_config, changes, invalid, slug_taken
+from app.modules.admin.patching import audit_config, changes, invalid, invalidate_feed, slug_taken
 from app.modules.admin.schemas import AdminCategory, CategoryCreate, CategoryPatch
 from app.modules.taxonomy.models import Category
 from app.shared.errors import NotFoundError, ProblemDetail
@@ -72,7 +72,9 @@ async def create_category(db: DbSession, principal: Manager, body: CategoryCreat
 
 
 @router.patch("/{category_id}", response_model=AdminCategory, responses=_ERRORS)
-async def patch_category(db: DbSession, principal: Manager, category_id: UUID, body: CategoryPatch):
+async def patch_category(
+    request: Request, db: DbSession, principal: Manager, category_id: UUID, body: CategoryPatch
+):
     """Change a category (the slug never changes)."""
     category = await db.get(Category, category_id)
     if category is None:
@@ -86,4 +88,5 @@ async def patch_category(db: DbSession, principal: Manager, category_id: UUID, b
     await db.refresh(category)
     await audit_config(db, principal.sub, "category", category.id, list(values))
     await db.commit()
+    await invalidate_feed(request)
     return category

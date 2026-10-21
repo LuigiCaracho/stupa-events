@@ -44,6 +44,20 @@ def attachment_readable(
     return visibility_readable(principal, org_id, visibility)
 
 
+def foreign_attachment_readable(visibility: str, scan_status: str, retired: bool) -> bool:
+    """Tell if an attachment of an archived foreign dossier is readable: shared, clean, shown."""
+    return visibility == "shared" and scan_status == "clean" and not retired
+
+
+def foreign_readable_clause() -> ColumnElement[bool]:
+    """Return the SQL condition of `foreign_attachment_readable` (the archive view)."""
+    return and_(
+        Attachment.visibility == "shared",
+        Attachment.scan_status == "clean",
+        Attachment.retired_at.is_(None),
+    )
+
+
 def readable_clause(principal: Principal, org_id: UUID | None) -> ColumnElement[bool]:
     """Return the SQL condition that selects exactly the readable attachments."""
     visible = [v for v in VISIBILITIES if attachment_readable(principal, org_id, "other", v)]

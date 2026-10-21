@@ -9,7 +9,7 @@ facts, follow-up data) carry a neutral default that every guard reports as satis
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
 
@@ -96,6 +96,7 @@ class Snapshot:
     duplicate_score: float | None = None
     open_hero_comments: int = 0
     open_required_checklist: int = 0
+    open_required_followup: int = 0
     facts_error: str | None = None
     open_proposals: int = 0
     entered_followup_at: datetime | None = None
@@ -105,6 +106,10 @@ class Snapshot:
     retrospective_filled: bool = True
     outcome_set: bool = True
     howto_verified: bool = True
+    format_id: UUID | None = None
+    all_day: bool = False
+    starts_on: date | None = None
+    ends_on: date | None = None
 
 
 @dataclass(frozen=True, slots=True)

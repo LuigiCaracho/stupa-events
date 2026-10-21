@@ -30,6 +30,8 @@ dependencies = [
     "redis>=5.0",
     "pillow>=11.0",
     "pyyaml>=6.0",
+    "markdown-it-py>=3.0",
+    "nh3>=0.2",
 ]
 
 [dependency-groups]
@@ -47,6 +49,7 @@ dev = [
     "ruff>=0.9",
     "basedpyright>=1.28",
     "psycopg[binary]>=3.2",
+    "icalendar>=6.0",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -90,7 +93,7 @@ omit = ["tests/*"]
 
 [tool.coverage.report]
 show_missing = true
-fail_under = 90
+fail_under = 97
 exclude_lines = [
     "pragma: no cover",
     "if TYPE_CHECKING:",

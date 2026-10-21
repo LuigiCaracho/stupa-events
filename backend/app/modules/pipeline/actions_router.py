@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
 from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, Request, Response
 
 from app.deps import DbSession, Principal, require_any_scope, require_principal
-from app.modules.events.conflict import parse_if_match, require_if_match, set_etag, with_current
-from app.modules.events.presenter import present
+from app.modules.events.conflict import parse_if_match, require_if_match
 from app.modules.events.schemas import (
     AssignOrganizationIn,
     CancelIn,
@@ -21,11 +19,9 @@ from app.modules.events.schemas import (
     ReinstateIn,
     RevertIn,
 )
-from app.modules.notifications.service import dispatch_mails
 from app.modules.pipeline import actions_service, assign, marks, revert
-from app.modules.pipeline.actions import run_actions
+from app.modules.pipeline.action_response import respond
 from app.modules.pipeline.exception import grant_image_exception
-from app.modules.pipeline.service import Fired
 from app.shared.errors import ProblemDetail
 
 router = APIRouter(prefix="/events/{event_id}/actions", tags=["actions"])
@@ -49,25 +45,6 @@ CriticalEditor = Annotated[Principal, Depends(require_any_scope("event.edit_crit
 Editor = Annotated[Principal, Depends(require_any_scope("event.edit"))]
 
 
-async def _run(
-    request: Request,
-    db: DbSession,
-    principal: Principal,
-    response: Response,
-    work: Callable[[], Awaitable[Fired]],
-) -> EventOut:
-    async with with_current(db, principal):
-        fired = await work()
-    out = (await present(db, principal, [fired.event]))[0]
-    out.checklist_recomputed = db.info.pop("checklist_recomputed", None)
-    await db.commit()
-    set_etag(response, out.rev)
-    pool = getattr(request.app.state, "arq_pool", None)
-    await run_actions(pool, fired.actions, fired.committed)
-    await dispatch_mails(pool, fired.mails)
-    return out
-
-
 @router.post("/cancel", response_model=EventOut, responses=_ERRORS)
 async def cancel(
     request: Request,
@@ -79,7 +56,7 @@ async def cancel(
     if_match: IfMatch = None,
 ) -> EventOut:
     """Cancel a live event; the dossier stays `live`, the public status becomes `cancelled`."""
-    return await _run(
+    return await respond(
         request,
         db,
         principal,
@@ -107,7 +84,7 @@ async def postpone(
     if_match: IfMatch = None,
 ) -> EventOut:
     """Postpone a live event, optionally with the new date."""
-    return await _run(
+    return await respond(
         request,
         db,
         principal,
@@ -137,7 +114,7 @@ async def reinstate(
     if_match: IfMatch = None,
 ) -> EventOut:
     """Take back a cancellation or postponement."""
-    return await _run(
+    return await respond(
         request,
         db,
         principal,
@@ -163,7 +140,7 @@ async def image_exception(
 ) -> EventOut:
     """Let this one event go public without a poster (editors only, audited)."""
 
-    return await _run(
+    return await respond(
         request,
         db,
         principal,
@@ -185,7 +162,7 @@ async def assign_organization(
     if_match: IfMatch = None,
 ) -> EventOut:
     """Give a proposal its organization (editors only)."""
-    return await _run(
+    return await respond(
         request,
         db,
         principal,
@@ -207,7 +184,7 @@ async def revert_revision(
     if_match: IfMatch = None,
 ) -> EventOut:
     """Write a new revision with the content of an earlier one."""
-    return await _run(
+    return await respond(
         request,
         db,
         principal,
@@ -234,7 +211,7 @@ async def acknowledge_changes(
     if_match: IfMatch = None,
 ) -> EventOut:
     """Mark the text changes since the publication as seen."""
-    return await _run(
+    return await respond(
         request,
         db,
         principal,
@@ -256,7 +233,7 @@ async def confirm_flyer(
     if_match: IfMatch = None,
 ) -> EventOut:
     """Record that the date on the flyer was checked."""
-    return await _run(
+    return await respond(
         request,
         db,
         principal,

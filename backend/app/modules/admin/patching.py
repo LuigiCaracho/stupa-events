@@ -8,12 +8,14 @@ from __future__ import annotations
 
 from typing import Any
 
+from fastapi import Request
 from pydantic.alias_generators import to_camel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.audit.actions import AuditAction
 from app.modules.audit.service import record as audit_record
 from app.modules.auth.schemas import CamelModel
+from app.modules.pipeline.actions import invalidate_public
 from app.shared.errors import ConflictError, FieldError, ValidationProblem
 
 
@@ -57,3 +59,8 @@ async def audit_config(
         target_id=str(target_id),
         data={"fields": sorted(to_camel(name) for name in fields)},
     )
+
+
+async def invalidate_feed(request: Request) -> None:
+    """Mark the public feed and calendars stale after a taxonomy edit that the view shows."""
+    await invalidate_public(getattr(request.app.state, "arq_pool", None))

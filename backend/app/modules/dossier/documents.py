@@ -16,6 +16,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.archive.access import foreign_archived
 from app.modules.audit.actions import AuditAction
 from app.modules.audit.service import record as audit_record
 from app.modules.auth.principal import Principal
@@ -31,6 +32,9 @@ from app.modules.dossier.schemas_documents import (
 )
 from app.modules.events.models import EditorDraft, Event
 from app.modules.files.access import visibility_readable
+from app.modules.followup.outcome import ensure_outcome_phase
+from app.modules.formats.access import ensure_can_manage
+from app.modules.formats.models import Format
 from app.modules.media.ref_sync import (
     add_refs,
     draft_owner_id,
@@ -40,7 +44,12 @@ from app.modules.media.ref_sync import (
 from app.shared.errors import ConflictError, NotFoundError
 from app.shared.timeutil import utcnow
 
-DEFAULT_VISIBILITY = {"howto": "shared", "mail_template": "shared", "notes": "org"}
+DEFAULT_VISIBILITY = {
+    "howto": "shared",
+    "mail_template": "shared",
+    "notes": "org",
+    "retrospective": "org",
+}
 
 
 def document_out(row: Document) -> DocumentOut:
@@ -49,17 +58,32 @@ def document_out(row: Document) -> DocumentOut:
 
 
 async def load_document(
-    session: AsyncSession, principal: Principal, document_id: UUID, *, lock: bool = False
-) -> tuple[Document, Event]:
-    """Load a document the caller reads, with its dossier (404 otherwise)."""
+    session: AsyncSession,
+    principal: Principal,
+    document_id: UUID,
+    *,
+    lock: bool = False,
+    archive: bool = False,
+) -> tuple[Document, Event | None]:
+    """Load a document the caller reads, with its dossier (404 otherwise).
+
+    A master howto of a format has no dossier (`None`) and is readable for everybody who may
+    read the library. With `archive` the `shared` documents of archived dossiers of other
+    organizations are readable too.
+    """
     query = select(Document).where(Document.id == document_id)
     row = await session.scalar(query.with_for_update() if lock else query)
     if row is None:
         raise NotFoundError("document not found")
+    if row.event_id is None:
+        return row, None
     try:
         event = await load_readable(session, principal, row.event_id)
     except NotFoundError:
-        raise NotFoundError("document not found") from None
+        foreign = await foreign_archived(session, principal, row.event_id) if archive else None
+        if foreign is None or row.visibility != "shared":
+            raise NotFoundError("document not found") from None
+        return row, foreign
     if not visibility_readable(principal, event.organization_id, row.visibility):
         raise NotFoundError("document not found")
     return row, event
@@ -104,31 +128,49 @@ async def create(
 ) -> Document:
     """Create a document with revision 1 (409 `already_exists` for a second howto)."""
     event = await load_for_write(session, principal, event_id, "event.edit")
+    retrospective = body.kind == "retrospective"
+    if retrospective:
+        ensure_outcome_phase(event, utcnow())
     doc = Document(
         event_id=event.id,
         kind=body.kind,
         title=body.title,
         body_md=body.body_md,
         visibility=body.visibility or DEFAULT_VISIBILITY[body.kind],
-        carry_over=True if body.carry_over is None else body.carry_over,
+        carry_over=False if retrospective else (body.carry_over is not False),
         created_by=principal.sub,
     )
     return await insert_document(session, principal, event, doc)
 
 
 async def insert_document(
-    session: AsyncSession, principal: Principal, event: Event, doc: Document
+    session: AsyncSession,
+    principal: Principal,
+    event: Event | None,
+    doc: Document,
+    note: str | None = None,
 ) -> Document:
-    """Insert a new document row with its first revision, refs and audit entry."""
+    """Insert a new document row with its first revision, refs and audit entry.
+
+    Raises:
+        ConflictError: `already_exists` for a second howto or retrospective of an owner.
+    """
     session.add(doc)
     try:
         await session.flush()
     except IntegrityError as exc:
-        if "uq_document_event_howto" in str(exc):
-            raise ConflictError("A howto exists already.", code="already_exists") from exc
+        if any(
+            name in str(exc)
+            for name in (
+                "uq_document_event_howto",
+                "uq_document_event_retrospective",
+                "uq_document_format_howto",
+            )
+        ):
+            raise ConflictError("The document exists already.", code="already_exists") from exc
         raise
     await session.refresh(doc)
-    await _append(session, doc, principal.sub, None)
+    await _append(session, doc, principal.sub, note)
     await add_refs(session, "document", doc.id, doc.body_md)
     await audit_record(
         session,
@@ -136,9 +178,26 @@ async def insert_document(
         action=AuditAction.DOCUMENT_CREATE,
         target_type="document",
         target_id=str(doc.id),
-        data={"eventId": str(event.id), "kind": doc.kind},
+        data={**_owner(event, doc), "kind": doc.kind},
     )
     return doc
+
+
+def _owner(event: Event | None, doc: Document) -> dict[str, str]:
+    return {"eventId": str(event.id)} if event is not None else {"formatId": str(doc.format_id)}
+
+
+async def authorize_write(
+    session: AsyncSession, principal: Principal, doc: Document, event: Event | None
+) -> None:
+    """Check the right to change a document: the dossier rules, or the right on its format."""
+    if event is None:
+        fmt = await session.get(Format, doc.format_id)
+        assert fmt is not None
+        await ensure_can_manage(session, principal, fmt)
+        return
+    ensure_permission(principal, event, "event.edit")
+    ensure_open(event)
 
 
 def _current(doc: Document) -> dict[str, Any]:
@@ -161,8 +220,7 @@ async def save(
             `use_mail_templates` for a mail template saved without its validated `meta`.
     """
     doc, event = await load_document(session, principal, document_id, lock=True)
-    ensure_permission(principal, event, "event.edit")
-    ensure_open(event)
+    await authorize_write(session, principal, doc, event)
     if doc.kind == "mail_template" and meta is None:
         raise ConflictError(
             "A mail template is saved through the mail template routes.",
@@ -202,7 +260,7 @@ async def save(
         action=AuditAction.DOCUMENT_UPDATE,
         target_type="document",
         target_id=str(doc.id),
-        data={"eventId": str(event.id), "rev": doc.rev},
+        data={**_owner(event, doc), "rev": doc.rev},
     )
     return doc, True
 
@@ -276,8 +334,7 @@ async def put_draft(
 ) -> EditorDraft:
     """Store the caller's autosave draft (no revision, no audit)."""
     doc, event = await load_document(session, principal, document_id)
-    ensure_permission(principal, event, "event.edit")
-    ensure_open(event)
+    await authorize_write(session, principal, doc, event)
     fields = {"bodyMd": body_md, **({"title": title} if title is not None else {})}
     stmt = insert(EditorDraft).values(
         owner_kind="document",

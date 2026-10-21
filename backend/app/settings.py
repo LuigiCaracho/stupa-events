@@ -54,6 +54,9 @@ class Settings(BaseSettings):
     environment: str = "development"
     log_level: str = "INFO"
     public_base_url: str = "http://localhost:8081"
+    ics_uid_domain: str = "events.reutlingen.university"
+    public_snapshot_max_age_seconds: int = 7200
+    public_snapshot_max_rows: int = 5000
     local_timezone: str = "Europe/Berlin"
 
     strict_security: bool = True
@@ -158,6 +161,7 @@ class Settings(BaseSettings):
     rate_limit_enabled: bool = True
     rl_attachments_per_hour: int = 30
     rl_media_images_per_hour: int = 120
+    rl_search_per_minute: int = 240
     rl_default_write_per_hour: int = 100
     rl_default_write_session_per_hour: int = 3000
 

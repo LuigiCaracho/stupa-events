@@ -13,9 +13,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.auth.models import Principal as PrincipalRow
 from app.modules.events.models import Event
+from app.modules.followup.missing import days_open, missing_of
 from app.modules.notifications.service import PendingMail, notify_event
+from app.modules.pipeline.snapshot import Snapshot
+from app.shared.timeutil import utcnow
 
-_KIND_OF = {"T02": "review_requested", "T03": "changes_requested"}
+_KIND_OF = {"T02": "review_requested", "T03": "changes_requested", "T09b": "auto_archived"}
 
 
 async def _actor_name(session: AsyncSession, sub: str) -> str:
@@ -30,14 +33,25 @@ async def notice_for(
     actor_sub: str,
     *,
     open_comments: int | None = None,
+    snapshot: Snapshot | None = None,
 ) -> tuple[PendingMail, ...]:
-    """Notify the people a transition or action concerns; return the mails for after the commit."""
+    """Notify the people a transition or action concerns; return the mails for after the commit.
+
+    T09b (the system archives a dossier) has its own kind with the open parts of the
+    follow-up, read from the snapshot before the transition.
+    """
     kind = _KIND_OF.get(step_id, "transition_done")
     params: dict[str, object] = {"actorName": await _actor_name(session, actor_sub)}
     if kind == "changes_requested" and open_comments is not None:
         params["count"] = open_comments
     if kind == "transition_done":
         params["step"] = step_id
+    if kind == "auto_archived" and snapshot is not None:
+        params |= {
+            "daysOpen": days_open(snapshot.entered_followup_at, utcnow()),
+            "missing": missing_of(snapshot),
+            "howtoUnverified": not snapshot.howto_verified,
+        }
     dedupe = f"{kind}:{event.id}:{event.rev}"
     pending = await notify_event(session, kind, event, params, dedupe, actor_sub=actor_sub)
     return tuple(pending)

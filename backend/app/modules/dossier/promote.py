@@ -3,13 +3,12 @@
 A poster uploaded in `approved` or `live` waits as an ordinary clean attachment that
 supersedes the current hero. Once it is scanned and derived, this job swaps the hero in one
 transaction: it hides the old poster, writes a critical revision ("Poster ersetzt") and, in
-`live`, raises `public_seq`. The feed cache is invalidated after the commit. An infected
-replacement never gets here, so the old poster stays untouched.
+`live`, raises `public_seq`. The feed and calendar snapshots are invalidated after the commit.
+An infected replacement never gets here, so the old poster stays untouched.
 """
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 from uuid import UUID
 
@@ -21,11 +20,9 @@ from app.modules.audit.actions import AuditAction
 from app.modules.events import revisions
 from app.modules.events.models import Event
 from app.modules.files.models import Attachment
+from app.modules.pipeline.actions import invalidate_public
 from app.shared.timeutil import utcnow
 
-logger = logging.getLogger("app.dossier")
-
-FEED_VERSION_KEY = "events:feed:version"
 PROMOTE_NOTE = "Poster ersetzt"
 
 
@@ -93,10 +90,6 @@ async def promote_poster(ctx: dict[str, Any], attachment_id: str) -> str:
             return "skipped"
         live = updated.state == "live"
         await session.commit()
-    pool = ctx.get("redis")
-    if live and pool is not None:
-        try:
-            await pool.incr(FEED_VERSION_KEY)
-        except Exception:  # noqa: BLE001 - the cache refresh never fails the swap
-            logger.warning("feed cache bump failed (event=%s)", updated.id)
+    if live:
+        await invalidate_public(ctx.get("redis"))
     return "promoted"

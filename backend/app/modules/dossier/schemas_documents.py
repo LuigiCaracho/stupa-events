@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Self
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from app.modules.auth.schemas import CamelModel
 from app.modules.dossier.models_documents import MAX_BODY_CHARS
 from app.modules.dossier.schemas import Visibility
 
+RETROSPECTIVE_TITLE = "Rückblick"
 Title = Field(min_length=1, max_length=200)
 Body = Field(max_length=MAX_BODY_CHARS)
 
@@ -33,7 +34,8 @@ class DocumentItem(CamelModel):
 class DocumentOut(DocumentItem):
     """A document with its text."""
 
-    event_id: UUID
+    event_id: UUID | None
+    format_id: UUID | None = None
     body_md: str
     meta: dict
 
@@ -41,11 +43,19 @@ class DocumentOut(DocumentItem):
 class DocumentCreate(CamelModel):
     """Body of `POST /events/{id}/documents`."""
 
-    kind: Literal["howto", "notes"]
-    title: str = Title
+    kind: Literal["howto", "notes", "retrospective"]
+    title: str | None = Field(default=None, min_length=1, max_length=200)
     body_md: str = Body
     visibility: Visibility | None = None
     carry_over: bool | None = None
+
+    @model_validator(mode="after")
+    def _title_default(self) -> Self:
+        if self.title is None:
+            if self.kind != "retrospective":
+                raise ValueError("title is required")
+            self.title = RETROSPECTIVE_TITLE
+        return self
 
 
 class DocumentPut(CamelModel):

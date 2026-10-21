@@ -83,7 +83,7 @@ async def get_document(
     db: DbSession, principal: Reader, document_id: UUID, response: Response
 ) -> DocumentOut:
     """Return a document with its text and its ETag."""
-    row, _ = await documents.load_document(db, principal, document_id)
+    row, _ = await documents.load_document(db, principal, document_id, archive=True)
     _etag(response, row)
     return documents.document_out(row)
 

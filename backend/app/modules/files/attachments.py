@@ -24,6 +24,7 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.archive.access import foreign_archived
 from app.modules.audit.actions import AuditAction
 from app.modules.auth.principal import Principal
 from app.modules.dossier.rules import ensure_open, ensure_permission, load_readable
@@ -31,7 +32,11 @@ from app.modules.events import revisions
 from app.modules.events.access import poster_of
 from app.modules.events.models import Event
 from app.modules.events.states import EventState
-from app.modules.files.access import attachment_readable, readable_clause
+from app.modules.files.access import (
+    attachment_readable,
+    foreign_attachment_readable,
+    readable_clause,
+)
 from app.modules.files.attachment_meta import parse_meta
 from app.modules.files.attachment_types import ATTACHMENT_IMAGE_MIMES, check_attachment
 from app.modules.files.mime import file_extension
@@ -310,16 +315,25 @@ async def _link_hero(session: AsyncSession, event: Event, attachment_id: UUID) -
 
 
 async def load_attachment(
-    session: AsyncSession, principal: Principal, attachment_id: UUID
+    session: AsyncSession, principal: Principal, attachment_id: UUID, *, archive: bool = False
 ) -> tuple[Attachment, Event]:
-    """Load an attachment the caller may read, with its dossier (404 otherwise)."""
+    """Load an attachment the caller may read, with its dossier (404 otherwise).
+
+    With `archive` the clean `shared` files of archived dossiers of other organizations are
+    readable too (download and preview only; writes never pass `archive`).
+    """
     row = await session.get(Attachment, attachment_id)
     if row is None:
         raise NotFoundError("attachment not found")
     try:
         event = await load_readable(session, principal, row.event_id)
     except NotFoundError:
-        raise NotFoundError("attachment not found") from None
+        foreign = await foreign_archived(session, principal, row.event_id) if archive else None
+        if foreign is None or not foreign_attachment_readable(
+            row.visibility, row.scan_status, row.retired_at is not None
+        ):
+            raise NotFoundError("attachment not found") from None
+        return row, foreign
     if not attachment_readable(principal, event.organization_id, row.kind, row.visibility):
         raise NotFoundError("attachment not found")
     return row, event

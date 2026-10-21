@@ -23,6 +23,8 @@ CRITICAL_FIELDS: frozenset[str] = frozenset(
         "starts_at",
         "ends_at",
         "all_day",
+        "starts_on",
+        "ends_on",
         "venue_id",
         "venue_text",
         "primary_category_id",
@@ -37,6 +39,8 @@ API_NAMES: dict[str, str] = {
     "starts_at": "startsAt",
     "ends_at": "endsAt",
     "all_day": "allDay",
+    "starts_on": "startsOn",
+    "ends_on": "endsOn",
     "venue_id": "venueId",
     "venue_text": "venueText",
     "primary_category_id": "primaryCategoryId",
@@ -128,6 +132,11 @@ def _text_locked(snapshot: Snapshot, actor: Actor) -> bool:
     return not (snapshot.state == S.IN_REVIEW.value and actor.can("event.approve"))
 
 
+def text_locked(snapshot: Snapshot, actor: Actor) -> bool:
+    """Tell if text fields (and the facts) are locked for this actor in this state."""
+    return _text_locked(snapshot, actor)
+
+
 def lock_reason(snapshot: Snapshot, actor: Actor) -> LockReason | None:
     """Return why critical fields are locked for this actor, `None` when they are not."""
     if snapshot.state in _CLOSED:
@@ -145,9 +154,7 @@ def editable_fields(snapshot: Snapshot, actor: Actor) -> list[str]:
         return []
     critical, text = not _critical_locked(snapshot, actor), not _text_locked(snapshot, actor)
     return [
-        API_NAMES[name]
-        for name in API_NAMES
-        if name != "all_day" and (critical if name in CRITICAL_FIELDS else text)
+        API_NAMES[name] for name in API_NAMES if (critical if name in CRITICAL_FIELDS else text)
     ]
 
 

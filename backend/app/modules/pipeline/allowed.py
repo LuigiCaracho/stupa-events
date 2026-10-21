@@ -8,6 +8,9 @@ from app.modules.pipeline.snapshot import Actor, Snapshot
 OPEN_STATES = frozenset({"idea", "planning", "in_review", "approved"})
 REVERTIBLE_STATES = frozenset({"idea", "planning", "live"})
 FLYER_STATES = frozenset({"idea", "planning", "in_review"})
+VERIFY_STATES = frozenset({"live", "followup", "archived"})
+TEMPLATE_STATES = frozenset({"live", "followup", "archived"})
+LOCATION_STATES = frozenset({"idea", "planning", "in_review", "approved", "live"})
 
 
 def allowed_actions(snapshot: Snapshot, actor: Actor) -> list[str]:
@@ -40,5 +43,20 @@ def allowed_actions(snapshot: Snapshot, actor: Actor) -> list[str]:
         ),
         ("acknowledge-changes", live and actor.can("event.edit_critical_live")),
         ("confirm-flyer", snapshot.state in FLYER_STATES and edit_right(snapshot, actor)),
+        ("verify-howto", snapshot.state in VERIFY_STATES and actor.can("event.submit")),
+        (
+            "confirm-location",
+            snapshot.state in LOCATION_STATES
+            and snapshot.venue_id is None
+            and bool((snapshot.venue_text or "").strip())
+            and actor.can("event.approve"),
+        ),
+        (
+            "save-as-format",
+            snapshot.format_id is None
+            and snapshot.organization_id is not None
+            and (actor.can("event.submit") or actor.can("format.manage")),
+        ),
+        ("clone", snapshot.state in TEMPLATE_STATES and actor.can("event.create")),
     )
     return [name for name, ok in candidates if ok]

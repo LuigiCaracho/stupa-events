@@ -8,8 +8,9 @@ entry in the same transaction. Writes are optimistic: `UPDATE ... WHERE rev = :r
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import replace
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -18,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.audit.actions import AuditAction
 from app.modules.auth.principal import Principal
-from app.modules.events import revisions
+from app.modules.events import allday, facts, revisions
 from app.modules.events.access import guard_snapshot, load_visible, poster_of, snapshot_of
 from app.modules.events.conflict import VersionConflict
 from app.modules.events.models import EditorDraft, Event
@@ -46,7 +47,7 @@ from app.shared.errors import (
 from app.shared.timeutil import utcnow
 
 DEFAULT_DURATION = timedelta(hours=2)
-_NOT_NULL = ("title", "starts_at", "ends_at")
+_NOT_NULL = ("title", "starts_at", "ends_at", "all_day")
 _NON_FIELDS = {"rev", "note"}
 
 
@@ -63,6 +64,30 @@ def locked_problem(fields: tuple[str, ...]) -> ConflictError:
         code="field_locked",
         errors=[FieldError(field=f, msg="locked in this state") for f in fields],
     )
+
+
+async def derived_values(
+    session: AsyncSession, event: Event, changes: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Return the columns that follow from a change: the location mark and the facts."""
+    values: dict[str, Any] = {}
+    if "venue_text" in changes:
+        values |= {
+            "location_precision": "hidden",
+            "location_confirmed_at": None,
+            "location_confirmed_by": None,
+        }
+    if "primary_category_id" in changes:
+        category = (
+            await session.get(Category, changes["primary_category_id"])
+            if changes["primary_category_id"]
+            else None
+        )
+        kept, dropped = facts.fit(category.required_profile if category else "generic", event.facts)
+        if dropped:
+            values["facts"] = kept
+            session.info["facts_dropped"] = dropped
+    return values
 
 
 class EventService:
@@ -103,7 +128,9 @@ class EventService:
         )
         return count or 0
 
-    async def create(self, principal: Principal, body: EventCreate) -> Event:
+    async def create(
+        self, principal: Principal, body: EventCreate, *, format_id: UUID | None = None
+    ) -> Event:
         """Create a dossier in `idea` (T00); without an organization it is a proposal.
 
         Raises:
@@ -115,12 +142,12 @@ class EventService:
         org = await self._organization(body.organization_id) if body.organization_id else None
         org_id = org.id if org else None
         proposals = await self._open_proposals(principal.sub) if org is None else 0
-        ends_at = body.ends_at or body.starts_at + DEFAULT_DURATION
+        starts_at, ends_at, estimated = self._times_of(body)
         scope_snapshot = Snapshot(
             state=EventState.IDEA.value,
             title=body.title,
             summary=body.summary,
-            starts_at=body.starts_at,
+            starts_at=starts_at,
             ends_at=ends_at,
             organization_id=org_id,
             primary_category_id=body.primary_category_id,
@@ -145,15 +172,18 @@ class EventService:
             title=body.title,
             summary=body.summary,
             description_md=body.description_md,
-            starts_at=body.starts_at,
+            starts_at=starts_at,
             ends_at=ends_at,
-            end_estimated=body.ends_at is None,
+            end_estimated=estimated,
             tzid=body.tzid,
-            all_day=False,
+            all_day=body.all_day,
+            starts_on=body.starts_on,
+            ends_on=(body.ends_on or body.starts_on) if body.all_day else None,
             organization_id=org_id,
             venue_id=body.venue_id,
             venue_text=body.venue_text,
             primary_category_id=body.primary_category_id,
+            format_id=format_id,
             cost_text=body.cost_text,
             ticket_url=body.ticket_url,
             website_url=body.website_url,
@@ -179,6 +209,19 @@ class EventService:
             data={"organizationId": str(org_id) if org_id else None},
         )
         return event
+
+    @staticmethod
+    def _times_of(body: EventCreate) -> tuple[datetime, datetime, bool]:
+        if body.all_day:
+            assert body.starts_on is not None
+            start, end = allday.bounds(body.starts_on, body.ends_on or body.starts_on, body.tzid)
+            return start, end, False
+        assert body.starts_at is not None
+        return (
+            body.starts_at,
+            body.ends_at or body.starts_at + DEFAULT_DURATION,
+            body.ends_at is None,
+        )
 
     async def get(self, principal: Principal, event_id: UUID) -> Event:
         """Return an event the principal may read (404 otherwise)."""
@@ -207,7 +250,7 @@ class EventService:
             raise ForbiddenError("Missing permission: event.edit")
         if expected_rev != event.rev:
             raise VersionConflict(event)
-        plan = plan_patch(snapshot, actor, changes)
+        plan = plan_patch(snapshot, actor, allday.resolve(event, changes))
         if plan.locked:
             raise locked_problem(plan.locked)
         return event, snapshot, actor, plan
@@ -250,6 +293,7 @@ class EventService:
         values: dict[str, Any] = dict(plan.changes)
         if "ends_at" in values:
             values["end_estimated"] = False
+        values |= await derived_values(self.session, event, plan.changes)
         if plan.bump_public_seq:
             values["public_seq"] = event.public_seq + 1
         updated = await update_event(self.session, event, values, states=[event.state])
@@ -268,7 +312,7 @@ class EventService:
             data={"fields": sorted(plan.changes), "fieldClass": plan.field_class},
         )
         await self._drop_draft(updated, principal.sub)
-        actions = (ACTION_FEED_INVALIDATE,) if plan.bump_public_seq else ()
+        actions = (ACTION_FEED_INVALIDATE,) if updated.state == EventState.LIVE.value else ()
         return updated, actions, await self._committed(updated)
 
     async def _committed(self, event: Event) -> Committed:
@@ -292,7 +336,6 @@ class EventService:
         """Turn the given fields of a patch or draft body into column changes."""
         given = body.model_fields_set - _NON_FIELDS
         changes: dict[str, Any] = {name: getattr(body, name) for name in given}
-        changes.pop("all_day", None)
         for name in _NOT_NULL:
             if name in changes and changes[name] is None:
                 raise _invalid(name, "must not be null")

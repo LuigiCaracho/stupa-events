@@ -9,8 +9,8 @@ before M5. `EventOut` carries the version, the allowed moves and the field locks
 from __future__ import annotations
 
 import re
-from datetime import datetime
-from typing import Annotated, Literal, Self
+from datetime import date, datetime
+from typing import Annotated, Any, Literal, Self
 from uuid import UUID
 
 from pydantic import AfterValidator, AwareDatetime, Field, model_validator
@@ -18,6 +18,8 @@ from pydantic import AfterValidator, AwareDatetime, Field, model_validator
 from app.modules.auth.schemas import CamelModel
 from app.modules.dossier.schemas import AttachmentOut
 from app.modules.events.states import PublicStatus
+from app.modules.followup.schemas import OutcomeOut
+from app.modules.formats.schemas import FormatRef
 from app.modules.orgs.schemas import OrgRef
 from app.modules.taxonomy.schemas import CategoryRef, VenueRef
 
@@ -81,29 +83,30 @@ ActionName = Literal[
     "confirm-flyer",
     "postpone-with-date",
     "public-text",
+    "verify-howto",
+    "confirm-location",
+    "save-as-format",
+    "clone",
 ]
 PublicReasonCode = Literal["none", "room", "speaker", "illness", "registration", "weather", "other"]
 LockReason = Literal["in_review", "approved", "live_critical", "closed"]
 _URL = re.compile(r"^https://[^/@\s]+\.[^/@\s]+")
 
 
-def _reject_all_day(value: bool) -> bool:
-    if value:
-        raise ValueError("all-day events arrive with M5")
-    return value
-
-
-NoAllDay = Annotated[bool, AfterValidator(_reject_all_day)]
-
-
 class EventCreate(CamelModel):
-    """Body of `POST /events` (T00): without `organizationId` it is a proposal (E09)."""
+    """Body of `POST /events` (T00): without `organizationId` it is a proposal (E09).
+
+    A timed event needs `startsAt`; an all-day event needs `startsOn` (and optionally
+    `endsOn`, the last day) and takes its instants from the days.
+    """
 
     title: Title
-    starts_at: AwareDatetime
+    starts_at: AwareDatetime | None = None
     ends_at: AwareDatetime | None = None
     tzid: Literal["Europe/Berlin"] = "Europe/Berlin"
-    all_day: NoAllDay = False
+    all_day: bool = False
+    starts_on: date | None = None
+    ends_on: date | None = None
     organization_id: UUID | None = None
     venue_id: UUID | None = None
     venue_text: VenueText = None
@@ -115,7 +118,19 @@ class EventCreate(CamelModel):
     website_url: Link = None
 
     @model_validator(mode="after")
-    def _ordered(self) -> Self:
+    def _times(self) -> Self:
+        if self.all_day:
+            if self.starts_on is None:
+                raise ValueError("startsOn is required for an all-day event")
+            if self.starts_at is not None or self.ends_at is not None:
+                raise ValueError("startsAt and endsAt follow from startsOn and endsOn")
+            if self.ends_on is not None and self.ends_on < self.starts_on:
+                raise ValueError("endsOn must not be before startsOn")
+            return self
+        if self.starts_at is None:
+            raise ValueError("startsAt is required")
+        if self.starts_on is not None or self.ends_on is not None:
+            raise ValueError("startsOn and endsOn need allDay")
         if self.ends_at is not None and self.ends_at < self.starts_at:
             raise ValueError("endsAt must not be before startsAt")
         return self
@@ -127,7 +142,9 @@ class DraftFields(CamelModel):
     title: Title | None = None
     starts_at: AwareDatetime | None = None
     ends_at: AwareDatetime | None = None
-    all_day: NoAllDay | None = None
+    all_day: bool | None = None
+    starts_on: date | None = None
+    ends_on: date | None = None
     venue_id: UUID | None = None
     venue_text: VenueText = None
     primary_category_id: UUID | None = None
@@ -233,6 +250,8 @@ class EventOut(CamelModel):
     ends_at: datetime
     tzid: str
     all_day: bool
+    starts_on: date | None
+    ends_on: date | None
     organization: OrgRef | None
     venue_id: UUID | None
     venue: VenueRef | None
@@ -260,3 +279,14 @@ class EventOut(CamelModel):
     editable_fields: list[str]
     lock_reason: LockReason | None
     checklist_recomputed: int | None = None
+    outcome: OutcomeOut | None = None
+    howto_verified_at: datetime | None = None
+    howto_verified_by: str | None = None
+    howto_unverified: bool = False
+    format_id: UUID | None = None
+    format: FormatRef | None = None
+    derived_from_id: UUID | None = None
+    facts: dict[str, Any] = Field(default_factory=dict)
+    facts_dropped: list[str] | None = None
+    location_precision: Literal["exact", "building", "hidden"] = "hidden"
+    location_confirmed_at: datetime | None = None

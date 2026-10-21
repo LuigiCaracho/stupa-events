@@ -48,6 +48,9 @@ class EventCard(CamelModel):
     blocker_count: int
     moves: dict[str, TransitionName]
     open_questions: int = 0
+    all_day: bool = False
+    format_slug: str | None = None
+    howto_unverified: bool = False
 
 
 class BoardColumn(CamelModel):

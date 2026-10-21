@@ -46,6 +46,15 @@ _SNAPSHOT_FIELDS = (
     "flyer_checked_at",
     "text_reviewed_rev",
     "published_rev",
+    "format_id",
+    "derived_from_id",
+    "outcome",
+    "howto_verified_at",
+    "howto_verified_by",
+    "facts",
+    "location_precision",
+    "location_confirmed_at",
+    "location_confirmed_by",
 )
 
 

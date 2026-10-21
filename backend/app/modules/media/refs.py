@@ -25,6 +25,14 @@ IMAGE_PATH_RE: Final[re.Pattern[str]] = re.compile(rf"^/api/media/images/({_UUID
 _REF_RE: Final[re.Pattern[str]] = re.compile(rf"\]\(/api/media/images/({_UUID})\)")
 
 
+_REF_MARKUP_RE: Final[re.Pattern[str]] = re.compile(rf"!?\[([^\]]*)\]\(/api/media/images/{_UUID}\)")
+
+
+def strip_image_refs(text: str | None) -> str | None:
+    """Replace every reference to an uploaded image by its alt text (a link keeps its label)."""
+    return None if text is None else _REF_MARKUP_RE.sub(r"\1", text)
+
+
 def image_path(image_id: UUID) -> str:
     """Return the canonical Markdown path of an image."""
     return f"/api/media/images/{image_id}"

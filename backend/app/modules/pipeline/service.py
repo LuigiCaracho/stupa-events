@@ -25,6 +25,7 @@ from app.modules.events import revisions
 from app.modules.events.access import guard_snapshot, load_visible, poster_of
 from app.modules.events.conflict import VersionConflict
 from app.modules.events.models import Event
+from app.modules.formats.verification import verify_format
 from app.modules.notifications.service import PendingMail
 from app.modules.orgs.scope import bind
 from app.modules.pipeline import slugs
@@ -177,8 +178,15 @@ class PipelineService:
         values = await self._values(transition, event, actor, publish_at)
         updated = await self._write(event, transition, values)
         await self._record(updated, transition, actor, snapshot, note)
+        if transition.id == "T09" and actor.kind != "system":
+            await verify_format(self.session, updated, actor.sub, moment)
         mails = await notice_for(
-            self.session, updated, transition.id, actor.sub, open_comments=snapshot.open_comments
+            self.session,
+            updated,
+            transition.id,
+            actor.sub,
+            open_comments=snapshot.open_comments,
+            snapshot=snapshot,
         )
         return Fired(
             updated,

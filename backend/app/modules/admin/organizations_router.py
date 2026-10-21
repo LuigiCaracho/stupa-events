@@ -10,13 +10,13 @@ from __future__ import annotations
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.deps import DbSession, Principal, require_principal
 from app.modules.admin.membership_sync import sync_all_memberships
-from app.modules.admin.patching import audit_config, changes, invalid, slug_taken
+from app.modules.admin.patching import audit_config, changes, invalid, invalidate_feed, slug_taken
 from app.modules.admin.schemas import AdminOrganization, OrganizationCreate, OrganizationPatch
 from app.modules.audit.actions import AuditAction
 from app.modules.audit.service import record as audit_record
@@ -102,7 +102,11 @@ async def create_organization(db: DbSession, principal: Manager, body: Organizat
 
 @router.patch("/{organization_id}", response_model=AdminOrganization, responses=_ERRORS)
 async def patch_organization(
-    db: DbSession, principal: Manager, organization_id: UUID, body: OrganizationPatch
+    request: Request,
+    db: DbSession,
+    principal: Manager,
+    organization_id: UUID,
+    body: OrganizationPatch,
 ):
     """Change an organization; `trusted` needs `admin.mappings` when its value changes."""
     org = await db.get(Organization, organization_id)
@@ -124,4 +128,5 @@ async def patch_organization(
     elif active_changes:
         await sync_all_memberships(db)
     await db.commit()
+    await invalidate_feed(request)
     return org

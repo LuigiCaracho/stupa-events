@@ -14,6 +14,7 @@ from datetime import date, datetime
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
+    Computed,
     Date,
     DateTime,
     ForeignKey,
@@ -25,7 +26,7 @@ from sqlalchemy import (
     func,
     text,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base, TimestampMixin, UUIDPkMixin
@@ -38,6 +39,12 @@ ORIGIN_KINDS = ("internal", "imported", "legacy", "mcp")
 ACTOR_TYPES = ("human", "agent", "system")
 FIELD_CLASSES = ("critical", "text", "dossier", "state")
 CONTROL_CHARS = r"[\x01-\x1f\x7f-\x9f\u2028\u2029]"
+LOCATION_PRECISIONS = ("exact", "building", "hidden")
+EVENT_SEARCH_TSV = (
+    "setweight(to_tsvector('de_unaccent'::regconfig, coalesce(title, '')), 'A') || "
+    "setweight(to_tsvector('de_unaccent'::regconfig, coalesce(summary, '')), 'B') || "
+    "setweight(to_tsvector('de_unaccent'::regconfig, coalesce(description_md, '')), 'C')"
+)
 
 
 def _in(column: str, values: tuple[str, ...]) -> str:
@@ -93,9 +100,33 @@ class Event(UUIDPkMixin, TimestampMixin, Base):
     )
     text_reviewed_rev: Mapped[int] = mapped_column(Integer, server_default="0")
     published_rev: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    format_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("format.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    derived_from_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("event.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    outcome: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    howto_verified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    howto_verified_by: Mapped[str | None] = mapped_column(Text, nullable=True)
+    facts: Mapped[dict] = mapped_column(JSONB, server_default=text("'{}'::jsonb"), default=dict)
+    location_precision: Mapped[str] = mapped_column(Text, server_default="hidden", default="hidden")
+    location_confirmed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    location_confirmed_by: Mapped[str | None] = mapped_column(Text, nullable=True)
+    search_tsv: Mapped[str | None] = mapped_column(
+        TSVECTOR, Computed(EVENT_SEARCH_TSV, persisted=True), nullable=True, deferred=True
+    )
 
     __table_args__ = (
         CheckConstraint(_in("state", EVENT_STATES), name="state"),
+        CheckConstraint(_in("location_precision", LOCATION_PRECISIONS), name="location_precision"),
+        CheckConstraint("derived_from_id <> id", name="derived_from_self"),
+        CheckConstraint("outcome IS NULL OR jsonb_typeof(outcome) = 'object'", name="outcome"),
+        CheckConstraint("jsonb_typeof(facts) = 'object'", name="facts"),
         CheckConstraint(_in("public_reason_code", PUBLIC_REASON_CODES), name="public_reason_code"),
         CheckConstraint(
             "public_status <> 'scheduled' OR "

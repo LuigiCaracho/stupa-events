@@ -13,7 +13,9 @@ from app.modules.events.board import PRIMARY_TRANSITION, moves_for
 from app.modules.events.card_extras import CardExtras, load_card_extras
 from app.modules.events.card_schemas import EventCard, PersonRef
 from app.modules.events.models import Event
+from app.modules.events.presenter import howto_unverified
 from app.modules.files.models import Attachment
+from app.modules.formats.models import Format
 from app.modules.orgs.models import Organization
 from app.modules.orgs.schemas import OrgRef
 from app.modules.orgs.scope import bind
@@ -64,11 +66,13 @@ async def present_cards(
     posters = await _by_id(
         session, Attachment, {e.hero_attachment_id for e in events if e.hero_attachment_id}
     )
+    formats = await _by_id(session, Format, {e.format_id for e in events if e.format_id})
     names = await _names(session, {e.created_by for e in events})
     extras = await load_card_extras(session, events)
     now = utcnow()
     return [
-        _card(principal, e, orgs, categories, venues, posters, names, extras, now) for e in events
+        _card(principal, e, orgs, categories, venues, posters, formats, names, extras, now)
+        for e in events
     ]
 
 
@@ -79,6 +83,7 @@ def _card(
     categories: dict,
     venues: dict,
     posters: dict,
+    formats: dict,
     names: dict[str, str | None],
     extras: CardExtras,
     now,  # noqa: ANN001
@@ -114,4 +119,7 @@ def _card(
         blockers=[reason_out(r) for r in found[:MAX_BLOCKERS]],
         blocker_count=len(found),
         moves=moves_for(event.state, allowed),  # type: ignore[arg-type]
+        all_day=event.all_day,
+        format_slug=formats[event.format_id].slug if event.format_id in formats else None,
+        howto_unverified=howto_unverified(event, extras.has_howto(event.id)),
     )

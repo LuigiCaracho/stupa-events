@@ -61,6 +61,7 @@ def template_item(row: Document) -> MailTemplateItem:
 
 def template_out(row: Document) -> MailTemplateOut:
     """Build the full wire shape."""
+    assert row.event_id is not None
     return MailTemplateOut(
         **template_item(row).model_dump(),
         event_id=row.event_id,

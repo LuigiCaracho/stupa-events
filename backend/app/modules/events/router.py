@@ -9,6 +9,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, Query, Request, Response, status
 
 from app.deps import DbSession, Principal, SettingsDep, require_any_scope, require_principal
+from app.modules.events.calendar import CalendarOut, calendar, check_range
 from app.modules.events.card_schemas import BoardOut, EventCard
 from app.modules.events.conflict import revision_of, set_etag, with_current
 from app.modules.events.listing import Filters, board, list_cards
@@ -36,11 +37,11 @@ Editor = Annotated[Principal, Depends(require_any_scope("event.edit"))]
 IfMatch = Annotated[str | None, Header(alias="If-Match")]
 
 
-@router.get("", response_model=Page[EventCard] | BoardOut, responses=_ERRORS)
+@router.get("", response_model=Page[EventCard] | BoardOut | CalendarOut, responses=_ERRORS)
 async def list_events(
     db: DbSession,
     principal: Reader,
-    view: Annotated[Literal["list", "board"], Query()] = "list",
+    view: Annotated[Literal["list", "board", "calendar"], Query()] = "list",
     state: Annotated[list[str] | None, Query()] = None,
     organization: Annotated[str | None, Query(max_length=100)] = None,
     category: Annotated[str | None, Query(max_length=100)] = None,
@@ -52,8 +53,13 @@ async def list_events(
     limit: Annotated[int, Query(ge=1, le=MAX_LIMIT)] = DEFAULT_LIMIT,
     offset: Annotated[int, Query(ge=0)] = 0,
     column_limit: Annotated[int, Query(alias="columnLimit", ge=1, le=100)] = 50,
-) -> Page[EventCard] | BoardOut:
-    """List the dossiers the caller reads as cards, or build the board."""
+) -> Page[EventCard] | BoardOut | CalendarOut:
+    """List the dossiers the caller reads as cards, build the board or fill the calendar."""
+    if view == "calendar":
+        first, last = check_range(from_, to)
+        return await calendar(
+            db, principal, Filters(tuple(state or ()), organization, category, mine, q), first, last
+        )
     filters = Filters(tuple(state or ()), organization, category, mine, q, from_, to)
     if view == "board":
         return await board(db, principal, filters, column_limit=column_limit)
@@ -106,6 +112,7 @@ async def patch_event(
         event, actions, committed = await service.patch(principal, event_id, body, expected)
     out = (await present(db, principal, [event]))[0]
     out.checklist_recomputed = db.info.pop("checklist_recomputed", None)
+    out.facts_dropped = db.info.pop("facts_dropped", None)
     await db.commit()
     set_etag(response, out.rev)
     await run_actions(getattr(request.app.state, "arq_pool", None), actions, committed)

@@ -18,9 +18,11 @@ from arq.connections import RedisSettings
 from app.modules.dossier.worker_jobs import WORKER_FUNCTIONS
 from worker.advance import advance_states, purge_drafts
 from worker.audit_verify import process_audit_verification
+from worker.followup import send_followup_reminders
 from worker.gc import gc_media, gc_notifications
 from worker.mail import on_startup as mail_on_startup
 from worker.mail import send_due_reminders, send_mail
+from worker.public_cache import rebuild_public_cache
 from worker.scan import on_startup as scan_on_startup
 from worker.scan import requeue_stale_scans, scan_attachment
 
@@ -45,6 +47,8 @@ class WorkerSettings:
         ping,
         send_mail,
         send_due_reminders,
+        send_followup_reminders,
+        func(rebuild_public_cache, keep_result=0, timeout=300),
         gc_media,
         gc_notifications,
         scan_attachment,
@@ -66,6 +70,8 @@ class WorkerSettings:
         cron(gc_notifications, hour=3, minute=40),
         cron(gc_media, hour=3, minute=50),
         cron(send_due_reminders, minute=10, timeout=300, unique=True),
+        cron(send_followup_reminders, minute=20, timeout=300, unique=True),
+        cron(rebuild_public_cache, minute=5, timeout=300, unique=True, keep_result=0),
         cron(requeue_stale_scans, minute={3, 13, 23, 33, 43, 53}, timeout=120, unique=True),
     ]
     on_startup = _on_startup

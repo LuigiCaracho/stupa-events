@@ -16,11 +16,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.auth.principal import Principal
 from app.modules.dossier.guard_data import GuardData, load_guard_data
+from app.modules.events import facts
 from app.modules.events.models import Event, EventStatusEvent
 from app.modules.files.models import Attachment
 from app.modules.orgs.scope import readable_org_ids
 from app.modules.pipeline.snapshot import PosterSnapshot, Snapshot
 from app.shared.errors import NotFoundError
+
+WAIVER_MIN_CHARS = 10
 
 
 async def load_visible(session: AsyncSession, principal: Principal, event_id: UUID) -> Event:
@@ -69,11 +72,29 @@ def valid_exception_reason(event: Event) -> str | None:
     return reason if len(reason) >= 10 else None
 
 
+def location_is_confirmed(event: Event) -> bool:
+    """Tell if the venue of a dossier is settled: a venue row, no free text, or a confirmed one."""
+    return (
+        event.venue_id is not None
+        or not (event.venue_text or "").strip()
+        or (event.location_confirmed_at is not None and event.location_precision != "hidden")
+    )
+
+
+def outcome_is_set(event: Event) -> bool:
+    """Tell if the outcome is complete: the waiver with a reason, or attendance and costs."""
+    outcome = event.outcome or {}
+    if outcome.get("waived"):
+        return len((outcome.get("waivedReason") or "").strip()) >= WAIVER_MIN_CHARS
+    return outcome.get("attendance") is not None and outcome.get("costsCents") is not None
+
+
 def snapshot_of(event: Event, poster: Attachment | None, **extra: object) -> Snapshot:
     """Build the snapshot of an event and its current poster.
 
     `extra` carries the values that need a query (`quarantined_attachments`,
-    `entered_followup_at`, `open_proposals`); without them the guards see neutral values.
+    `entered_followup_at`, `open_proposals`, the follow-up counts); without them the guards
+    see neutral values. The location and the outcome come from the row itself.
     """
     return Snapshot(
         state=event.state,
@@ -102,6 +123,12 @@ def snapshot_of(event: Event, poster: Attachment | None, **extra: object) -> Sna
         rev=event.rev,
         published_rev=event.published_rev,
         text_reviewed_rev=event.text_reviewed_rev,
+        format_id=event.format_id,
+        all_day=bool(event.all_day),
+        starts_on=event.starts_on,
+        ends_on=event.ends_on,
+        location_confirmed=location_is_confirmed(event),
+        outcome_set=outcome_is_set(event),
         **extra,  # type: ignore[arg-type]
     )
 
@@ -143,6 +170,10 @@ def snapshot_with(
         open_comments=data.open_comments,
         open_hero_comments=data.open_hero_comments,
         open_required_checklist=data.open_required_checklist,
+        open_required_followup=data.open_required_followup,
+        retrospective_filled=data.retrospective_filled,
+        howto_verified=event.howto_verified_at is not None or not data.howto_present,
+        facts_error=facts.error_for(data.required_profile, event.facts),
     )
     if snapshot.poster is None or not data.poster_reused:
         return snapshot

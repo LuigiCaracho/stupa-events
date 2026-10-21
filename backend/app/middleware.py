@@ -28,7 +28,7 @@ from starlette.responses import JSONResponse, Response
 from app.modules.auth.sessions import SESSION_COOKIE_MAX_AGE, principal_sid
 from app.settings import Settings, get_settings
 from app.shared.antiabuse import client_ip, get_rate_limiter
-from app.shared.errors import PUBLIC_API_PREFIX
+from app.shared.errors import is_public_path
 from app.shared.ratelimit import RateLimiter
 
 TRACE_HEADER = "X-Trace-Id"
@@ -47,7 +47,6 @@ _SECURITY_HEADERS = {
 }
 
 _SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS", "TRACE"})
-_PUBLIC_PREFIX = "/api/public/"
 
 Dispatch = Callable[[Request], Awaitable[Response]]
 
@@ -72,7 +71,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         for key, value in _SECURITY_HEADERS.items():
             response.headers.setdefault(key, value)
-        if request.url.path.startswith(PUBLIC_API_PREFIX):
+        if is_public_path(request.url.path):
             # The public JSON routes are data, not pages: every answer, an error
             # included, carries noindex.
             response.headers["X-Robots-Tag"] = "noindex"
@@ -94,7 +93,7 @@ class CsrfMiddleware(BaseHTTPMiddleware):
     For an unsafe method with an auth cookie and no bearer header, the
     `X-XSRF-TOKEN` header must match the CSRF cookie. The compare runs in constant
     time. The middleware sets the CSRF cookie on any response that lacks it, so the
-    frontend can mirror it; public routes (`/api/public/`) never get a cookie.
+    frontend can mirror it; public routes (`/api/public/`, `/ics/`) never get a cookie.
     """
 
     def __init__(self, app: object, settings: Settings | None = None) -> None:
@@ -139,7 +138,7 @@ class CsrfMiddleware(BaseHTTPMiddleware):
         if (
             settings.csrf_enabled
             and not request.cookies.get(settings.csrf_cookie_name)
-            and not request.url.path.startswith(_PUBLIC_PREFIX)
+            and not is_public_path(request.url.path)
         ):
             response.set_cookie(
                 settings.csrf_cookie_name,
