@@ -41,6 +41,14 @@ _TAB = {
     "comment_resolved": "/verlauf",
     "task_assigned": "/checkliste",
     "checklist_due": "/checkliste",
+    "followup_reminder": "/nachbereitung",
+    "auto_archived": "/nachbereitung",
+}
+MISSING_LABELS = {
+    "retrospective": "Rückblick",
+    "outcome": "Ergebnis",
+    "howto": "Anleitung prüfen",
+    "checklist": "offene Pflichtpunkte der Checkliste",
 }
 
 
@@ -94,6 +102,9 @@ def _build_mail(
         "actor": params.get("actorName", "Jemand"),
         "item": params.get("itemText", ""),
         "due": params.get("dueDate", ""),
+        "days": params.get("daysOpen", 0),
+        "missing": ", ".join(MISSING_LABELS[m] for m in params.get("missing", ())),
+        "howto_unverified": bool(params.get("howtoUnverified", False)),
         "link": absolute_link(settings.public_base_url, link),
         "prefs_link": absolute_link(settings.public_base_url, "/konto"),
     }

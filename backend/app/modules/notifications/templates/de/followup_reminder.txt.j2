@@ -1,0 +1,7 @@
+Das Dossier „{{ title }}“ ist seit {{ days }} Tagen in der Nachbereitung.{% if missing %} Es fehlt noch: {{ missing }}.
+
+Nach 30 Tagen archiviert das System das Dossier von selbst, auch wenn noch etwas fehlt.{% else %} Alles ist erledigt, es fehlt nur noch das Abschließen.{% endif %}
+
+Nachbereitung öffnen: {{ link }}
+
+Du kannst diese Mails unter {{ prefs_link }} abschalten.

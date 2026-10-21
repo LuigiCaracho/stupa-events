@@ -1,0 +1,8 @@
+Das Dossier „{{ title }}“ wurde nach {{ days }} Tagen in der Nachbereitung automatisch archiviert.
+{% if missing %}Es fehlte noch: {{ missing }}.
+{% endif %}{% if howto_unverified %}
+Die Anleitung ist nicht geprüft und trägt deshalb die Kennzeichnung „Anleitung ungeprüft“. Bitte prüft sie nach, damit sie als Vorlage taugt.
+{% endif %}
+Dossier öffnen: {{ link }}
+
+Du kannst diese Mails unter {{ prefs_link }} abschalten.

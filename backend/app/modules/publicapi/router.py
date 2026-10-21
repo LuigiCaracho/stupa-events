@@ -1,11 +1,13 @@
 """Public endpoints: the event feed (schema 2) and the derivative images.
 
 These routes run on the `events_public` connection only. They set no cookie, resolve no
-session and need no CORS: Astro and WordPress fetch the feed server to server.
+session and need no CORS: Astro and WordPress fetch the feed server to server. The feed is
+served from the worker snapshot when it is fresh and read live from the view otherwise.
 """
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query, Request, Response
@@ -16,55 +18,111 @@ from app.modules.dossier.deps import PublicStorage
 from app.modules.dossier.derive import derivative_key
 from app.modules.files.storage import StorageError
 from app.modules.media.derivatives import parse_derivative_id
+from app.modules.publicapi import cursor as cursors
+from app.modules.publicapi import serving
 from app.modules.publicapi.db import get_public_session
+from app.modules.publicapi.etag import matches
 from app.modules.publicapi.schemas import FeedOut
-from app.modules.publicapi.service import (
-    FeedQuery,
-    derivative_is_public,
-    feed_items,
-    feed_json,
-    items_etag,
+from app.modules.publicapi.service import FeedQuery, derivative_is_public, feed_json, items_etag
+from app.settings import Settings, get_settings
+from app.shared.errors import (
+    BadRequestError,
+    FieldError,
+    NotFoundError,
+    ProblemDetail,
+    ServiceUnavailableError,
+    ValidationProblem,
 )
-from app.settings import get_settings
-from app.shared.errors import NotFoundError, ProblemDetail, ServiceUnavailableError
-from app.shared.timeutil import utcnow
 
+NO_CONTROL = r"^[^\x00-\x1f\x7f]*$"
 router = APIRouter(prefix="/public", tags=["public"])
 
 FEED_CACHE_CONTROL = "public, max-age=300, stale-while-revalidate=60"
 MEDIA_CACHE_CONTROL = "public, max-age=31536000, immutable"
 PublicSession = Annotated[AsyncSession, Depends(get_public_session)]
 _PROBLEM: dict[str, Any] = {"model": ProblemDetail}
+INVALID_SINCE_HINT = "since must be ISO 8601 with an offset; URL-encode the plus sign as %2B02:00."
 
 
-def _matches(header: str | None, etag: str) -> bool:
-    if header is None:
-        return False
-    candidates = {part.strip().removeprefix("W/") for part in header.split(",")}
-    return "*" in candidates or etag in candidates
+def parse_since(raw: str | None) -> datetime | None:
+    """Read `since`: ISO 8601 with an offset (`Z` allowed).
+
+    Raises:
+        BadRequestError: `invalid_since` for a naive or broken value (an unencoded `+`
+            reaches the server as a space, which lands here too).
+    """
+    if raw is None:
+        return None
+    try:
+        value = datetime.fromisoformat(raw)
+        if value.utcoffset() is None:
+            raise ValueError("naive")
+    except ValueError as exc:
+        raise BadRequestError(INVALID_SINCE_HINT, code="invalid_since") from exc
+    return value
 
 
-@router.get("/feed/events", response_model=FeedOut, responses={304: {}, 422: _PROBLEM})
+def pick_organization(organization: str | None, org: str | None) -> str | None:
+    """Return the organization filter; `org` is the old alias and must not disagree."""
+    if organization is not None and org is not None and organization != org:
+        raise ValidationProblem(
+            "organization and org differ.",
+            errors=[FieldError(field="org", msg="differs from organization")],
+        )
+    return organization if organization is not None else org
+
+
+@router.api_route(
+    "/feed/events",
+    methods=["GET", "HEAD"],
+    response_model=FeedOut,
+    responses={304: {}, 400: _PROBLEM, 422: _PROBLEM},
+)
 async def event_feed(
     request: Request,
     session: PublicSession,
+    settings: Annotated[Settings, Depends(get_settings)],
     from_: Annotated[AwareDatetime | None, Query(alias="from")] = None,
     to: Annotated[AwareDatetime | None, Query()] = None,
-    category: Annotated[str | None, Query(max_length=100)] = None,
-    org: Annotated[str | None, Query(max_length=100)] = None,
+    since: Annotated[str | None, Query(max_length=64)] = None,
+    category: Annotated[str | None, Query(max_length=100, pattern=NO_CONTROL)] = None,
+    organization: Annotated[str | None, Query(max_length=100, pattern=NO_CONTROL)] = None,
+    org: Annotated[str | None, Query(max_length=100, pattern=NO_CONTROL)] = None,
     limit: Annotated[int, Query(ge=1, le=500)] = 100,
+    cursor: Annotated[str | None, Query(max_length=200)] = None,
 ) -> Response:
-    """Return the public events by start time with `ETag` and a five minute cache."""
-    base_url = get_settings().public_base_url.rstrip("/")
-    items = await feed_items(session, FeedQuery(from_, to, category, org, limit), base_url)
-    etag = items_etag(items)
+    """Return the public events by start time with `ETag`, a cursor and a five minute cache."""
+    query = FeedQuery(
+        from_,
+        to,
+        parse_since(since),
+        category,
+        pick_organization(organization, org),
+        cursors.decode(cursor) if cursor else None,
+        limit,
+    )
+    pool = getattr(request.app.state, "arq_pool", None)
+    page = await serving.feed_page(pool, session, query, settings)
+    etag = items_etag(page.items, page.next_cursor)
     headers = {"ETag": etag, "Cache-Control": FEED_CACHE_CONTROL}
-    if _matches(request.headers.get("if-none-match"), etag):
+    if matches(request.headers.get("if-none-match"), etag):
         return Response(status_code=304, headers=headers)
-    return Response(feed_json(items, utcnow()), media_type="application/json", headers=headers)
+    body = feed_json(page.items, page.generated_at, page.next_cursor)
+    return Response(body, media_type="application/json", headers=headers)
 
 
-@router.get("/media/{name}", responses={404: _PROBLEM, 503: _PROBLEM})
+@router.get(
+    "/media/{name}",
+    response_class=Response,
+    responses={
+        200: {
+            "description": "The image",
+            "content": {"image/webp": {"schema": {"type": "string"}}},
+        },
+        404: _PROBLEM,
+        503: _PROBLEM,
+    },
+)
 async def media(session: PublicSession, storage: PublicStorage, name: str) -> Response:
     """Stream one WebP derivative of a public event's poster, cached for a year."""
     derivative = name.removesuffix(".webp")

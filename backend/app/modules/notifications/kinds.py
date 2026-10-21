@@ -29,6 +29,8 @@ KINDS: tuple[Kind, ...] = (
     Kind("transition_done", mail=False),
     Kind("task_assigned", mail=True),
     Kind("checklist_due", mail=True),
+    Kind("followup_reminder", mail=True),
+    Kind("auto_archived", mail=True),
 )
 
 NOTIFICATION_KINDS: tuple[str, ...] = tuple(k.key for k in KINDS)

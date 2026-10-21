@@ -1,0 +1,4 @@
+<p>Das Dossier „{{ title }}“ wurde nach {{ days }} Tagen in der Nachbereitung automatisch archiviert.{% if missing %} Es fehlte noch: {{ missing }}.{% endif %}</p>
+{% if howto_unverified %}<p>Die Anleitung ist nicht geprüft und trägt deshalb die Kennzeichnung „Anleitung ungeprüft“. Bitte prüft sie nach, damit sie als Vorlage taugt.</p>
+{% endif %}<p><a href="{{ link }}">Dossier öffnen</a></p>
+<p><small><a href="{{ prefs_link }}">Benachrichtigungen verwalten</a></small></p>

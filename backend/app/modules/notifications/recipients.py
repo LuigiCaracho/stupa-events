@@ -106,7 +106,7 @@ async def recipients_for(
                 *await _org_subs(session, org, _ORGANIZER_ROLES),
                 *await _commenter_subs(session, event),
             ]
-        case "transition_done":
+        case "transition_done" | "followup_reminder" | "auto_archived":
             subs = [*_owners(event), *await _org_subs(session, org, ("organizer",))]
         case _:
             raise KeyError(kind)
