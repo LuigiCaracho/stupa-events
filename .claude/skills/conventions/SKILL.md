@@ -38,7 +38,7 @@ inherited from STUPA-Workflow@93c33d6; each encodes a bug that already cost time
 ## Gates
 
 Backend: `ruff`, `basedpyright` 0 errors, unit and integration suites, coverage 90 % overall in M1 (97 % by M5),
-100 % branch for `pipeline` and `publicapi`. Frontend: `eslint`, `tsc`, jest thresholds, production build.
+100 % branch for the packages and files in `scripts/coverage_critical.py` (`auth`, `audit`, `publicapi`, `archive`, `search`, `events/lifecycle.py`, ...). Frontend: `eslint`, `tsc`, jest thresholds, production build.
 CI jobs: `be-lint`, `be-typecheck`, `be-unit`, `be-integration`, `migrations-check`, `fe-unit`, `compose`, `gitleaks`.
 
 ## Migrations

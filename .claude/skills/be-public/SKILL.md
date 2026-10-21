@@ -25,7 +25,7 @@ description: The public side of STUPA Events (M5): feed schema 2 with cursor and
 
 - A new public field needs: view column (migration), `PUBLIC_EVENT_V` in `service.py`, `PublicEventOut`, `allowlist.py`,
   `feed-v2.json`, and the canary stays green. `/ics/*` is a public prefix for the middleware (`is_public_path`).
-- `venue_text` in the view is `NULL` for private venues and for a free text that no approver confirmed.
+- `venue_text` in the view is `NULL` for private venues and for a free text that nobody with `event.publish` confirmed (`confirm-location`).
 - ICS golden files: `UPDATE_GOLDEN=1 pytest tests/unit/publicapi/test_ics.py`, then read the diff by hand.
 - Schemathesis (`test_schemathesis.py`) draws 200 cases per operation and mode and sends them through the integration client.
 - Redis keys: `events:feed:version` (counter) and `events:public:snap:<name>` (hash, 2 h lifetime). The job queues

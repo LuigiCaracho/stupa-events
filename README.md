@@ -1,8 +1,9 @@
 # STUPA Events
 
-Event pipeline with dossiers, roles and a PWA for the student parliament (StuPa) of Hochschule
-Reutlingen. Fachschaften and initiatives plan events as dossiers, the editorial team approves them,
-and approved events with a poster appear in a public feed for the website.
+Event dossiers with roles and a PWA for the student parliament (StuPa) of Hochschule Reutlingen.
+Fachschaften and initiatives keep the documentation of every event in one dossier and publish it
+themselves; published events appear in a public feed and ICS calendars for the website. Approval
+workflows belong to the Workflow tool.
 
 Status: milestone M5 (archive, templates, feed and calendars). The specification is `PLAN.md` in the
 separate planning directory `stupa-events-plan`; the contract of the current milestone is
@@ -42,25 +43,21 @@ nix develop .#backend  -c bash -c 'cd backend && uv run --env-file .env arq work
 nix develop .#frontend -c bash -c 'cd frontend && npm ci && npm start'   # http://localhost:4200
 ```
 
-The worker is needed for posters (ClamAV scan, WebP derivatives) and moves dossiers on: `advance_states` every quarter
-hour (scheduled publication `approved` to `live`, `live` to `followup`/`archived` 12 h after the end, `followup` to
-`archived` after 30 days) and `purge_drafts` daily at 03:30 UTC (autosave drafts older than 14 days).
-A `T05` without `publishAt` always waits for a person.
-`backend/scripts/m1_acceptance.py` to `m4_acceptance.py` walk the criteria of M1 to M4 against this setup (see
-`docs/M1-ABNAHME.md` to `docs/M4-ABNAHME.md`). `m4_acceptance` stops and restarts the dev Redis once (mail check). `m3_acceptance` waits for one worker run.
+The worker is needed for posters (ClamAV scan, WebP derivatives) and archives: `archive_ended` every quarter hour
+(a published dossier 12 h after its end) and `purge_drafts` daily at 03:30 UTC (autosave drafts older than 14 days).
+`python -m scripts.m5b_acceptance` walks the M5b criteria against this setup (see `docs/M5B-ABNAHME.md`); it stops and
+restarts the dev Redis once (cache check).
 
 The roles in `deploy/db/roles.sql` are created on the first Postgres start; after migrations run
 `psql -U postgres -d events -f /db/roles.sql` once more for stage 2 (the grants that need the tables).
 
 Run `python -m scripts.seed_dev` once after the migrations: it maps the realm groups in `group_mapping`
-(a group name grants nothing without a row) and loads the reference data and nine dossiers in every stage up to the archive, one of them a proposal.
+(a group name grants nothing without a row) and loads the reference data and the dev dossiers in the three states (draft, published, archived).
 
 Test users (password `password`, local Keycloak only), all in `events-users`: `admin` (events-admin), `editor`
-(events-editor), `stupa` (events-stupa), `approver-stupa` and `approver2-stupa` (events-stupa-approver, trusted; the second person approves what the first
-submitted, Four-Eyes), `approver-fsi`
-(events-fsi-approver, acts as organizer), `organizer-fsi`, `submitter-fsi`, `viewer-fsi`, `organizer-makers`,
+(events-editor), `stupa` (events-stupa), `organizer-fsi`, `submitter-fsi`, `viewer-fsi`, `organizer-makers`,
 `submitter-ekhg` (partner account) and `member` (no role group). A running Keycloak gets the new users with
-`python -m scripts.m2_acceptance` (it syncs the realm file first). Instead of Keycloak you can use Luis' Authentik, see
+`scripts.keycloak_admin.sync_realm_users` (the realm import runs only on a fresh container). Instead of Keycloak you can use Luis' Authentik, see
 [`docs/authentik/README.md`](docs/authentik/README.md).
 
 ## Tests
