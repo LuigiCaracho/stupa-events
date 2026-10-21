@@ -1,0 +1,6 @@
+# The public allowlist decides what the feed and the calendars may show (E14, E39): a change to
+# it is a decision about publishing data and needs a review of a code owner.
+# TODO(owner): replace the placeholder team with the real GitHub handle of the maintainers.
+/backend/app/modules/publicapi/allowlist.py @stupa-makers/events-maintainers
+/backend/tests/schema/feed-v2.json @stupa-makers/events-maintainers
+/deploy/db/roles.sql @stupa-makers/events-maintainers

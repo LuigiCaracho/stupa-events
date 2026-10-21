@@ -8,6 +8,7 @@ name: ci
 on:
   push:
     branches: [main, development]
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
@@ -140,6 +141,50 @@ jobs:
         run: uv run alembic upgrade head
       - name: Roles, stage 2
         run: psql -h localhost -U postgres -d events -v ON_ERROR_STOP=1 -f ../deploy/db/roles.sql
+
+  restore-smoke:
+    # E26: mandatory before every tag v*. A backup of a freshly migrated and seeded database is
+    # restored into a throwaway container and compared with its manifest.
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: events
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: ci
+      DATABASE_URL: postgresql+asyncpg://events_app:ci@localhost:5432/events
+      DB_MIGRATION_URL: postgresql+asyncpg://events_migrator:ci@localhost:5432/events
+      SESSION_SECRET: ci-session-secret-0001
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install uv
+      - run: sudo apt-get update && sudo apt-get install -y age jq postgresql-client
+      - name: Roles, migrations, roles again, dev seed
+        run: |
+          psql -d events -v ON_ERROR_STOP=1 -f ../deploy/db/roles.sql
+          psql -d events -c "ALTER ROLE events_app PASSWORD 'ci'" -c "ALTER ROLE events_migrator PASSWORD 'ci'"
+          uv run alembic upgrade head
+          psql -d events -v ON_ERROR_STOP=1 -f ../deploy/db/roles.sql
+          uv run python -m scripts.seed_dev
+      - name: Back up, restore and compare
+        run: |
+          mapfile -t made < <(bash ../.github/scripts/make-test-backup.sh "${RUNNER_TEMP}/restore")
+          AGE_IDENTITY="${made[1]}" BACKUP_DIR="${made[0]}" bash ../deploy/restore-smoke.sh
 
   fe-unit:
     runs-on: ubuntu-latest

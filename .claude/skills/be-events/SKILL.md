@@ -57,10 +57,11 @@ Internal (session + CSRF): `GET /api/events` (`view=list|board`, `state`, `organ
 `POST /api/events/{id}/actions/image-exception` (editor, reason >= 10 chars; the M1 path stays as an alias),
 `GET /api/organizations?creatable=true`, `GET /api/categories`, `GET /api/events/{id}/revisions[/{rev}]`, `GET /api/tasks`.
 
-Public (no session, no cookie): `GET /api/public/feed/events` (`from`, `to`, `category`, `org` slugs, `limit`
+Public (no session, no cookie): `GET /api/public/feed/events` (`from`, `to`, `since`, `category`, `organization`/`org` slugs, `cursor`, `limit`
 1..500; schema 2 `{schema, generatedAt, items[]}`, ETag, 304, `Cache-Control: public, max-age=300,
 stale-while-revalidate=60`), `GET /api/public/media/{sha16}-{variant}.webp` (immutable, 404 unless the derivative
-belongs to a public event). Shapes: `docs/M1-KONTRAKT.md` 4.2 and 4.4, schema `tests/schema/feed-v2.json`.
+belongs to a public event). Shapes: `docs/M1-KONTRAKT.md` 4.2 and 4.4 and `docs/M5-KONTRAKT.md` 9 (see skill `be-public`), schema `tests/schema/feed-v2.json`.
+Since M5 an event also has `format_id`, `derived_from_id`, `outcome`, `facts`, `location_precision` (a free `venue_text` is public only after `confirm-location`), all-day columns are writable and `view=calendar` exists on `GET /events`.
 
 ## Gotchas
 

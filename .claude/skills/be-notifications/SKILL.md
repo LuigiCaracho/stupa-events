@@ -5,7 +5,7 @@ description: Notifications, mail, inbox, account prefs, user mail templates and 
 
 # Notifications (M4)
 
-- Kinds: `notifications/kinds.py` (7 kinds, `changes_requested` essential, `mail=False` kinds only fill the inbox).
+- Kinds: `notifications/kinds.py` (9 kinds since M5: `followup_reminder` from `worker/followup.py` and `auto_archived` from T09b; `changes_requested` essential, `mail=False` kinds only fill the inbox).
 - Hook for other modules: `notify(session, kind, recipients, event, params, dedupe_key, actor_sub=...)` or `notify_event(...)` (resolves group kinds via `recipients_for`). It inserts inbox rows in the caller's transaction and returns `PendingMail`s. After `commit()` call `dispatch_mails(app.state.arq_pool, pending)`. Redis missing means the mail is dropped with a warning (no address), never a 500.
 - `params` hold display values only (`actorName`, `dueDate`), never comment text or `itemText` (free text goes into the mail only). `dedupe_key` is stored as `<key>:<sub>`.
 - System mail templates: `notifications/templates/de/<kind>.{subject,txt,html}.j2`, Jinja sandbox, `StrictUndefined`. A new mail kind needs all three files plus a `Kind` entry and a CHECK update in a migration.

@@ -45,8 +45,13 @@ worker after 30 days; T10 archived to followup (editor, note); T11 withdraw (not
 - `date_in_future`, `publish_at_reached` and `human_approval` bind the worker only (humans may publish early).
 - The worker has no side door: `stage_system_fire` calls `decide` with `SYSTEM_ACTOR`; a poster that turned invalid
   gives `blocked`, the trigger `enforce_publish_image` is the second net.
-- Placeholder guards (duplicates, hero comments, checklists, facts, follow-up fields, location, wall clock, open
-  comment) read neutral snapshot values until M4 to M6 fill them.
+- Real guards since M5: `locationConfirmed`, `factsValid`, the four of T09 (`checklistDone(followup)`,
+  `retrospectiveFilled`, `outcomeSetOrWaived`, `howtoVerified`). Still neutral: duplicates (M6) and the wall-clock
+  warnings (M6). `Transition.checklist_phase` names the phase a checklist guard reads (`planning`, T09 `followup`).
+- T09 by a person sets `format.last_verified_at/_by` and verifies the master howto in the same transaction
+  (`formats/verification.py`); T09b never touches the format and sends `auto_archived` (`pipeline/notices.py`).
+- T08, T08b, T09, T09b and T10 carry `invalidate_feed_cache`, which bumps `events:feed:version` and queues
+  `rebuild_public_cache` (`pipeline/actions.py`, `request_rebuild`).
 - Version: `If-Match` (or body `rev`) against `event.rev`; a stale one is 409 `conflict` with `current`; a missing
   one on PATCH/PUT draft is 428.
 - Reasons of cancel/postpone/reinstate live in `event_status_event.note` only (never audit, revision, feed).

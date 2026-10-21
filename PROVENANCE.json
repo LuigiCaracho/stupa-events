@@ -260,6 +260,11 @@
       "mode": "K"
     },
     {
+      "path": "backend/app/modules/publicapi/ics/writer.py",
+      "source": "backend/app/modules/calendar/ics.py",
+      "mode": "U"
+    },
+    {
       "path": "backend/app/settings.py",
       "source": "backend/app/settings.py",
       "mode": "U"

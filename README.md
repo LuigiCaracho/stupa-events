@@ -4,8 +4,11 @@ Event pipeline with dossiers, roles and a PWA for the student parliament (StuPa)
 Reutlingen. Fachschaften and initiatives plan events as dossiers, the editorial team approves them,
 and approved events with a poster appear in a public feed for the website.
 
-Status: milestone M1 (walking skeleton). The specification is `PLAN.md` in the separate planning
-directory `stupa-events-plan`; the contract for M1 is [`docs/M1-KONTRAKT.md`](docs/M1-KONTRAKT.md).
+Status: milestone M5 (archive, templates, feed and calendars). The specification is `PLAN.md` in the
+separate planning directory `stupa-events-plan`; the contract of the current milestone is
+[`docs/M5-KONTRAKT.md`](docs/M5-KONTRAKT.md), on top of `docs/M1-KONTRAKT.md` to `docs/M4-KONTRAKT.md`.
+The public side: `GET /api/public/feed/events` (schema 2, cursor, `since`) and the calendar
+subscriptions `/ics/all.ics` and `/ics/k/<category>.ics`.
 The platform reuses the proven scaffold of STUPA-Workflow (files marked `Copied from
 STUPA-Workflow@93c33d6`, listed in `PROVENANCE.json`).
 
