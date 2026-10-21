@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Start the local dev environment on the host: containers, migrations, API, worker and ng serve as user units.
-# Reads backend/.env via systemd EnvironmentFile; NixOS needs libstdc++ and libmagic on LD_LIBRARY_PATH.
+# Reads backend/.env via systemd EnvironmentFile; API and worker restart on failure, so the worker
+# survives the Redis outage of the acceptance cache check; NixOS needs libstdc++ and libmagic on LD_LIBRARY_PATH.
 set -euo pipefail
 R="$(cd "$(dirname "$0")/.." && pwd)"
 LIBS="$(nix build --no-link --print-out-paths nixpkgs#stdenv.cc.cc.lib nixpkgs#file | grep -v -- -man | sed 's|$|/lib|' | paste -sd:)"
@@ -9,7 +10,7 @@ for _ in $(seq 1 30); do
   curl -fs -o /dev/null http://127.0.0.1:8090/realms/stupa-events/.well-known/openid-configuration && break
   sleep 5
 done
-run() { systemd-run --user --quiet --collect --unit="$1" --working-directory="$2" -p EnvironmentFile="$R/backend/.env" --setenv=LD_LIBRARY_PATH="$LIBS" "${@:3}"; }
+run() { systemd-run --user --quiet --collect --unit="$1" --working-directory="$2" -p EnvironmentFile="$R/backend/.env" --setenv=LD_LIBRARY_PATH="$LIBS" -p Restart=on-failure -p RestartSec=5 "${@:3}"; }
 systemd-run --user --quiet --wait --pipe --collect --working-directory="$R/backend" -p EnvironmentFile="$R/backend/.env" --setenv=LD_LIBRARY_PATH="$LIBS" "$R/backend/.venv/bin/alembic" upgrade head
 for u in stupa-api stupa-worker stupa-ng; do systemctl --user stop "$u" 2>/dev/null || true; done
 run stupa-api "$R/backend" "$R/backend/.venv/bin/uvicorn" app.main:app --host 127.0.0.1 --port 8000
