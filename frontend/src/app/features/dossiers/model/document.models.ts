@@ -1,7 +1,7 @@
 /** Wire models of documents (howto), their revisions and diffs, and mail templates (M4 contract 5.2, 5.6). */
 import type { Visibility } from './attachment.models';
 
-export type DocumentKind = 'howto' | 'notes' | 'mail_template';
+export type DocumentKind = 'howto' | 'notes' | 'mail_template' | 'retrospective';
 
 export interface DocumentOut {
   id: string;
@@ -18,7 +18,7 @@ export interface DocumentOut {
 }
 
 export interface DocumentIn {
-  kind: 'howto' | 'notes';
+  kind: 'howto' | 'notes' | 'retrospective';
   title: string;
   bodyMd?: string;
   visibility?: Visibility;

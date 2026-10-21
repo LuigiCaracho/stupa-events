@@ -1,0 +1,16 @@
+.ad {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.ad__hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--fs-small);
+}
+
+.ad__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}

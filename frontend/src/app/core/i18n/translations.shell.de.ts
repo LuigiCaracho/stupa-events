@@ -10,6 +10,7 @@ export const shellDe = {
   'nav.tasks': 'Aufgaben',
   'nav.dossiers': 'Dossiers',
   'nav.account': 'Konto',
+  'nav.more': 'Mehr',
   'shell.nav.brand': '{name}, Start',
   'footer.coBranding': 'STUPA Events, Studierendenparlament der Hochschule Reutlingen',
   'theme.toggle': 'Hell oder dunkel umschalten',

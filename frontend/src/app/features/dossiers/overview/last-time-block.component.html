@@ -1,0 +1,13 @@
+@if (value(); as lt) {
+  <div class="ltb">
+    <app-last-time-card [lastTime]="lt" />
+    @if (groups().length > 0) {
+      <section class="ltb__quotes" aria-labelledby="ltb-quotes">
+        <h3 class="sec" id="ltb-quotes">{{ 'clone.quotes' | t }}</h3>
+        @for (g of groups(); track g.grp) {
+          <app-quote-table [group]="g" />
+        }
+      </section>
+    }
+  </div>
+}

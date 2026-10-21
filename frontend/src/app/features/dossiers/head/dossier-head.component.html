@@ -35,7 +35,13 @@
     @if (publicLine(); as p) {
       <app-status-text [kind]="p.kind">{{ p.text }}</app-status-text>
     }
+    @if (howtoUnverified()) {
+      <app-status-text kind="warn">{{ 'format.unverified' | t }}</app-status-text>
+    }
     <span class="num">{{ when() }}</span>
     <span>{{ event().organization?.name ?? ('dossiers.noOrg' | t) }}</span>
+    @if (event().format; as f) {
+      <a class="dh__format" [routerLink]="['/formate', f.slug]">{{ f.title }}</a>
+    }
   </p>
 </header>

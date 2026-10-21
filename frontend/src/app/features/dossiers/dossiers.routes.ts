@@ -13,6 +13,12 @@ export default [
     component: DossierListComponent,
     children: [
       { path: ':id', component: DossierDetailComponent, canDeactivate: [pendingChangesGuard] },
+      {
+        path: ':id/nachbereitung',
+        component: DossierDetailComponent,
+        data: { tab: 'followup' },
+        canDeactivate: [pendingChangesGuard],
+      },
     ],
   },
 ] satisfies Routes;

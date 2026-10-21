@@ -1,0 +1,35 @@
+:host {
+  display: block;
+}
+
+.lbd {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.lbd__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+
+.lbd__title {
+  margin: 0;
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-semibold);
+  overflow-wrap: anywhere;
+}
+
+.lbd__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.lbd__download {
+  color: var(--color-accent-text);
+}

@@ -1,7 +1,8 @@
 /**
  * I04: dossier list (`/dossiers`, `/dossiers/:id`, `/dossiers/neu`). The same filters as the board, one row per dossier
  * (day, title, organization, state as text, number of blockers). Wide screens show the open dossier (the child route)
- * beside the list; narrow screens show one view at a time. On `/dossiers/neu` the dialog I05 opens over the list.
+ * beside the list; narrow screens show one view at a time. On `/dossiers/neu` the dialog I05 opens over the list; with
+ * `?vorlage=` or `?format=` (or the second tab) it is I06 "Neu aus Vorlage". "Kalender" leads to `/kalender` with the filters.
  */
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { rxResource, toSignal } from '@angular/core/rxjs-interop';
@@ -29,6 +30,7 @@ import {
 import type { EventCard } from '../api/board.models';
 import { formatEventDay } from '../api/event-time';
 import { EventsApi } from '../api/events-api.service';
+import { CloneDialogComponent } from '../clone/clone-dialog.component';
 import { NewEventDialogComponent } from '../new-event/new-event-dialog.component';
 
 const PAGE = 100;
@@ -41,6 +43,7 @@ const PAGE = 100;
     RouterOutlet,
     TranslatePipe,
     ButtonComponent,
+    CloneDialogComponent,
     EmptyStateComponent,
     ListDetailLayoutComponent,
     ListItemComponent,
@@ -62,6 +65,14 @@ export class DossierListComponent {
   private readonly route = inject(ActivatedRoute);
 
   protected readonly newOpen = this.route.snapshot.data['newEvent'] === true;
+  protected readonly templateId = this.route.snapshot.queryParamMap.get('vorlage');
+  protected readonly formatSlug = this.route.snapshot.queryParamMap.get('format');
+  /** "Neu" or "Aus Vorlage" in the dialog of `/dossiers/neu`; a template or a format in the URL starts on the second. */
+  protected readonly newMode = signal<'blank' | 'template'>(
+    this.templateId || this.formatSlug || this.route.snapshot.queryParamMap.get('modus') === 'vorlage'
+      ? 'template'
+      : 'blank',
+  );
   protected readonly state = createFilterState();
   protected readonly limit = signal(PAGE);
 
@@ -128,6 +139,10 @@ export class DossierListComponent {
 
   protected closeNew(): void {
     void this.router.navigateByUrl('/dossiers');
+  }
+
+  protected openCalendar(): void {
+    void this.router.navigate(['/kalender'], { queryParamsHandling: 'preserve' });
   }
 
   protected created(id: string): void {

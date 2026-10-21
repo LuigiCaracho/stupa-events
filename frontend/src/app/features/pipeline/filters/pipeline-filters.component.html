@@ -21,13 +21,15 @@
       [value]="filters().category"
       (valueChange)="set('category', $event)"
     />
-    <app-filter-select
-      [label]="'filters.period' | t"
-      [options]="rangeOptions()"
-      [active]="!!filters().range"
-      [value]="filters().range"
-      (valueChange)="set('range', $any($event))"
-    />
+    @if (showPeriod()) {
+      <app-filter-select
+        [label]="'filters.period' | t"
+        [options]="rangeOptions()"
+        [active]="!!filters().range"
+        [value]="filters().range"
+        (valueChange)="set('range', $any($event))"
+      />
+    }
     <button
       type="button"
       class="chip"

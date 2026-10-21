@@ -41,6 +41,9 @@
 
 @if (frame() === 'rail') {
   <app-inbox />
+  @defer (when palette.requested()) {
+    <app-command-palette />
+  }
 }
 <app-load-bar />
 <app-toast />

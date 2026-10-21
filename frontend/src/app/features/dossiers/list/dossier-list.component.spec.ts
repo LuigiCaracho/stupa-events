@@ -1,4 +1,5 @@
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, provideRouter } from '@angular/router';
 import { render, screen, waitFor } from '@testing-library/angular';
@@ -26,6 +27,8 @@ describe('DossierListComponent', () => {
     const view = await render(DossierListComponent, {
       providers: [
         provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
         { provide: EventsApi, useValue: api },
         { provide: ActivatedRoute, useValue: route },
         { provide: AuthService, useValue: fakeAuth() },
@@ -166,5 +169,30 @@ describe('DossierListComponent', () => {
     const { view } = await setup();
     await screen.findByRole('link', { name: 'Movienight' });
     expect(await runAxe(view.container)).toHaveNoViolations();
+  });
+
+  describe('M5', () => {
+    it('warns in text on a row whose archived howto is unchecked', async () => {
+      const api = fakeApi({
+        listCards: jest.fn(() =>
+          of({ items: [makeCard({ state: 'archived', howtoUnverified: true })], total: 1, limit: 100, offset: 0 }),
+        ),
+      });
+      await setup(api);
+      expect(await screen.findByText('Anleitung ungeprüft')).toBeInTheDocument();
+    });
+
+    it('leads to the calendar and keeps the filters', async () => {
+      const { navigate } = await setup();
+      await userEvent.click(screen.getAllByRole('button', { name: 'Kalender' })[0]);
+      expect(navigate).toHaveBeenCalledWith(['/kalender'], { queryParamsHandling: 'preserve' });
+    });
+
+    it('opens the blank dialog on /dossiers/neu and switches to "Aus Vorlage"', async () => {
+      await setup(fakeApi(), { newEvent: true });
+      expect(await screen.findByRole('dialog', { name: 'Neues Event' })).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('radio', { name: 'Aus Vorlage' }));
+      expect(await screen.findByRole('dialog', { name: 'Neu aus Vorlage' })).toBeInTheDocument();
+    });
   });
 });

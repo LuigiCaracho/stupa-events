@@ -1,0 +1,26 @@
+@if (value(); as s) {
+  <section class="tp" aria-labelledby="tp-heading">
+    <h3 class="sec" id="tp-heading">{{ 'templatePanel.title' | t }}</h3>
+    <p class="tp__source">
+      @if (link(); as l) {
+        <a [routerLink]="l">{{ s.title }}</a>
+      }
+    </p>
+    @if (s.documents.length > 0 || s.attachments.length > 0) {
+      <ul class="tp__list">
+        @for (d of s.documents; track d.id) {
+          <li>
+            <a [routerLink]="['/bibliothek', 'document', d.id]">{{ d.title }}</a>
+          </li>
+        }
+        @for (a of s.attachments; track a.id) {
+          <li>
+            <a [href]="download(a.id)" download>{{ a.displayName }}</a>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="tp__muted">{{ 'archive.noneShared' | t }}</p>
+    }
+  </section>
+}

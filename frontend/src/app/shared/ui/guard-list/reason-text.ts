@@ -19,7 +19,7 @@ export function reasonText(i18n: I18nService, reason: ProblemReason): string {
   return i18n.translate(key, { field: fieldLabel(i18n, reason.field) });
 }
 
-/** The fix buttons the app can act on in M3; the others (comments, duplicates, facts, checklists) come with M4 to M7. */
+/** The fix buttons the app can act on in M3 to M5; duplicates and times come with M6 and M7. */
 export const HANDLED_FIXES: ReadonlySet<string> = new Set([
   'fill_field',
   'change_date',
@@ -31,4 +31,9 @@ export const HANDLED_FIXES: ReadonlySet<string> = new Set([
   'set_end',
   'open_comment',
   'open_checklist',
+  'fill_retrospective',
+  'fill_outcome',
+  'verify_howto',
+  'confirm_location',
+  'fill_facts',
 ]);

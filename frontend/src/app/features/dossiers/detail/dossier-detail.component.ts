@@ -17,6 +17,7 @@ import {
   untracked,
 } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router } from '@angular/router';
 import type { ProblemReason } from '@core/api/models';
 import { problemOf } from '@core/api/problem';
 import type { PendingChanges } from '@core/auth/pending-changes.guard';
@@ -26,6 +27,14 @@ import type { TranslationKey } from '@core/i18n/translations';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { ActivityTabComponent } from '../activity/activity-tab.component';
 import { FieldQuestionsComponent } from '../activity/field-questions.component';
+import { DossierCommands } from '../api/dossier-commands';
+import { FollowupApi } from '../api/followup-api.service';
+import { FactsFormComponent } from '../facts/facts-form.component';
+import { FollowupTabComponent } from '../followup/followup-tab.component';
+import { FormatSaveDialogComponent } from '../format-save/format-save-dialog.component';
+import { LocationDialogComponent } from '../location/location-dialog.component';
+import { LastTimeBlockComponent } from '../overview/last-time-block.component';
+import { TemplatePanelComponent } from '../overview/template-panel.component';
 import { AttachmentsApi } from '../api/attachments-api.service';
 import { CommentsApi } from '../api/comments-api.service';
 import { AttachmentsTabComponent } from '../attachments/attachments-tab.component';
@@ -61,7 +70,15 @@ import {
 } from './detail-dialogs.component';
 import { focusField } from './focus-field';
 
-type DetailTab = 'overview' | 'attachments' | 'howto' | 'checklist' | 'mails' | 'history';
+type DetailTab =
+  'overview' | 'attachments' | 'howto' | 'checklist' | 'mails' | 'followup' | 'history';
+
+const FOLLOWUP_FIX: ReadonlySet<string> = new Set(['fill_retrospective', 'fill_outcome', 'verify_howto']);
+const FOLLOWUP_ANCHOR: Record<string, string> = {
+  fill_retrospective: '#fu-retro-heading',
+  fill_outcome: '#fu-outcome-heading',
+  verify_howto: '#fu-howto-heading',
+};
 
 const POSTER_STATES: readonly string[] = ['idea', 'planning', 'in_review'];
 const SAVE_BEFORE_TRANSITION: readonly string[] = ['idea', 'planning'];
@@ -84,7 +101,13 @@ const SAVE_BEFORE_TRANSITION: readonly string[] = ['idea', 'planning'];
     DossierHeadComponent,
     DossierOverviewComponent,
     EventFormComponent,
+    FactsFormComponent,
+    FollowupTabComponent,
+    FormatSaveDialogComponent,
     ImageThumbComponent,
+    LastTimeBlockComponent,
+    LocationDialogComponent,
+    TemplatePanelComponent,
     NoteComponent,
     PosterUploadComponent,
     SkeletonComponent,
@@ -106,6 +129,10 @@ export class DossierDetailComponent implements PendingChanges {
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(I18nService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly followupApi = inject(FollowupApi);
+  private readonly commands = inject(DossierCommands);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   readonly id = input.required<string>();
 
@@ -125,7 +152,11 @@ export class DossierDetailComponent implements PendingChanges {
   });
 
   protected readonly dialog = signal<DialogState>(null);
-  protected readonly tab = signal<DetailTab>('overview');
+  protected readonly tab = signal<DetailTab>(
+    this.route.snapshot.data['tab'] === 'followup' ? 'followup' : 'overview',
+  );
+  protected readonly formatDialog = signal(false);
+  protected readonly locationDialog = signal(false);
   protected readonly refreshTick = signal(0);
   protected readonly recomputed = signal(0);
   protected readonly posterOpen = signal(false);
@@ -195,6 +226,17 @@ export class DossierDetailComponent implements PendingChanges {
   protected readonly threadList = computed(() => (this.threads.hasValue() ? this.threads.value() : []));
   protected readonly canComment = computed(() => this.editable() || this.auth.can('comment.write'));
 
+  /** The tab shows from the end of a live event on; only called while a dossier is loaded. */
+  protected readonly showFollowup = computed(() => {
+    const e = this.event() as EventDto;
+    return (
+      e.state === 'followup' ||
+      e.state === 'archived' ||
+      (e.state === 'live' && Date.parse(e.endsAt) <= Date.now())
+    );
+  });
+  protected readonly canWrite = computed(() => this.auth.can('event.edit'));
+
   protected readonly tabs = computed<TabItem[]>(() => {
     const c = this.counts.hasValue() ? this.counts.value() : null;
     const tab = (id: DetailTab, key: TranslationKey, count?: number): TabItem => ({
@@ -208,6 +250,7 @@ export class DossierDetailComponent implements PendingChanges {
       tab('howto', 'detail.tabHowto', c?.howto),
       tab('checklist', 'detail.tabChecklist', c?.openChecklist),
       tab('mails', 'detail.tabMails', c?.mailTemplates),
+      ...(this.showFollowup() ? [tab('followup', 'detail.tabFollowup', c?.followupOpen)] : []),
       tab('history', 'detail.tabHistory', c?.openComments),
     ];
   });
@@ -236,7 +279,24 @@ export class DossierDetailComponent implements PendingChanges {
       const e = this.loaded.hasValue() ? this.loaded.value() : null;
       if (e) untracked(() => this.begin(e));
     });
-    inject(DestroyRef).onDestroy(() => this.autosave.destroy());
+    effect(() => {
+      const command = this.commands.pending();
+      const e = this.event();
+      if (!command || !e) return;
+      untracked(() => {
+        this.commands.clear();
+        if (command.name === 'save-as-format' && this.actions().includes('save-as-format'))
+          this.formatDialog.set(true);
+      });
+    });
+    effect(() => {
+      const actions = this.actions();
+      untracked(() => this.commands.allowed.set(actions));
+    });
+    inject(DestroyRef).onDestroy(() => {
+      this.autosave.destroy();
+      this.commands.allowed.set([]);
+    });
   }
 
   private begin(e: EventDto): void {
@@ -259,12 +319,24 @@ export class DossierDetailComponent implements PendingChanges {
   }
 
   protected useBudget(cents: number): void {
-    // TODO-M4: the event form has no budget field yet (`facts.budgetCents` comes with the facts block); show the suggestion only.
-    this.toast.show(
-      this.i18n.translate('quote.budgetSuggested', { amount: (cents / 100).toFixed(2).replace('.', ',') }),
-      'info',
-      8000,
-    );
+    const e = this.event();
+    if (!e) return;
+    this.followupApi
+      .putFacts(e.id, e.rev, { ...(e.facts ?? {}), budgetCents: cents })
+      .subscribe({
+        next: (updated) => {
+          this.event.set(updated);
+          this.toast.success(this.i18n.translate('facts.saved'));
+        },
+        error: (err: unknown) => this.failed(err),
+      });
+  }
+
+  protected followupChanged(updated: EventDto | null): void {
+    if (updated) this.event.set(updated);
+    else
+      this.api.get(this.id()).subscribe({ next: (e) => this.event.set(e), error: () => undefined });
+    this.changedKnowledge();
   }
 
   protected reload(): void {
@@ -285,6 +357,12 @@ export class DossierDetailComponent implements PendingChanges {
         return this.dialog.set({ kind: 'assign' });
       case 'confirm-flyer':
         return this.confirmFlyer();
+      case 'confirm-location':
+        return this.locationDialog.set(true);
+      case 'save-as-format':
+        return this.formatDialog.set(true);
+      case 'clone':
+        void this.router.navigate(['/dossiers/neu'], { queryParams: { vorlage: this.id() } });
     }
   }
 
@@ -302,10 +380,31 @@ export class DossierDetailComponent implements PendingChanges {
       this.tab.set('history');
     } else if (action === 'open_checklist') {
       this.tab.set('checklist');
+    } else if (action && FOLLOWUP_FIX.has(action)) {
+      this.tab.set('followup');
+      setTimeout(() =>
+        this.host.nativeElement.querySelector<HTMLElement>(FOLLOWUP_ANCHOR[action])?.focus(),
+      );
+    } else if (action === 'confirm_location') {
+      this.locationDialog.set(true);
+    } else if (action === 'fill_facts') {
+      this.tab.set('overview');
+      setTimeout(() => this.host.nativeElement.querySelector<HTMLElement>('#facts-heading')?.focus());
     } else if (action) {
       this.tab.set('overview');
       setTimeout(() => focusField(this.host.nativeElement, action, reason.field));
     }
+  }
+
+  protected locationConfirmed(updated: EventDto): void {
+    this.locationDialog.set(false);
+    this.event.set(updated);
+    this.guards.reload();
+  }
+
+  protected formatSaved(): void {
+    this.formatDialog.set(false);
+    this.refresh();
   }
 
   protected applied(updated: EventDto): void {

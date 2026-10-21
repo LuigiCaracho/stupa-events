@@ -11,7 +11,13 @@ import {
   request,
   test,
 } from '@playwright/test';
-import { confirmTransition, createDossier, setSummary, uploadPoster } from './support/dossier';
+import {
+  confirmLocation,
+  confirmTransition,
+  createDossier,
+  setSummary,
+  uploadPoster,
+} from './support/dossier';
 import { login, logout, postJson } from './support/session';
 
 const BASE_URL = process.env['E2E_BASE_URL'] ?? 'http://localhost:8081';
@@ -94,7 +100,7 @@ test('editor: approval without poster is refused with image_required', async ({ 
   await page.getByRole('button', { name: 'Freigeben' }).click();
   const dialog = page.getByRole('dialog', { name: 'Freigeben' });
   await expect(dialog.getByText('Poster fehlt oder ist nicht freigegeben.')).toBeVisible();
-  await expect(dialog.getByRole('button', { name: 'Bestätigen' })).toBeDisabled();
+  await expect(dialog.getByRole('button', { name: 'Bestätigen', exact: true })).toBeDisabled();
   await dialog.getByRole('button', { name: 'Schließen' }).click();
 
   const response = await postJson(page, `/api/events/${noPosterId}/transitions/T04`);
@@ -116,13 +122,15 @@ test('editor: approves and publishes, the event appears in the feed', async ({ b
     .first()
     .click();
   await expect(page.getByRole('heading', { level: 1, name: TITLE })).toBeVisible();
+  // Since M5 the free venue text needs the location confirmation before the approval.
+  await confirmLocation(page, /\/dossiers\/([0-9a-f-]{36})/.exec(page.url())?.[1] as string);
   await expect(page.getByText('Alles bereit.')).toBeVisible();
 
   await confirmTransition(page, 'Freigeben', 'Freigegeben');
   await confirmTransition(page, 'Veröffentlichen', 'Veröffentlicht');
 
   const anonymous: APIRequestContext = await request.newContext({ baseURL: BASE_URL });
-  const feed = await anonymous.get('/api/public/feed/events');
+  const feed = await anonymous.get('/api/public/feed/events?limit=500');
   expect(feed.status()).toBe(200);
   expect(feed.headers()['set-cookie']).toBeUndefined();
   const body = await feed.json();

@@ -1,0 +1,43 @@
+.of,
+.of__form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.of__numbers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.of__actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.of__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  margin: 0;
+}
+.of__list dt {
+  color: var(--color-text-muted);
+  font-size: var(--fs-small);
+}
+.of__list dd {
+  margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semibold);
+}
+
+.of__text {
+  margin: 0;
+  white-space: pre-line;
+}
+
+.of__muted {
+  margin: 0;
+  color: var(--color-text-muted);
+}

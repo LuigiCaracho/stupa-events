@@ -4,6 +4,7 @@
  * the server allows it) and the menu "Mehr" with the other transitions and the actions. The page runs the commands.
  */
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { type EventState, eventStateStatus } from '@shared/status-kind.util';
@@ -28,7 +29,15 @@ const PATH: readonly EventState[] = [
   'followup',
 ];
 
-export type HeadAction = 'cancel' | 'reinstate' | 'exception' | 'assign' | 'confirm-flyer';
+export type HeadAction =
+  | 'cancel'
+  | 'reinstate'
+  | 'exception'
+  | 'assign'
+  | 'confirm-flyer'
+  | 'confirm-location'
+  | 'clone'
+  | 'save-as-format';
 
 export type HeadCommand =
   { kind: 'transition'; id: TransitionId } | { kind: 'action'; name: HeadAction };
@@ -40,13 +49,16 @@ const ACTION_OF: Record<string, HeadAction> = {
   'image-exception': 'exception',
   'assign-organization': 'assign',
   'confirm-flyer': 'confirm-flyer',
+  'confirm-location': 'confirm-location',
+  clone: 'clone',
+  'save-as-format': 'save-as-format',
 };
 
 @Component({
   selector: 'app-dossier-head',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TranslatePipe, ButtonComponent, RowMenuComponent, StatusTextComponent],
+  imports: [RouterLink, TranslatePipe, ButtonComponent, RowMenuComponent, StatusTextComponent],
   templateUrl: './dossier-head.component.html',
   styleUrl: './dossier-head.component.scss',
 })
@@ -56,6 +68,8 @@ export class DossierHeadComponent {
   readonly event = input.required<EventDto>();
   /** The action names the page offers (`allowedActions` of the server). */
   readonly actions = input<readonly string[]>([]);
+  /** The archived dossier has a howto nobody checked (derived by the page, M5 contract 3.2). */
+  readonly howtoUnverified = input(false);
 
   readonly command = output<HeadCommand>();
 
@@ -112,7 +126,12 @@ export class DossierHeadComponent {
       actions.push({ id: 'A:reinstate', label: t('head.reinstate') });
     if (names.has('confirm-flyer'))
       actions.push({ id: 'A:confirm-flyer', label: t('head.confirmFlyer') });
+    if (names.has('confirm-location'))
+      actions.push({ id: 'A:confirm-location', label: t('head.confirmLocation') });
     if (names.has('exception')) actions.push({ id: 'A:exception', label: t('detail.exception') });
+    if (names.has('clone')) actions.push({ id: 'A:clone', label: t('head.clone') });
+    if (names.has('save-as-format'))
+      actions.push({ id: 'A:save-as-format', label: t('head.saveAsFormat') });
     if (names.has('assign')) actions.push({ id: 'A:assign', label: t('head.assign') });
     return [{ items: actions }, { items: transitions }].filter((s) => s.items.length > 0);
   });

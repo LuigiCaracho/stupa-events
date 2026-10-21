@@ -74,4 +74,7 @@ export type FixAction =
   | 'open_checklist'
   | 'confirm_time'
   | 'set_end'
-  | 'make_offer';
+  | 'make_offer'
+  | 'fill_retrospective'
+  | 'fill_outcome'
+  | 'verify_howto';

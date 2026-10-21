@@ -1,0 +1,76 @@
+<section class="ff" aria-labelledby="facts-heading">
+  <h2 class="sec" id="facts-heading" tabindex="-1">{{ 'facts.title' | t }}</h2>
+  @if (!canEdit()) {
+    @if (summary().length === 0) {
+      <p class="ff__muted">{{ 'facts.none' | t }}</p>
+    } @else {
+      <dl class="ff__list">
+        @for (row of summary(); track row.label) {
+          <div>
+            <dt>{{ row.label | t }}</dt>
+            <dd>{{ row.text }}</dd>
+          </div>
+        }
+      </dl>
+    }
+  } @else {
+  <form class="ff__grid" (ngSubmit)="save()" novalidate>
+    @for (f of fields(); track f.key) {
+      @switch (f.kind) {
+        @case ('bool') {
+          <app-checkbox
+            [name]="f.key"
+            [ngModel]="ticked(f.key)"
+            (ngModelChange)="set(f.key, $event)"
+          >
+            {{ f.label | t }}
+          </app-checkbox>
+        }
+        @case ('age') {
+          <app-select
+            [label]="f.label | t"
+            [options]="ageOptions"
+            [clearable]="true"
+            [required]="f.required ?? false"
+            [value]="text(f.key)"
+            [error]="error(f.key)"
+            (valueChange)="set(f.key, $event)"
+          />
+        }
+        @case ('cents') {
+          <app-currency-input
+            [name]="f.key"
+            [label]="f.label | t"
+            [error]="error(f.key)"
+            [ngModel]="text(f.key)"
+            (ngModelChange)="set(f.key, $event)"
+          />
+        }
+        @case ('textarea') {
+          <app-textarea
+            [name]="f.key"
+            [label]="f.label | t"
+            [rows]="4"
+            [error]="error(f.key)"
+            [ngModel]="text(f.key)"
+            (ngModelChange)="set(f.key, $event)"
+          />
+        }
+        @default {
+          <app-input
+            [name]="f.key"
+            [label]="f.label | t"
+            [type]="f.kind === 'int' ? 'number' : f.kind === 'deadline' ? 'date' : 'text'"
+            [error]="error(f.key)"
+            [ngModel]="text(f.key)"
+            (ngModelChange)="set(f.key, $event)"
+          />
+        }
+      }
+    }
+    <div class="ff__actions">
+      <app-button type="submit" variant="tonal" [loading]="busy()">{{ 'facts.save' | t }}</app-button>
+    </div>
+  </form>
+  }
+</section>

@@ -29,14 +29,18 @@ function keysFor(
 }
 
 describe('NavService', () => {
-  it('shows Aufgaben, Pipeline, Dossiers and Konto to a signed-in principal', () => {
-    expect(keysFor(true)).toEqual(['tasks', 'pipeline', 'dossiers', 'account']);
+  it('shows the areas of the rail to a signed-in principal', () => {
+    expect(keysFor(true)).toEqual([
+      'tasks', 'pipeline', 'dossiers', 'calendar', 'archive', 'formats', 'library', 'account',
+    ]);
   });
 
   it('adds Verwaltung for a principal with a taxonomy or mapping permission', () => {
     expect(
       keysFor(true, { roles: ['editor'], permissions: ['taxonomy.manage', 'venue.manage'] }),
-    ).toEqual(['tasks', 'pipeline', 'dossiers', 'admin', 'account']);
+    ).toEqual([
+      'tasks', 'pipeline', 'dossiers', 'calendar', 'archive', 'formats', 'library', 'admin', 'account',
+    ]);
   });
 
   it('adds Verwaltung for admin without a listed permission', () => {
@@ -45,6 +49,10 @@ describe('NavService', () => {
 
   it('shows nothing without a session', () => {
     expect(keysFor(false)).toEqual([]);
+  });
+
+  it('keeps four entries in the phone bar and the rest in the "Mehr" sheet', () => {
+    expect(BOTTOM_BAR_KEYS).toEqual(['tasks', 'pipeline', 'calendar', 'archive']);
   });
 
   it('keeps every bar entry in the navigation', () => {

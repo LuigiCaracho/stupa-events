@@ -50,6 +50,8 @@ export class PipelineFiltersComponent {
 
   readonly filters = input.required<PipelineFilters>();
   readonly showView = input(false);
+  /** The calendar chooses its own period. */
+  readonly showPeriod = input(true);
   readonly changed = output<PipelineFilters>();
 
   protected readonly lookups = rxResource({

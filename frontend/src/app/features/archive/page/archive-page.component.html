@@ -1,0 +1,107 @@
+<app-page-header [title]="'archive.title' | t" [subtitle]="'archive.subtitle' | t" />
+
+<app-sticky-bar>
+  <div class="ar__filters" role="search" [attr.aria-label]="'archive.search' | t">
+    <app-search-pill
+      [clearable]="true"
+      [maxlength]="maxQuery"
+      [label]="'archive.search' | t"
+      [placeholder]="'archive.placeholder' | t"
+      [value]="state.value().q"
+      (valueChange)="patch({ q: $event })"
+    />
+    <app-segmented
+      [ariaLabel]="'archive.scope' | t"
+      [options]="scopes()"
+      [value]="state.value().scope"
+      (valueChange)="setScope($event)"
+    />
+    @if (started()) {
+      <div class="ar__chips">
+        @if (state.value().scope === 'events') {
+          <app-filter-select
+            [label]="'search.facet.state' | t"
+            [multiple]="true"
+            [options]="options(facets().state, state.value().state)"
+            [active]="facetCount() > 0 && state.value().state.length !== 1"
+            [values]="state.value().state"
+            (valuesChange)="patch({ state: $event })"
+          />
+        }
+        <app-filter-select
+          [label]="'search.facet.organization' | t"
+          [options]="withAll(options(facets().organization, [state.value().org]), 'filters.allOrgs')"
+          [active]="!!state.value().org"
+          [value]="state.value().org"
+          (valueChange)="patch({ org: $event })"
+        />
+        <app-filter-select
+          [label]="'search.facet.year' | t"
+          [options]="withAll(options(facets().year, [state.value().year]), 'search.allYears')"
+          [active]="!!state.value().year"
+          [value]="state.value().year"
+          (valueChange)="patch({ year: $event })"
+        />
+        <app-filter-select
+          [label]="'search.facet.category' | t"
+          [options]="withAll(options(facets().category, [state.value().category]), 'filters.allCategories')"
+          [active]="!!state.value().category"
+          [value]="state.value().category"
+          (valueChange)="patch({ category: $event })"
+        />
+        <app-filter-select
+          [label]="'search.facet.format' | t"
+          [options]="withAll(options(facets().format, [state.value().format]), 'search.allFormats')"
+          [active]="!!state.value().format"
+          [value]="state.value().format"
+          (valueChange)="patch({ format: $event })"
+        />
+        @if (facetCount() > 0) {
+          <app-button variant="text" size="sm" (click)="reset()">{{
+            'dossiers.resetFilters' | t
+          }}</app-button>
+        }
+      </div>
+    }
+  </div>
+</app-sticky-bar>
+
+@if (!started()) {
+  <app-empty-state plain [heading]="'archive.hint' | t" [body]="'archive.hintBody' | t" />
+} @else if (errorKey(); as key) {
+  <app-note kind="error" role="alert">{{ key | t }}</app-note>
+} @else if (!result.hasValue()) {
+  <app-skeleton variant="items" [count]="4" />
+} @else if (hits().length === 0) {
+  <app-empty-state
+    plain
+    role="status"
+    [heading]="'archive.nothing' | t: { q: state.applied().q }"
+  >
+    @if (suggestion(); as s) {
+      <p class="ar__suggest">
+        {{ 'archive.didYouMean' | t }}
+        <app-button variant="text" size="sm" (click)="useSuggestion(s)">„{{ s }}“</app-button>?
+      </p>
+    }
+  </app-empty-state>
+} @else {
+  <p class="ar__count" role="status">{{ 'archive.count' | t: { count: total() } }}</p>
+  <ul class="ar__hits rowgroup">
+    @for (hit of hits(); track hit.kind + hit.id) {
+      <li>
+        <app-search-hit
+          [hit]="hit"
+          [query]="state.applied().q"
+          (open)="open($event)"
+          (useTemplate)="useTemplate($event)"
+        />
+      </li>
+    }
+  </ul>
+  @if (canMore()) {
+    <app-button class="ar__more" variant="text" [loading]="loadingMore()" (click)="loadMore()">{{
+      'dossiers.more' | t
+    }}</app-button>
+  }
+}

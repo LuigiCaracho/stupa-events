@@ -42,6 +42,8 @@ export class SearchPillComponent {
   readonly size = input<'lg' | 'md'>('lg');
   /** Show a × button that clears a filled field (input mode). */
   readonly clearable = input(false);
+  /** Upper bound of the input length (the server limit of a query). */
+  readonly maxlength = input<number | null>(null);
   /** A search runs (input mode): the magnifier becomes a spinner. */
   readonly busy = input(false);
 

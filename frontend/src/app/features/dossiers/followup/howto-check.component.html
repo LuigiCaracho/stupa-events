@@ -1,0 +1,17 @@
+<section class="hc" aria-labelledby="fu-howto-heading">
+  <h2 class="sec" id="fu-howto-heading" tabindex="-1">{{ 'howtoCheck.title' | t }}</h2>
+  <app-checkbox
+    [id]="'howto-verified'"
+    [ngModel]="verified()"
+    [disabled]="locked()"
+    (ngModelChange)="toggle($event)"
+    [hint]="'howtoCheck.hint' | t"
+  >
+    {{ 'howtoCheck.label' | t }}
+  </app-checkbox>
+  @if (event().howtoVerifiedAt; as at) {
+    <p class="hc__line">
+      {{ 'howto.verified' | t: { who: event().howtoVerifiedBy ?? '', at: (at | ldate: 'mediumDate') } }}
+    </p>
+  }
+</section>

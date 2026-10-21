@@ -174,4 +174,18 @@ describe('NewEventDialogComponent', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
     expect(closed).toHaveBeenCalled();
   });
+
+  it('offers the second tab "Aus Vorlage" and asks the page to switch', async () => {
+    const switchToTemplate = jest.fn();
+    await render(NewEventDialogComponent, {
+      providers: [
+        { provide: EventsApi, useValue: fakeApi() },
+        { provide: AuthService, useValue: fakeAuth() },
+      ],
+      on: { switchToTemplate },
+    });
+    expect(screen.getByRole('radio', { name: 'Neu' })).toBeChecked();
+    await userEvent.click(screen.getByRole('radio', { name: 'Aus Vorlage' }));
+    expect(switchToTemplate).toHaveBeenCalled();
+  });
 });

@@ -3,6 +3,7 @@
 import { Component } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { DeferBlockBehavior } from '@angular/core/testing';
 import { Router, provideRouter, type Routes } from '@angular/router';
 import { SwUpdate } from '@angular/service-worker';
 import { render, screen } from '@testing-library/angular';
@@ -30,6 +31,7 @@ const PRINCIPAL = {
 
 async function setup(signedIn: boolean | null, url = '/aufgaben') {
   const view = await render(ShellComponent, {
+    deferBlockBehavior: DeferBlockBehavior.Playthrough,
     providers: [
       provideRouter(ROUTES),
       provideHttpClient(),
@@ -59,6 +61,26 @@ describe('ShellComponent', () => {
     expect(container.querySelector('app-public-header')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Seite' })).toBeInTheDocument();
     expect(container.querySelector('app-site-footer')).not.toBeNull();
+  });
+
+  it('loads the command palette on the first Strg+K in the rail frame, not before', async () => {
+    const { container, fixture } = await setup(true);
+    expect(container.querySelector('app-command-palette')).toBeNull();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true, cancelable: true }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(container.querySelector('app-command-palette')).not.toBeNull();
+    expect(await screen.findByRole('combobox')).toBeInTheDocument();
+  });
+
+  it('keeps the command palette out of the public frame and leaves Strg+K to the browser', async () => {
+    const { container, fixture } = await setup(false);
+    const key = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true, cancelable: true });
+    document.dispatchEvent(key);
+    fixture.detectChanges();
+    expect(container.querySelector('app-command-palette')).toBeNull();
+    expect(key.defaultPrevented).toBe(false);
   });
 
   it('shows the public frame with header and footer when nobody is signed in', async () => {

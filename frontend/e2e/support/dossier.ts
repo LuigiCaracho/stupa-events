@@ -1,10 +1,11 @@
 /**
  * E2E building blocks of the dossier UI: create, move through transitions ("Freigeben" approves without publishing,
- * so the M1 flow keeps its second step), save the summary, upload the poster.
+ * so the M1 flow keeps its second step), save the summary, upload the poster. Since M5 a free venue text needs the
+ * location confirmation before "Freigeben" (M5 contract 13.1.15); `confirmLocation` does that over the API.
  */
 import { type Page, expect } from '@playwright/test';
 import { makePng } from './png';
-import { inDays } from './session';
+import { eventOf, inDays, postJson } from './session';
 
 export async function createDossier(page: Page, title: string): Promise<string> {
   await page.goto('/aufgaben');
@@ -28,11 +29,24 @@ export async function createDossier(page: Page, title: string): Promise<string> 
   return page.url().split('/').pop() as string;
 }
 
+/** Confirms an unconfirmed free venue text as the signed-in approver and reloads the dossier with the new version. */
+export async function confirmLocation(page: Page, id: string): Promise<void> {
+  const event = await eventOf(page, id);
+  if (event['venueId'] || !event['venueText'] || event['locationConfirmedAt']) return;
+  const answer = await postJson(page, `/api/events/${id}/actions/confirm-location`, {
+    precision: 'building',
+  });
+  expect(answer.status()).toBe(200);
+  await page.reload();
+}
+
 export async function confirmTransition(
   page: Page,
   action: string,
   newState: string,
 ): Promise<void> {
+  const id = /\/dossiers\/([0-9a-f-]{36})/.exec(page.url())?.[1];
+  if (action === 'Freigeben' && id) await confirmLocation(page, id);
   await page.getByRole('button', { name: action }).first().click();
   const dialog = page.getByRole('dialog', { name: action });
   await dialog.getByRole('heading', { name: 'Fehlt noch' }).waitFor();
@@ -40,7 +54,7 @@ export async function confirmTransition(
   if (await notice.count()) await notice.check();
   if (action === 'Freigeben')
     await dialog.getByRole('switch', { name: 'Sofort veröffentlichen' }).click();
-  const confirm = dialog.getByRole('button', { name: 'Bestätigen' });
+  const confirm = dialog.getByRole('button', { name: 'Bestätigen', exact: true });
   await expect(confirm).toBeEnabled();
   await confirm.click();
   await expect(dialog).toBeHidden();
@@ -50,7 +64,7 @@ export async function confirmTransition(
 export async function setSummary(page: Page, summary: string): Promise<void> {
   const field = page.getByRole('textbox', { name: /Kurztext/ });
   await field.fill(summary);
-  await page.getByRole('button', { name: 'Speichern' }).click();
+  await page.getByRole('button', { name: 'Speichern', exact: true }).click();
   await expect(page.getByText('Gespeichert.')).toBeVisible();
   await expect(field).toHaveValue(summary);
 }

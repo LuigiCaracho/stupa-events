@@ -1,0 +1,48 @@
+:host {
+  display: block;
+}
+
+.lt {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface-2);
+}
+
+.lt__source {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-3);
+  margin: 0;
+}
+
+.lt__muted {
+  color: var(--color-text-muted);
+}
+
+.lt__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  margin: 0;
+}
+.lt__facts dt {
+  color: var(--color-text-muted);
+  font-size: var(--fs-small);
+}
+.lt__facts dd {
+  margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semibold);
+}
+
+.lt__notes {
+  margin: 0;
+  white-space: pre-line;
+}
+
+.lt__retro summary {
+  cursor: pointer;
+  color: var(--color-accent-text);
+}

@@ -4,6 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { render, screen, within } from '@testing-library/angular';
+import userEvent from '@testing-library/user-event';
 import { AuthService } from '@core/auth/auth.service';
 import { runAxe } from '../../../testing/a11y';
 import { createLocationMock, provideLocationMock } from '../../../testing/location-mock';
@@ -28,16 +29,35 @@ async function setup(signedIn = true) {
 }
 
 describe('BottomBarComponent', () => {
-  it('shows Aufgaben, Pipeline, Dossiers and Konto with their paths', async () => {
+  it('shows Aufgaben, Pipeline, Kalender and Archiv with their paths, then Mehr and the bell', async () => {
     await setup();
     const bar = screen.getByRole('navigation', { name: 'Hauptnavigation' });
     const labels = Array.from(bar.querySelectorAll('.bb__label')).map((l) => l.textContent?.trim());
-    expect(labels).toEqual(['Aufgaben', 'Pipeline', 'Dossiers', 'Konto', 'Meldungen']);
-    expect(within(bar).getByRole('link', { name: 'Aufgaben' })).toHaveAttribute(
-      'href',
-      '/aufgaben',
-    );
-    expect(within(bar).getByRole('link', { name: 'Konto' })).toHaveAttribute('href', '/konto');
+    expect(labels).toEqual(['Aufgaben', 'Pipeline', 'Kalender', 'Archiv', 'Mehr', 'Meldungen']);
+    expect(within(bar).getByRole('link', { name: 'Aufgaben' })).toHaveAttribute('href', '/aufgaben');
+    expect(within(bar).getByRole('link', { name: 'Kalender' })).toHaveAttribute('href', '/kalender');
+    expect(within(bar).getByRole('link', { name: 'Archiv' })).toHaveAttribute('href', '/archiv');
+  });
+
+  it('opens a sheet with Dossiers, Formate, Bibliothek and Konto behind "Mehr"', async () => {
+    await setup();
+    await userEvent.click(screen.getByRole('button', { name: 'Mehr' }));
+    const sheet = await screen.findByRole('dialog', { name: 'Mehr' });
+    const links = within(sheet).getAllByRole('link');
+    expect(links.map((l) => l.textContent?.trim())).toEqual([
+      'Dossiers',
+      'Formate',
+      'Bibliothek',
+      'Konto',
+    ]);
+    expect(links.map((l) => l.getAttribute('href'))).toEqual([
+      '/dossiers',
+      '/formate',
+      '/bibliothek',
+      '/konto',
+    ]);
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Schließen' }));
+    expect(screen.queryByRole('dialog', { name: 'Mehr' })).not.toBeInTheDocument();
   });
 
   it('shows no entry without a session', async () => {

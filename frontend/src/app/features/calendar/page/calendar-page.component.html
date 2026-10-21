@@ -1,0 +1,48 @@
+<app-page-header [title]="'calendar.title' | t">
+  <ng-container ngProjectAs="[actions]">
+    <app-button variant="tonal" size="sm" (click)="toList()">{{
+      'calendar.list' | t
+    }}</app-button>
+  </ng-container>
+</app-page-header>
+
+<app-sticky-bar>
+  <app-pipeline-filters
+    [filters]="state.filters()"
+    [showPeriod]="false"
+    (changed)="state.set($event)"
+  />
+</app-sticky-bar>
+
+<div class="cp__bar">
+  <div class="cp__nav" role="group" [attr.aria-label]="'calendar.view' | t">
+    <app-button variant="tonal" size="sm" (click)="step(-1)">{{ 'calendar.prev' | t }}</app-button>
+    <app-button variant="tonal" size="sm" (click)="today()">{{ 'calendar.goToday' | t }}</app-button>
+    <app-button variant="tonal" size="sm" (click)="step(1)">{{ 'calendar.next' | t }}</app-button>
+  </div>
+  <h2 class="cp__title" aria-live="polite">{{ title() }}</h2>
+  <app-segmented
+    [ariaLabel]="'calendar.mode' | t"
+    [options]="modes()"
+    [value]="mode()"
+    (valueChange)="setMode($event)"
+  />
+</div>
+
+@if (failed()) {
+  <app-note kind="error" role="alert">{{ 'calendar.loadFailed' | t }}</app-note>
+}
+@if (data.value()?.truncated) {
+  <app-note kind="warn" role="status">{{ 'calendar.truncated' | t }}</app-note>
+}
+<app-calendar-grid
+  [entries]="entries()"
+  [mode]="mode()"
+  [anchor]="anchor()"
+  (rangeChange)="range.set($event)"
+  (anchorChange)="anchor.set($event)"
+  (entryOpen)="open($event)"
+/>
+@if (data.isLoading() && !data.hasValue()) {
+  <app-skeleton variant="items" [count]="3" />
+}

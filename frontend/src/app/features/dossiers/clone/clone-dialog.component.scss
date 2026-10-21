@@ -1,0 +1,83 @@
+.cl {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.cl__cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.cl__lists {
+  display: grid;
+  gap: var(--space-2);
+  max-height: 18rem;
+  overflow-y: auto;
+}
+
+.cl__pick,
+.cl__preview {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  align-content: start;
+}
+
+.cl__search {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.cl__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.cl__groupTitle {
+  margin: var(--space-2) 0 var(--space-1);
+  font-size: var(--fs-small);
+  font-weight: var(--fw-semibold);
+  color: var(--color-text-muted);
+}
+
+.cl__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cl__when,
+.cl__muted {
+  color: var(--color-text-muted);
+  font-size: var(--fs-small);
+}
+
+.cl__chosen {
+  margin: 0;
+  font-weight: var(--fw-semibold);
+}
+
+.cl__form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.cl__row {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.cl__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.cl__mode {
+  display: block;
+}

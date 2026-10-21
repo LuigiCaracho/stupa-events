@@ -33,7 +33,7 @@ test('editor: Verwaltung shows the taxonomy tabs and creates a category', async 
   await page.getByRole('button', { name: 'Hinzufügen' }).click();
   await page.getByRole('textbox', { name: 'Name' }).fill(CATEGORY);
   await page.getByRole('textbox', { name: 'Slug' }).fill(SLUG);
-  await page.getByRole('button', { name: 'Speichern' }).click();
+  await page.getByRole('button', { name: 'Speichern', exact: true }).click();
   await expect(page.getByText('Gespeichert.')).toBeVisible();
   await expect(page.getByRole('cell', { name: CATEGORY })).toBeVisible();
 
@@ -43,7 +43,7 @@ test('editor: Verwaltung shows the taxonomy tabs and creates a category', async 
   await page.getByRole('button', { name: 'Hinzufügen' }).click();
   await page.getByRole('textbox', { name: 'Name' }).fill('Doppelt');
   await page.getByRole('textbox', { name: 'Slug' }).fill(SLUG);
-  await page.getByRole('button', { name: 'Speichern' }).click();
+  await page.getByRole('button', { name: 'Speichern', exact: true }).click();
   await expect(page.getByText('Slug schon vergeben.')).toBeVisible();
   await page.context().close();
 });
@@ -68,7 +68,7 @@ test('admin: adds a group mapping and removes it again', async ({ browser }) => 
   await page.getByRole('option', { name: 'Lesend' }).click();
   await page.getByRole('combobox', { name: 'Organisation' }).click();
   await page.getByRole('option', { name: 'Fachschaft Informatik' }).click();
-  await page.getByRole('button', { name: 'Speichern' }).click();
+  await page.getByRole('button', { name: 'Speichern', exact: true }).click();
   await expect(page.getByText('Gespeichert.')).toBeVisible();
 
   const row = page.getByRole('row', { name: new RegExp(GROUP) });
@@ -81,7 +81,7 @@ test('admin: adds a group mapping and removes it again', async ({ browser }) => 
   await page.getByRole('textbox', { name: /Gruppe/ }).fill(`events-system:${STAMP}`);
   await page.getByRole('combobox', { name: /Rolle/ }).click();
   await page.getByRole('option', { name: 'Redaktion' }).click();
-  await page.getByRole('button', { name: 'Speichern' }).click();
+  await page.getByRole('button', { name: 'Speichern', exact: true }).click();
   await expect(
     page.getByText('Gruppe beginnt mit reserviertem Präfix events-system:.'),
   ).toBeVisible();

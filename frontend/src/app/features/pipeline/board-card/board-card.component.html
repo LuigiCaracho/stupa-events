@@ -15,6 +15,9 @@
   @if (status(); as s) {
     <app-status-text class="bc__status" [kind]="s.kind">{{ s.text }}</app-status-text>
   }
+  @if (card().howtoUnverified) {
+    <app-status-text class="bc__status" kind="warn">{{ 'format.unverified' | t }}</app-status-text>
+  }
   @if (shown().length > 0) {
     <span class="bc__blockers">
       @for (r of shown(); track $index) {

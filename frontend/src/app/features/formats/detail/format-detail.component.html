@@ -1,0 +1,155 @@
+@if (format(); as f) {
+  <app-page-header
+    [pane]="true"
+    [title]="f.title"
+    [subtitle]="f.organization.name"
+  >
+    <ng-container ngProjectAs="[actions]">
+      <app-button variant="fill" (click)="newEdition()">{{ 'format.newEdition' | t }}</app-button>
+    </ng-container>
+  </app-page-header>
+
+  @if (f.descriptionMd) {
+    <app-markdown-view [src]="f.descriptionMd" />
+  }
+
+  @if (latest(); as l) {
+    <section class="fd__last" aria-labelledby="fd-last">
+      <h2 class="sec" id="fd-last">{{ 'format.lastEdition' | t }}</h2>
+      <p class="fd__lastLine">
+        {{ l.title }} <span class="fd__muted num">{{ day(l) }}</span>
+      </p>
+      <dl class="fd__facts">
+        <div>
+          <dt>{{ 'outcome.attendance' | t }}</dt>
+          <dd class="num">{{ l.attendance ?? '–' }}</dd>
+        </div>
+        @if (l.costsCents !== null) {
+          <div>
+            <dt>{{ 'outcome.costs' | t }}</dt>
+            <dd class="num">{{ money(l.costsCents) }}</dd>
+          </div>
+        }
+      </dl>
+    </section>
+  }
+
+  <app-tabs
+    #bar
+    idPrefix="fd"
+    [ariaLabel]="'format.tabs' | t"
+    [tabs]="tabs()"
+    [active]="tab()"
+    (activeChange)="tab.set($any($event))"
+  />
+
+  <section
+    class="fd__panel"
+    role="tabpanel"
+    [id]="bar.panelId(tab())"
+    [attr.aria-labelledby]="bar.tabId(tab())"
+  >
+    @if (tab() === 'howto') {
+      @if (f.masterHowto; as h) {
+        <p class="fd__verified">
+          @if (h.verifiedAt) {
+            {{
+              'format.verifiedBy'
+                | t: { who: h.verifiedBy ?? '', date: (h.verifiedAt | ldate: 'mediumDate') }
+            }}
+          } @else {
+            {{ 'howto.notVerified' | t }}
+          }
+          @if (stale()) {
+            <app-status-text kind="warn">{{ 'format.stale' | t }}</app-status-text>
+          }
+        </p>
+        <app-note>{{ 'howto.privacy' | t }}</app-note>
+        <app-document-editor
+          [documentId]="h.id"
+          [canEdit]="canManage()"
+          keyPrefix="format-howto"
+          [label]="'format.howtoLabel' | t"
+          (saved)="reload()"
+        />
+        @if (canManage()) {
+          <div class="fd__actions">
+            <app-button variant="tonal" [loading]="busy()" (click)="verify()">{{
+              'format.markVerified' | t
+            }}</app-button>
+          </div>
+        }
+      } @else {
+        <app-empty-state plain [heading]="'format.noHowto' | t" [body]="'format.noHowtoBody' | t" />
+        @if (canManage()) {
+          <div class="fd__actions">
+            <app-button variant="tonal" [loading]="busy()" (click)="createHowto(false)">{{
+              'format.createHowto' | t
+            }}</app-button>
+            @if (latest()) {
+              <app-button variant="text" [loading]="busy()" (click)="createHowto(true)">{{
+                'format.howtoFromEdition' | t
+              }}</app-button>
+            }
+          </div>
+        }
+      }
+    } @else if (tab() === 'editions') {
+      @if (f.editions.length === 0) {
+        <app-empty-state plain [heading]="'format.noEditions' | t">
+          <app-button variant="fill" (click)="newEdition()">{{ 'format.newEditionShort' | t }}</app-button>
+        </app-empty-state>
+      } @else {
+        <app-format-editions [editions]="f.editions" (open)="openEdition($event)" />
+      }
+    } @else {
+      <section aria-labelledby="fd-check">
+        <h2 class="sec" id="fd-check">
+          {{ 'format.checklist' | t }}
+          @if (f.checklist.template; as t) {
+            <span class="fd__muted">{{ t.name }}</span>
+          }
+        </h2>
+        @if (f.checklist.items.length === 0) {
+          <p class="fd__muted">{{ 'format.noChecklist' | t }}</p>
+        } @else {
+          <ul class="fd__list rowgroup">
+            @for (item of f.checklist.items; track $index) {
+              <li>
+                {{ item.text }}
+                @if (item.required) {
+                  <span class="fd__muted">{{ 'format.required' | t }}</span>
+                }
+              </li>
+            }
+          </ul>
+        }
+      </section>
+      <section aria-labelledby="fd-mails">
+        <h2 class="sec" id="fd-mails">{{ 'format.mails' | t }}</h2>
+        @if (f.mailTemplates.length === 0) {
+          <p class="fd__muted">{{ 'format.noMails' | t }}</p>
+        } @else {
+          <ul class="fd__list rowgroup">
+            @for (m of f.mailTemplates; track m.id) {
+              <li>{{ m.title }}</li>
+            }
+          </ul>
+        }
+      </section>
+    }
+  </section>
+
+  @if (dialogOpen()) {
+    <app-new-edition-dialog
+      [format]="f"
+      (closed)="dialogOpen.set(false)"
+      (created)="created($event)"
+    />
+  }
+} @else if (loaded.error()) {
+  <app-note kind="error" role="alert">{{ 'format.loadFailed' | t }}</app-note>
+  <app-button variant="text" (click)="reload()">{{ 'action.retry' | t }}</app-button>
+} @else {
+  <app-skeleton variant="panel" />
+}

@@ -1,0 +1,59 @@
+<app-dialog
+  [open]="palette.isOpen()"
+  [title]="'palette.title' | t"
+  [closeLabel]="'action.close' | t"
+  (closed)="palette.hide()"
+>
+  <div class="cp">
+    <input
+      #field
+      class="cp__input"
+      type="text"
+      role="combobox"
+      autocomplete="off"
+      spellcheck="false"
+      maxlength="100"
+      aria-autocomplete="list"
+      aria-haspopup="listbox"
+      [attr.aria-expanded]="flat().length > 0"
+      [attr.aria-controls]="uid + '-list'"
+      [attr.aria-activedescendant]="activeId()"
+      [attr.aria-label]="'palette.input' | t"
+      [placeholder]="'palette.placeholder' | t"
+      [value]="q()"
+      (input)="typed($event)"
+      (keydown)="onKey($event)"
+    />
+    <div class="cp__live" role="status" aria-live="polite">{{ announce() }}</div>
+    <div class="cp__list" role="listbox" [id]="uid + '-list'" [attr.aria-label]="'palette.results' | t">
+      @for (group of groups(); track group.key) {
+        <div class="cp__group" role="group" [attr.aria-labelledby]="uid + '-g-' + group.key">
+          <div class="cp__heading" [id]="uid + '-g-' + group.key">{{ group.heading | t }}</div>
+          @for (item of group.items; track item.id) {
+            <div
+              class="cp__option"
+              role="option"
+              [id]="optionId(item)"
+              [class.cp__option--active]="isActive(item)"
+              [attr.aria-selected]="isActive(item)"
+              (click)="run(item)"
+              (mousemove)="hover(item)"
+            >
+              <span class="cp__label">{{ item.label }}</span>
+              @if (item.hint) {
+                <span class="cp__hint">{{ item.hint }}</span>
+              }
+            </div>
+          }
+        </div>
+      } @empty {
+        <p class="cp__empty">{{ 'palette.empty' | t }}</p>
+      }
+
+    </div>
+    @if (failure(); as failed) {
+      <p class="cp__error" role="alert">{{ (failed === 'rate' ? 'palette.rateLimited' : 'palette.error') | t }}</p>
+    }
+    <p class="cp__keys" aria-hidden="true">{{ 'palette.keys' | t }}</p>
+  </div>
+</app-dialog>

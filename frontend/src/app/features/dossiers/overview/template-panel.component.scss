@@ -1,0 +1,21 @@
+.tp {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.tp__source,
+.tp__muted {
+  margin: 0;
+}
+
+.tp__muted {
+  color: var(--color-text-muted);
+}
+
+.tp__list {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

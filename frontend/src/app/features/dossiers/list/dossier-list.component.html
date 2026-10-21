@@ -8,6 +8,9 @@
       [meta]="meta()"
     >
       <ng-container ngProjectAs="[actions]">
+        <app-button variant="text" size="sm" (click)="openCalendar()">{{
+          'calendar.title' | t
+        }}</app-button>
         <app-button variant="tonal" size="sm" (click)="openNew()">{{
           'dossiers.new' | t
         }}</app-button>
@@ -49,6 +52,9 @@
               <app-status-text status [kind]="status(card).kind">{{
                 status(card).key | t
               }}</app-status-text>
+              @if (card.howtoUnverified) {
+                <app-status-text status kind="warn">{{ 'format.unverified' | t }}</app-status-text>
+              }
               @if (card.blockerCount > 0) {
                 <span trail class="dl__blockers">{{
                   'dossiers.blockers' | t: { count: card.blockerCount }
@@ -75,5 +81,19 @@
 </app-list-detail>
 
 @if (newOpen) {
-  <app-new-event-dialog (closed)="closeNew()" (created)="created($event.id)" />
+  @if (newMode() === 'template') {
+    <app-clone-dialog
+      [templateId]="templateId"
+      [formatSlug]="formatSlug"
+      (closed)="closeNew()"
+      (created)="created($event)"
+      (switchToBlank)="newMode.set('blank')"
+    />
+  } @else {
+    <app-new-event-dialog
+      (closed)="closeNew()"
+      (created)="created($event.id)"
+      (switchToTemplate)="newMode.set('template')"
+    />
+  }
 }

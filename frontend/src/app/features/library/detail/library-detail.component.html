@@ -1,0 +1,58 @@
+@if (kind() === 'document') {
+  @if (doc.hasValue()) {
+    @let d = doc.value();
+    <article class="lbd" [attr.aria-labelledby]="'lbd-title'">
+      <header class="lbd__head">
+        <h2 class="lbd__title" id="lbd-title">{{ d.title }}</h2>
+        <app-button variant="fill" (click)="adopting.set(true)">{{ 'library.adopt' | t }}</app-button>
+      </header>
+      <p class="lbd__meta">
+        @if (item(); as i) {
+          @if (sourceLink(); as link) {
+            <a [routerLink]="link">{{ i.source.title }}</a>
+          }
+          <span>{{ i.source.organization.short }}</span>
+        }
+        @if (d.verifiedAt) {
+          <span>{{ 'format.verifiedOn' | t: { date: (d.verifiedAt | ldate: 'mediumDate') } }}</span>
+        } @else {
+          <app-status-text kind="warn">{{ 'format.unverified' | t }}</app-status-text>
+        }
+      </p>
+      <app-markdown-view [src]="d.bodyMd ?? ''" />
+    </article>
+    @if (adopting()) {
+      <app-adopt-dialog [documentId]="d.id" [title]="d.title" (closed)="adopting.set(false)" />
+    }
+  } @else if (notFound()) {
+    <app-note kind="error" role="alert">{{ 'library.notFound' | t }}</app-note>
+  } @else if (doc.error()) {
+    <app-note kind="error" role="alert">{{ 'library.loadFailed' | t }}</app-note>
+  } @else {
+    <app-skeleton variant="panel" />
+  }
+} @else {
+  <article class="lbd" aria-labelledby="lbd-title">
+    <h2 class="lbd__title" id="lbd-title">{{ item()?.title ?? ('library.file' | t) }}</h2>
+    @if (item(); as i) {
+      <p class="lbd__meta">
+        @if (sourceLink(); as link) {
+          <a [routerLink]="link">{{ i.source.title }}</a>
+        }
+        <span>{{ i.source.organization.short }}</span>
+        @if (i.mime) {
+          <span>{{ i.mime }}</span>
+        }
+        @if (i.sizeBytes) {
+          <span class="num">{{ size(i.sizeBytes) }}</span>
+        }
+      </p>
+    }
+    @if (isImage()) {
+      <app-image-thumb size="md" [src]="preview()" [alt]="item()?.title ?? ''" />
+    }
+    <p>
+      <a class="lbd__download" [href]="download()" download>{{ 'library.download' | t }}</a>
+    </p>
+  </article>
+}

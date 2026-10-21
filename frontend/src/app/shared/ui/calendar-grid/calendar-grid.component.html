@@ -1,0 +1,96 @@
+@if (phone()) {
+  <div class="cg__agenda" [attr.aria-label]="'calendar.agenda' | t" role="region">
+    @for (day of agenda(); track day.key) {
+      <section class="cg__day">
+        <h3 class="cg__dayTitle" [class.cg__dayTitle--today]="day.key === today()">
+          {{ day.label }}
+          @if (day.key === today()) {
+            <span class="cg__todayTag">{{ 'calendar.today' | t }}</span>
+          }
+        </h3>
+        <ul class="cg__list">
+          @for (entry of day.entries; track entry.id) {
+            <li>
+              <app-calendar-entry [entry]="entry" [day]="day.key" (open)="entryOpen.emit($event)" />
+            </li>
+          }
+        </ul>
+      </section>
+    } @empty {
+      <p class="cg__empty" role="status">{{ 'calendar.empty' | t }}</p>
+    }
+  </div>
+} @else {
+  <div
+    class="cg"
+    [class.cg--week]="mode() === 'week'"
+    role="grid"
+    [attr.aria-label]="'calendar.gridLabel' | t"
+    [attr.aria-rowcount]="rows().length + 1"
+    [attr.aria-colcount]="7"
+  >
+    <div class="cg__row cg__row--head" role="row">
+      @for (name of weekdays(); track $index) {
+        <div class="cg__head" role="columnheader">{{ name }}</div>
+      }
+    </div>
+    @for (row of rows(); track row[0].key) {
+      <div class="cg__row" role="row">
+        @for (cell of row; track cell.key) {
+          <div
+            class="cg__cell"
+            role="gridcell"
+            [class.cg__cell--outside]="cell.outside"
+            [class.cg__cell--today]="cell.today"
+            [attr.data-day]="cell.key"
+            [attr.tabindex]="tabIndex(cell.key)"
+            [attr.aria-current]="cell.today ? 'date' : null"
+            (keydown)="onKey($event, cell)"
+            (click)="focusDay.set(cell.key)"
+          >
+            <span class="cg__date">
+              <span aria-hidden="true">{{ cell.day }}</span>
+              <span class="cg__sr">{{ cell.label }}</span>
+            </span>
+            <ul class="cg__list">
+              @for (entry of cell.shown; track entry.id) {
+                <li>
+                  <app-calendar-entry
+                    [entry]="entry"
+                    [day]="cell.key"
+                    [compact]="mode() === 'month'"
+                    [focusable]="false"
+                    (open)="entryOpen.emit($event)"
+                  />
+                </li>
+              }
+            </ul>
+            @if (cell.more > 0) {
+              <button
+                type="button"
+                class="cg__more"
+                tabindex="-1"
+                (click)="sheetDay.set(cell.key); $event.stopPropagation()"
+              >
+                {{ 'calendar.more' | t: { count: cell.more } }}
+              </button>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+  <app-side-sheet
+    [open]="sheetDay() !== null"
+    [heading]="sheetTitle()"
+    (closed)="sheetDay.set(null)"
+  >
+    <ul class="cg__list cg__list--sheet">
+      @for (entry of sheetEntries(); track entry.id) {
+        <li>
+          <app-calendar-entry [entry]="entry" [day]="sheetDay()" (open)="openEntry($event)" />
+        </li>
+      }
+    </ul>
+  </app-side-sheet>
+}

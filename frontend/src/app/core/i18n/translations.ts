@@ -2,11 +2,14 @@
 /**
  * UI string catalog. Rewritten from the workflow tool: DE only in stage A (en parity follows with
  * stage B, see the TODO in `translations.spec.ts`). The shell strings live in
- * `translations.shell.de.ts`; the feature pages add theirs in `translations.events.de.ts`, the pipeline pages in `translations.pipeline.de.ts`, the admin area in `translations.admin.de.ts`.
+ * `translations.shell.de.ts`; the feature pages add theirs in `translations.events.de.ts`, the pipeline pages in `translations.pipeline.de.ts`, the admin area in `translations.admin.de.ts`, the M5 areas in `translations.{calendar,format,archive}.de.ts`.
  */
 import { adminDe } from './translations.admin.de';
+import { archiveDe } from './translations.archive.de';
+import { calendarDe } from './translations.calendar.de';
 import { dossierDe } from './translations.dossier.de';
 import { eventsDe } from './translations.events.de';
+import { formatDe } from './translations.format.de';
 import { pipelineDe } from './translations.pipeline.de';
 import { shellDe } from './translations.shell.de';
 import { sharedDe } from './translations.shared.de';
@@ -16,7 +19,17 @@ export type Locale = 'de';
 export const SUPPORTED_LOCALES: readonly Locale[] = ['de'] as const;
 export const DEFAULT_LOCALE: Locale = 'de';
 
-export const de = { ...shellDe, ...sharedDe, ...eventsDe, ...pipelineDe, ...dossierDe, ...adminDe } as const;
+export const de = {
+  ...shellDe,
+  ...sharedDe,
+  ...eventsDe,
+  ...pipelineDe,
+  ...dossierDe,
+  ...adminDe,
+  ...calendarDe,
+  ...formatDe,
+  ...archiveDe,
+} as const;
 
 export type TranslationKey = keyof typeof de;
 

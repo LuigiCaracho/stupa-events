@@ -11,6 +11,8 @@ export type ActionName =
   | 'revert-revision'
   | 'acknowledge-changes'
   | 'confirm-flyer'
+  | 'verify-howto'
+  | 'confirm-location'
   /** Hints of `allowedActions` only; they have no route of their own. */
   | 'postpone-with-date'
   | 'public-text';
@@ -39,8 +41,12 @@ export interface RevertBody {
   note?: string;
 }
 
+export interface ConfirmLocationBody {
+  precision: 'exact' | 'building';
+}
+
 export type ActionBody =
-  CancelBody | PostponeBody | ReasonBody | AssignBody | RevertBody | Record<string, never>;
+  ConfirmLocationBody | CancelBody | PostponeBody | ReasonBody | AssignBody | RevertBody | Record<string, never>;
 
 export type FieldClass = 'state' | 'critical' | 'text' | 'dossier';
 

@@ -134,7 +134,7 @@ test('Board: keyboard drag from idea to planning, back with Escape, no drop into
   const dialog = page.getByRole('dialog', { name: 'Freigabe anfragen' });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole('heading', { name: 'Fehlt noch' })).toBeVisible();
-  await expect(dialog.getByRole('button', { name: 'Bestätigen' })).toBeDisabled();
+  await expect(dialog.getByRole('button', { name: 'Bestätigen', exact: true })).toBeDisabled();
   await page.context().close();
 });
 
@@ -192,7 +192,7 @@ test('Four eyes: the submitter cannot approve, a second approver can', async ({ 
   await expect(
     dialog.getByText('Du hast dieses Event eingereicht. Eine andere Person muss freigeben.'),
   ).toBeVisible();
-  await expect(dialog.getByRole('button', { name: 'Bestätigen' })).toBeDisabled();
+  await expect(dialog.getByRole('button', { name: 'Bestätigen', exact: true })).toBeDisabled();
   await dialog.getByRole('button', { name: 'Schließen' }).click();
   const refused = await postJson(first, `/api/events/${ids['fourEyes']}/transitions/T04`);
   expect(refused.status()).toBe(403);
@@ -245,7 +245,7 @@ test('Field classes in live: the organizer corrects the summary, the time stays 
   await expect(time).toBeEnabled();
   await time.fill('20:15');
   await time.blur();
-  await editor.getByRole('button', { name: 'Speichern' }).click();
+  await editor.getByRole('button', { name: 'Speichern', exact: true }).click();
   await expect(editor.getByText('Gespeichert.')).toBeVisible();
   expect((await eventOf(editor, ids['live']))['startsAt']).not.toBe(live['startsAt']);
   await editor.context().close();
@@ -267,7 +267,7 @@ test('Cancellation stays in the feed as cancelled and the editor takes it back',
   await expect(organizer.locator('app-dossier-head').getByText(/Abgesagt/)).toBeVisible();
 
   const anonymous: APIRequestContext = await request.newContext({ baseURL: BASE_URL });
-  const feed = await (await anonymous.get('/api/public/feed/events')).json();
+  const feed = await (await anonymous.get('/api/public/feed/events?limit=500')).json();
   const item = feed.items.find((i: { id: string }) => i.id === ids['live']);
   expect(item).toBeTruthy();
   expect(item.status).toBe('cancelled');
@@ -312,7 +312,7 @@ test('Autosave survives a reload, and a second save raises the edit conflict', a
   await login(other, 'organizer-fsi');
   await other.goto(`/dossiers/${ids['autosave']}`);
   await other.getByRole('textbox', { name: /Kurztext/ }).fill('Von der zweiten Sitzung');
-  await other.getByRole('button', { name: 'Speichern' }).click();
+  await other.getByRole('button', { name: 'Speichern', exact: true }).click();
   await expect(other.getByText('Gespeichert.')).toBeVisible();
 
   await page.getByRole('textbox', { name: /Kurztext/ }).fill('Nur als Entwurf, weiter getippt');

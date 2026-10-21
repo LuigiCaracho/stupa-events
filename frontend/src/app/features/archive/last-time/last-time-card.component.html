@@ -1,0 +1,44 @@
+@let lt = lastTime();
+<section class="lt" aria-labelledby="lt-heading">
+  <h3 class="sec" id="lt-heading">{{ 'lastTime.title' | t }}</h3>
+  <p class="lt__source">
+    @if (linked()) {
+      <a [routerLink]="link()">{{ lt.source.title }}</a>
+    } @else {
+      {{ lt.source.title }}
+    }
+    <span class="lt__muted">
+      {{ lt.source.organization.short }} · {{ lt.source.startsAt | ldate: 'mediumDate' }}
+    </span>
+  </p>
+  <dl class="lt__facts">
+    <div>
+      <dt>{{ 'outcome.attendance' | t }}</dt>
+      <dd class="num">{{ lt.attendance ?? '–' }}</dd>
+    </div>
+    @if (lt.costsCents !== null) {
+      <div>
+        <dt>{{ 'outcome.costs' | t }}</dt>
+        <dd class="num">{{ money(lt.costsCents) }}</dd>
+      </div>
+    }
+    @if (lt.revenueCents !== null) {
+      <div>
+        <dt>{{ 'outcome.revenue' | t }}</dt>
+        <dd class="num">{{ money(lt.revenueCents) }}</dd>
+      </div>
+    }
+  </dl>
+  @if (lt.notes) {
+    <p class="lt__notes">{{ lt.notes }}</p>
+  }
+  @if (lt.restricted) {
+    <app-note>{{ 'lastTime.restricted' | t }}</app-note>
+  }
+  @if (lt.retrospective; as r) {
+    <details class="lt__retro">
+      <summary>{{ 'lastTime.retrospective' | t }}</summary>
+      <app-markdown-view [src]="r.bodyMd" />
+    </details>
+  }
+</section>

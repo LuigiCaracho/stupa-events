@@ -44,6 +44,9 @@ export interface EventCard {
   blockerCount: number;
   moves: Partial<Record<ColumnKey, TransitionId>>;
   openQuestions: number;
+  /** M5: the format of the dossier and the mark "Anleitung ungeprüft" of an archived one (contract 3.2, 3.4). */
+  formatSlug?: string | null;
+  howtoUnverified?: boolean;
 }
 
 export interface BoardColumn {

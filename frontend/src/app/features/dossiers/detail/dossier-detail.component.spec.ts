@@ -1,4 +1,5 @@
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { render, screen, waitFor, within } from '@testing-library/angular';
@@ -49,6 +50,8 @@ async function setup(api = fakeApi(), auth = fakeAuth(), fakeTimers = false) {
     inputs: { id: 'ev-1' },
     providers: [
       provideRouter([]),
+      provideHttpClient(),
+      provideHttpClientTesting(),
       { provide: EventsApi, useValue: api },
       { provide: AuthService, useValue: auth },
       {
@@ -231,10 +234,15 @@ describe('DossierDetailComponent', () => {
       expect(await screen.findByText('2 Fälligkeiten neu berechnet.')).toBeInTheDocument();
     });
 
-    it('only shows the budget suggestion; the budget field comes later', async () => {
+    it('puts the budget suggestion into the facts of the dossier', async () => {
       const { page, toasts } = await setup();
       (page as unknown as { useBudget(c: number): void }).useBudget(123456);
-      expect(toasts()[0]).toContain('1234,56');
+      const req = TestBed.inject(HttpTestingController).expectOne('/api/events/ev-1/facts');
+      expect(req.request.method).toBe('PUT');
+      expect(req.request.body).toEqual({ budgetCents: 123456 });
+      expect(req.request.headers.get('If-Match')).toBe('"3"');
+      req.flush(makeEvent({ rev: 4, facts: { budgetCents: 123456 } }));
+      expect(toasts()).toContain('Rahmen gespeichert.');
     });
   });
 

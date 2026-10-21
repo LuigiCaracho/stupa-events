@@ -1,0 +1,66 @@
+@if (event(); as e) {
+  <app-page-header [title]="e.title" [subtitle]="e.organization.name">
+    <ng-container ngProjectAs="[actions]">
+      <app-button variant="fill" (click)="useTemplate()">{{ 'search.useTemplate' | t }}</app-button>
+    </ng-container>
+  </app-page-header>
+  <p class="ae__meta">
+    @if (state(); as s) {
+      <app-status-text [kind]="s.kind">{{ s.key | t }}</app-status-text>
+    }
+    <span class="num">{{ when() }}</span>
+    @if (e.venueName; as venue) {
+      <span>{{ venue }}</span>
+    }
+    @if (e.format; as f) {
+      <a [routerLink]="['/formate', f.slug]">{{ f.title }}</a>
+    }
+    @if (e.attendance !== null) {
+      <span>{{ 'archive.attendance' | t: { count: e.attendance } }}</span>
+    }
+  </p>
+  <app-note>{{ 'archive.foreignNote' | t }}</app-note>
+  @if (e.summary) {
+    <p>{{ e.summary }}</p>
+  }
+  @if (e.descriptionMd) {
+    <app-markdown-view [src]="e.descriptionMd" />
+  }
+  <section aria-labelledby="ae-docs">
+    <h2 class="sec" id="ae-docs">{{ 'archive.sharedDocuments' | t }}</h2>
+    @if (e.documents.length === 0) {
+      <p class="ae__muted">{{ 'archive.noneShared' | t }}</p>
+    } @else {
+      <ul class="ae__list rowgroup">
+        @for (d of e.documents; track d.id) {
+          <li>
+            <a [routerLink]="['/bibliothek', 'document', d.id]">{{ d.title }}</a>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+  <section aria-labelledby="ae-files">
+    <h2 class="sec" id="ae-files">{{ 'archive.sharedFiles' | t }}</h2>
+    @if (e.attachments.length === 0) {
+      <p class="ae__muted">{{ 'archive.noneShared' | t }}</p>
+    } @else {
+      <ul class="ae__list rowgroup">
+        @for (a of e.attachments; track a.id) {
+          <li>
+            <a [href]="download(a.id)" download>{{ a.displayName }}</a>
+            <span class="ae__muted">{{ size(a.sizeBytes) }}</span>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+} @else if (notFound()) {
+  <app-note kind="error" role="alert">{{ 'archive.notFound' | t }}</app-note>
+  <a routerLink="/archiv">{{ 'archive.back' | t }}</a>
+} @else if (loaded.error()) {
+  <app-note kind="error" role="alert">{{ 'archive.loadFailed' | t }}</app-note>
+  <app-button variant="text" (click)="loaded.reload()">{{ 'action.retry' | t }}</app-button>
+} @else {
+  <app-skeleton variant="panel" />
+}

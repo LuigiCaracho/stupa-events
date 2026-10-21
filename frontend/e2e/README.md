@@ -19,6 +19,12 @@ checklist with its template, a mail template with live preview and the sentence 
 organization (`organizer-makers`) getting 404 on the quotes and tabs of an FSI dossier, and axe on the new tabs.
 It needs the M4 backend (migration `0005`) in the running stack.
 
+`m5.spec.ts` is the M5 acceptance run in the browser: a new edition from an archived Movienight (preview, no poster, "Letztes Mal"),
+"Fachschaftssitzung" finds "Sitzung", the palette (Strg+K) and the calendar by keyboard, the follow-up up to T09 and the archive, and the
+archive, formats, library and calendar at desktop width and 360 px with axe in light and dark. It needs the M5 backend (migration
+`0006`) and the Movienight fixture in the dev seed; the follow-up test moves a dossier into `followup` with SQL through
+`docker exec` (`support/db.ts`, `E2E_PG_CONTAINER`, dev stack only) and skips itself when that is not possible.
+
 Needs the compose stack with the Keycloak overlay and `127.0.0.1 host.docker.internal` in `/etc/hosts`
 (see `docs/M1-KONTRAKT.md` sections 1 and 8). The tests open `http://localhost:8081` (the registered
 redirect URI); override with `E2E_BASE_URL`. Run `npx playwright test` in `frontend/`.

@@ -80,4 +80,14 @@ describe('BoardCardComponent', () => {
     await userEvent.click(button);
     expect(open).toHaveBeenCalledWith(expect.objectContaining({ id: 'ev-1' }));
   });
+
+  it('warns in text when the howto of an archived dossier is unchecked', async () => {
+    await render(BoardCardComponent, { inputs: { card: makeCard({ state: 'archived', howtoUnverified: true }) } });
+    expect(screen.getByText('Anleitung ungeprüft')).toBeInTheDocument();
+  });
+
+  it('shows no such warning for a normal card', async () => {
+    await render(BoardCardComponent, { inputs: { card: makeCard() } });
+    expect(screen.queryByText('Anleitung ungeprüft')).not.toBeInTheDocument();
+  });
 });

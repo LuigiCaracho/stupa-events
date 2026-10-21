@@ -1,5 +1,5 @@
 /** Copied from STUPA-Workflow@93c33d6 frontend/src/app/layout/shell.component.ts */
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
@@ -12,7 +12,9 @@ import { InboxComponent } from '../features/notifications/inbox.component';
 import { LoadBarComponent } from './load-bar/load-bar.component';
 import { mediaQuerySignal } from './media-query';
 import { NavRailComponent } from './nav-rail/nav-rail.component';
+import { CommandPaletteComponent } from './palette/command-palette.component';
 import { PageFrameService } from './page-frame.service';
+import { PaletteService } from './palette/palette.service';
 import { PublicHeaderComponent } from './public-header/public-header.component';
 import { SiteFooterComponent } from './site-footer/site-footer.component';
 
@@ -47,17 +49,20 @@ export type ShellFrame = 'rail' | 'public' | 'bare' | 'pending';
     ToastComponent,
     SwUpdatePromptComponent,
     LoadBarComponent,
+    CommandPaletteComponent,
     InboxComponent,
     NavRailComponent,
     BottomBarComponent,
     PublicHeaderComponent,
     SiteFooterComponent,
   ],
+  host: { '(document:keydown)': 'onKey($event)' },
   templateUrl: './shell.component.html',
   styleUrl: './shell.component.scss',
 })
 export class ShellComponent {
   readonly auth = inject(AuthService);
+  protected readonly palette = inject(PaletteService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
@@ -100,7 +105,15 @@ export class ShellComponent {
     return this.auth.isAuthenticated() ? 'rail' : 'public';
   });
 
+  protected onKey(event: KeyboardEvent): void {
+    if (this.frame() === 'rail') this.palette.onKey(event);
+  }
+
   constructor() {
+    effect(() => {
+      if (this.frame() !== 'rail') this.palette.hide();
+    });
+
     // The app initializer starts the same request; `ensureLoaded` shares it.
     this.auth
       .ensureLoaded()

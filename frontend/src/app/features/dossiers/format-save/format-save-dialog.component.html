@@ -1,0 +1,29 @@
+<app-dialog
+  [open]="true"
+  [title]="'formatSave.title' | t"
+  [subtitle]="'formatSave.subtitle' | t"
+  [closeLabel]="'action.close' | t"
+  (closed)="closed.emit()"
+>
+  <form id="format-save-form" class="fs" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <app-input
+      formControlName="title"
+      [label]="'formatSave.name' | t"
+      [required]="true"
+      [error]="invalid('title') ? ('formatSave.errTitle' | t) : ''"
+    />
+    <app-input
+      formControlName="slug"
+      [label]="'formatSave.slug' | t"
+      [hint]="'formatSave.slugHint' | t"
+      [required]="true"
+      [error]="serverError() || (invalid('slug') ? ('formatSave.errSlug' | t) : '')"
+    />
+  </form>
+  <div dialog-footer class="fs__footer">
+    <app-button variant="text" (click)="closed.emit()">{{ 'action.cancel' | t }}</app-button>
+    <app-button type="submit" variant="fill" [loading]="busy()" (click)="submit()">{{
+      'formatSave.submit' | t
+    }}</app-button>
+  </div>
+</app-dialog>

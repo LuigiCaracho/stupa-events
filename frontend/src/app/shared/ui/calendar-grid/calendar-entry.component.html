@@ -1,0 +1,25 @@
+<button
+  type="button"
+  class="ce"
+  [style.--ce-tint]="tint()"
+  [attr.tabindex]="focusable() ? null : -1"
+  (click)="open.emit(entry().id); $event.stopPropagation()"
+>
+  @if (time(); as t) {
+    <span class="ce__time num">{{ t }}</span>
+  } @else if (entry().allDay && !continues()) {
+    <span class="ce__time">{{ 'calendar.allDay' | t }}</span>
+  } @else if (continues()) {
+    <span class="ce__time">{{ 'calendar.continues' | t }}</span>
+  }
+  <span class="ce__title">{{ entry().title }}</span>
+  @if (entry().organization; as org) {
+    <span class="ce__org">{{ org.short }}</span>
+  }
+  @if (marker(); as m) {
+    <app-status-text class="ce__state" [kind]="m.kind">{{ m.key | t }}</app-status-text>
+  }
+  @if (entry().howtoUnverified) {
+    <app-status-text class="ce__state" kind="warn">{{ 'format.unverified' | t }}</app-status-text>
+  }
+</button>

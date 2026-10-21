@@ -42,7 +42,9 @@ describe('NavRailComponent', () => {
     const labels = Array.from(container.querySelectorAll('.rail__label')).map((l) =>
       l.textContent?.trim(),
     );
-    expect(labels).toEqual(['Aufgaben', 'Pipeline', 'Dossiers', 'Meldungen', 'Konto']);
+    expect(labels).toEqual([
+      'Aufgaben', 'Pipeline', 'Dossiers', 'Kalender', 'Archiv', 'Formate', 'Bibliothek', 'Meldungen', 'Konto',
+    ]);
     expect(container.querySelector('.rail__spacer + button')).toHaveTextContent('Meldungen');
     expect(Array.from(container.querySelectorAll('.rail__item')).at(-1)).toHaveTextContent('Konto');
   });

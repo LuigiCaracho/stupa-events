@@ -1,0 +1,21 @@
+:host {
+  display: block;
+}
+
+.lib__filters {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.lib__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.lib__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

@@ -5,6 +5,16 @@
   [closeLabel]="'action.close' | t"
   (closed)="closed.emit()"
 >
+  <app-segmented
+    class="ne__mode"
+    [ariaLabel]="'clone.mode' | t"
+    [options]="[
+      { value: 'blank', label: 'clone.modeBlank' | t },
+      { value: 'template', label: 'clone.modeTemplate' | t },
+    ]"
+    value="blank"
+    (valueChange)="$event === 'template' && switchToTemplate.emit()"
+  />
   <form id="new-event-form" class="ne" [formGroup]="form" (ngSubmit)="submit()" novalidate>
     <app-input
       formControlName="title"

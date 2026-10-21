@@ -1,0 +1,33 @@
+<app-dialog
+  [open]="true"
+  [title]="'format.newEditionTitle' | t: { title: format().title }"
+  [subtitle]="'format.newEditionSubtitle' | t"
+  [closeLabel]="'action.close' | t"
+  (closed)="closed.emit()"
+>
+  <form id="new-edition-form" class="ned" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    @if (orgOptions().length > 1) {
+      <app-select
+        formControlName="organizationId"
+        [label]="'new.org' | t"
+        [options]="orgOptions()"
+        [clearable]="false"
+      />
+    }
+    <div class="ned__row">
+      <app-datepicker
+        formControlName="startDate"
+        [label]="'new.startDate' | t"
+        [required]="true"
+        [error]="attempted() && form.controls.startDate.invalid ? ('clone.errDate' | t) : ''"
+      />
+      <app-time-input formControlName="startTime" [label]="'new.startTime' | t" [required]="true" />
+    </div>
+  </form>
+  <div dialog-footer class="ned__footer">
+    <app-button variant="text" (click)="closed.emit()">{{ 'action.cancel' | t }}</app-button>
+    <app-button type="submit" variant="fill" [loading]="busy()" (click)="submit()">{{
+      'format.newEditionSubmit' | t
+    }}</app-button>
+  </div>
+</app-dialog>

@@ -1,3 +1,4 @@
+import { provideRouter } from '@angular/router';
 import { render, screen, within } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { runAxe } from '../../../../testing/a11y';
@@ -139,5 +140,48 @@ describe('DossierHeadComponent', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Mehr' }));
     expect(within(document.body).getByRole('menu')).toBeInTheDocument();
     expect(await runAxe(view.container)).toHaveNoViolations();
+  });
+
+  describe('M5', () => {
+    it('lists "Neu aus diesem Event", "Als Format speichern" and "Ort bestätigen" for the actions the server allows', async () => {
+      const { commands } = await setup(
+        makeEvent({ state: 'archived', allowedTransitions: [] }),
+        ['clone', 'save-as-format', 'confirm-location'],
+      );
+      expect(await menuLabels()).toEqual(['Ort bestätigen', 'Neu aus diesem Event', 'Als Format speichern']);
+      await userEvent.click(screen.getByRole('menuitem', { name: 'Neu aus diesem Event' }));
+      expect(commands).toEqual([{ kind: 'action', name: 'clone' }]);
+    });
+
+    it('sends save-as-format and confirm-location as commands', async () => {
+      const { commands } = await setup(makeEvent({ allowedTransitions: [] }), ['save-as-format', 'confirm-location']);
+      await userEvent.click(screen.getByRole('button', { name: 'Mehr' }));
+      await userEvent.click(screen.getByRole('menuitem', { name: 'Als Format speichern' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Mehr' }));
+      await userEvent.click(screen.getByRole('menuitem', { name: 'Ort bestätigen' }));
+      expect(commands).toEqual([
+        { kind: 'action', name: 'save-as-format' },
+        { kind: 'action', name: 'confirm-location' },
+      ]);
+    });
+
+    it('links the format and warns in text when the archived howto is unverified', async () => {
+      const view = await render(DossierHeadComponent, {
+        inputs: {
+          event: makeEvent({ state: 'archived', allowedTransitions: [], format: { slug: 'movienight', title: 'Movienight' } }),
+          actions: [],
+          howtoUnverified: true,
+        },
+        providers: [provideRouter([])],
+      });
+      expect(screen.getByRole('link', { name: 'Movienight' })).toHaveAttribute('href', '/formate/movienight');
+      expect(screen.getByText('Anleitung ungeprüft')).toBeInTheDocument();
+      expect(await runAxe(view.container)).toHaveNoViolations();
+    });
+
+    it('shows no warning when the howto is checked', async () => {
+      await setup(makeEvent({ state: 'archived', allowedTransitions: [] }));
+      expect(screen.queryByText('Anleitung ungeprüft')).not.toBeInTheDocument();
+    });
   });
 });

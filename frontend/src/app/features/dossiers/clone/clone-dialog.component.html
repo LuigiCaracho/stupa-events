@@ -1,0 +1,179 @@
+<app-dialog
+  [open]="true"
+  size="lg"
+  [title]="'clone.title' | t"
+  [subtitle]="'clone.subtitle' | t"
+  [closeLabel]="'action.close' | t"
+  (closed)="closed.emit()"
+>
+  <div class="cl">
+    <app-segmented
+      class="cl__mode"
+      [ariaLabel]="'clone.mode' | t"
+      [options]="[
+        { value: 'blank', label: 'clone.modeBlank' | t },
+        { value: 'template', label: 'clone.modeTemplate' | t },
+      ]"
+      value="template"
+      (valueChange)="$event === 'blank' && switchToBlank.emit()"
+    />
+    <div class="cl__cols">
+      @if (showList()) {
+        <section class="cl__pick" aria-labelledby="cl-pick">
+          <h3 class="sec" id="cl-pick">{{ 'clone.pick' | t }}</h3>
+          <div role="search" class="cl__search">
+            <app-search-pill
+              size="md"
+              [clearable]="true"
+              [maxlength]="100"
+              [label]="'clone.search' | t"
+              [placeholder]="'clone.searchPlaceholder' | t"
+              [value]="q()"
+              (valueChange)="typing($event)"
+            />
+            <div class="cl__chips">
+              <app-filter-select
+                [label]="'search.facet.format' | t"
+                [options]="formatOptions()"
+                [active]="!!applied().format"
+                [value]="applied().format"
+                (valueChange)="filter('format', $event)"
+              />
+              <app-filter-select
+                [label]="'search.facet.category' | t"
+                [options]="categoryOptions()"
+                [active]="!!applied().category"
+                [value]="applied().category"
+                (valueChange)="filter('category', $event)"
+              />
+              <app-filter-select
+                [label]="'search.facet.year' | t"
+                [options]="yearOptions()"
+                [active]="!!applied().year"
+                [value]="applied().year"
+                (valueChange)="filter('year', $event)"
+              />
+            </div>
+          </div>
+          @if (templates.error() && !templates.hasValue()) {
+            <app-note kind="error" role="alert">{{ 'clone.loadFailed' | t }}</app-note>
+          } @else if (!templates.hasValue()) {
+            <app-skeleton variant="items" [count]="3" />
+          } @else if (groups().length === 0) {
+            <app-empty-state plain role="status" [heading]="'clone.empty' | t" />
+          } @else {
+            <div class="cl__lists" role="region" tabindex="0" [attr.aria-label]="'clone.found' | t">
+            @for (group of groups(); track group.key) {
+              <div class="cl__group">
+                <h4 class="cl__groupTitle">{{ group.title ?? ('clone.noFormat' | t) }}</h4>
+                <ul class="cl__list rowgroup">
+                  @for (card of group.items; track card.id) {
+                    <li>
+                      <app-list-item
+                        [title]="card.title"
+                        [sub]="sub(card)"
+                        [selected]="card.id === selectedId()"
+                        (activate)="pick(card)"
+                      >
+                        <span lead class="cl__when num">{{ card.startsAt | ldate: 'mediumDate' }}</span>
+                        @if (card.howtoUnverified) {
+                          <app-status-text status kind="warn">{{ 'format.unverified' | t }}</app-status-text>
+                        } @else if (card.howtoVerifiedAt) {
+                          <span status class="cl__muted">{{
+                            'format.verifiedOn' | t: { date: (card.howtoVerifiedAt | ldate: 'mediumDate') }
+                          }}</span>
+                        }
+                      </app-list-item>
+                    </li>
+                  }
+                </ul>
+              </div>
+            }
+            </div>
+          }
+        </section>
+      }
+
+      @if (showPreview()) {
+        <section class="cl__preview" aria-labelledby="cl-preview">
+          @if (phone()) {
+            <app-button variant="text" size="sm" (click)="backToList()">{{ 'clone.back' | t }}</app-button>
+          }
+          <h3 class="sec" id="cl-preview">{{ 'clone.preview' | t }}</h3>
+          @if (selected(); as t) {
+            <p class="cl__chosen">{{ t.title }}</p>
+            @if (t.foreign) {
+              <app-note>{{ 'clone.foreignNote' | t }}</app-note>
+            }
+          }
+          @if (preview.error()) {
+            <app-note kind="error" role="alert">{{ 'clone.gone' | t }}</app-note>
+          } @else if (!preview.hasValue()) {
+            <app-skeleton variant="panel" />
+          } @else {
+            <app-carry-over-list [report]="preview.value().report" />
+            @if (lastTime(); as lt) {
+              <app-last-time-card [lastTime]="lt" [linked]="false" />
+            } @else {
+              <p class="cl__muted">{{ 'lastTime.none' | t }}</p>
+            }
+            @if (quoteGroups().length > 0) {
+              <section aria-labelledby="cl-quotes">
+                <h4 class="sec" id="cl-quotes">{{ 'clone.quotes' | t }}</h4>
+                @for (g of quoteGroups(); track g.grp) {
+                  <app-quote-table [group]="g" />
+                }
+              </section>
+            }
+          }
+
+          <form id="clone-form" class="cl__form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+            <h3 class="sec">{{ 'clone.newEdition' | t }}</h3>
+            @if (orgOptions().length > 1) {
+              <app-select
+                formControlName="organizationId"
+                [label]="'new.org' | t"
+                [options]="orgOptions()"
+                [clearable]="false"
+              />
+            }
+            <app-input formControlName="title" [label]="'clone.titleField' | t" [hint]="'clone.titleHint' | t" />
+            <div class="cl__row">
+              <app-datepicker
+                formControlName="startDate"
+                [label]="'new.startDate' | t"
+                [required]="true"
+                [error]="invalidStart() ? ('clone.errDate' | t) : ''"
+              />
+              @if (!allDay()) {
+                <app-time-input formControlName="startTime" [label]="'new.startTime' | t" [required]="true" />
+              }
+            </div>
+            <div class="cl__row">
+              <app-datepicker
+                formControlName="endDate"
+                [label]="'new.endDate' | t"
+                [hint]="'clone.endHint' | t"
+                [error]="attempted() && endBeforeStart() ? ('new.errEnd' | t) : ''"
+              />
+              @if (!allDay()) {
+                <app-time-input formControlName="endTime" [label]="'new.endTime' | t" />
+              }
+            </div>
+          </form>
+        </section>
+      }
+    </div>
+  </div>
+  <div dialog-footer class="cl__footer">
+    <app-button variant="text" (click)="closed.emit()">{{ 'action.cancel' | t }}</app-button>
+    <app-button
+      type="submit"
+      variant="fill"
+      [loading]="busy()"
+      [disabled]="!selectedId()"
+      (click)="submit()"
+      >{{ 'clone.submit' | t }}</app-button
+    >
+  </div>
+</app-dialog>

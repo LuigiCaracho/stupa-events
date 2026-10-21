@@ -1,5 +1,10 @@
 @if (event(); as e) {
-  <app-dossier-head [event]="e" [actions]="actions()" (command)="command($event)" />
+  <app-dossier-head
+    [event]="e"
+    [actions]="actions()"
+    [howtoUnverified]="e.howtoUnverified ?? false"
+    (command)="command($event)"
+  />
 
   <app-tabs
     #bar
@@ -59,6 +64,11 @@
         <app-note role="status">{{ 'checklist.recomputed' | t: { count: recomputed() } }}</app-note>
       }
 
+      <app-facts-form [event]="e" [canEdit]="editable()" (changed)="event.set($event)" />
+
+      <app-last-time-block [event]="e" />
+      <app-template-panel [event]="e" />
+
       <section class="dd__poster" aria-labelledby="poster-heading">
         <h2 class="sec" id="poster-heading" tabindex="-1">{{ 'detail.poster' | t }}</h2>
         @if (e.poster; as p) {
@@ -112,6 +122,16 @@
       <app-checklist-tab [event]="e" [canEdit]="editable()" (changed)="changedKnowledge()" />
     } @else if (tab() === 'mails') {
       <app-mails-tab [event]="e" [canEdit]="editable()" (changed)="changedKnowledge()" />
+    } @else if (tab() === 'followup') {
+      <app-followup-tab
+        [event]="e"
+        [canEdit]="canWrite()"
+        [guards]="e.state === 'followup' && guards.hasValue() ? guards.value() : null"
+        (changed)="followupChanged($event)"
+        (fix)="fix($event)"
+        (finish)="command({ kind: 'transition', id: 'T09' })"
+        (openChecklist)="tab.set('checklist')"
+      />
     } @else {
       <app-activity-tab
         [event]="e"
@@ -123,6 +143,22 @@
       />
     }
   </section>
+
+  @if (formatDialog()) {
+    <app-format-save-dialog
+      [eventId]="e.id"
+      [suggestedTitle]="e.title"
+      (saved)="formatSaved()"
+      (closed)="formatDialog.set(false)"
+    />
+  }
+  @if (locationDialog()) {
+    <app-location-dialog
+      [event]="e"
+      (confirmed)="locationConfirmed($event)"
+      (closed)="locationDialog.set(false)"
+    />
+  }
 
   <app-detail-dialogs
     [event]="e"

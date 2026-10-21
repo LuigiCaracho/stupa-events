@@ -1,0 +1,62 @@
+@if (loadFailed()) {
+  <app-note kind="error" role="alert">
+    <span>{{ 'document.loadFailed' | t }}</span>
+    <app-button variant="text" size="sm" (click)="reload()">{{ 'howto.reload' | t }}</app-button>
+  </app-note>
+} @else if (!doc()) {
+  <app-skeleton variant="panel" />
+} @else {
+  <div class="de">
+    @if (conflict()) {
+      <app-note kind="error" role="alert">
+        <span>{{ 'howto.conflict' | t }}</span>
+        <app-button variant="text" size="sm" (click)="reload()">{{ 'howto.reload' | t }}</app-button>
+      </app-note>
+    }
+    @if (restored()) {
+      <app-note kind="warn" role="status">
+        <span>{{ 'howto.restored' | t }}</span>
+        <app-button variant="text" size="sm" (click)="discardDraft()">{{
+          'autosave.discard' | t
+        }}</app-button>
+      </app-note>
+    }
+    @if (draft.status() === 'failed') {
+      <app-note kind="error" role="alert">{{ 'editor.saveFailed' | t }}</app-note>
+    }
+    <app-dossier-markdown-editor
+      [label]="label()"
+      [docKey]="docKey()"
+      [disabled]="!canEdit()"
+      [value]="text()"
+      (valueChange)="edited($event)"
+    />
+    @if (canEdit()) {
+      @if (noting()) {
+        <div class="de__note">
+          <app-textarea
+            name="changeNote"
+            [label]="'howto.changeNote' | t"
+            [hint]="'howto.changeNoteHint' | t"
+            [rows]="2"
+            [(ngModel)]="note"
+          />
+          <div class="de__actions">
+            <app-button variant="fill" [loading]="saving()" (click)="save()">{{
+              'howto.saveRevision' | t
+            }}</app-button>
+            <app-button variant="text" (click)="noting.set(false)">{{
+              'action.cancel' | t
+            }}</app-button>
+          </div>
+        </div>
+      } @else {
+        <div class="de__actions">
+          <app-button variant="fill" [disabled]="!dirty()" (click)="noting.set(true)">{{
+            'howto.saveAsRevision' | t
+          }}</app-button>
+        </div>
+      }
+    }
+  </div>
+}

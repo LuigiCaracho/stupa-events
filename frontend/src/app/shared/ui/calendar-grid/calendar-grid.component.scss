@@ -1,0 +1,124 @@
+:host {
+  display: block;
+  --cal-orange: #c8651b;
+  --cal-blue: #2f6db5;
+  --cal-petrol: #1f7a7a;
+  --cal-navy: #2b3a67;
+  --cal-yellow: #b8941a;
+  --cal-red: #b3261e;
+}
+
+.cg {
+  display: grid;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.cg__row {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.cg__head {
+  padding: var(--space-2);
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  font-size: var(--fs-small);
+  font-weight: var(--fw-semibold);
+  text-align: center;
+}
+
+.cg__cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  min-height: 7.5rem;
+  padding: var(--space-1);
+  border-top: var(--border-width) solid var(--color-border);
+  border-inline-start: var(--border-width) solid var(--color-border);
+  background: var(--color-surface-1);
+}
+.cg__row > .cg__cell:first-child {
+  border-inline-start: 0;
+}
+.cg__cell:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+.cg__cell--outside {
+  background: var(--color-surface-sunken);
+}
+.cg__cell--outside .cg__date {
+  color: var(--color-text-muted);
+}
+.cg--week .cg__cell {
+  min-height: 14rem;
+}
+
+.cg__date {
+  align-self: flex-start;
+  padding: 0 var(--space-1);
+  font-size: var(--fs-small);
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+}
+.cg__cell--today .cg__date {
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  padding-inline: var(--space-2);
+}
+
+.cg__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.cg__list {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cg__more {
+  align-self: flex-start;
+  padding: 0 var(--space-1);
+  border: 0;
+  background: none;
+  color: var(--color-accent-text);
+  font: inherit;
+  font-size: var(--fs-small);
+  cursor: pointer;
+}
+.cg__more:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+}
+
+.cg__agenda {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.cg__dayTitle {
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+}
+.cg__todayTag {
+  margin-inline-start: var(--space-2);
+  color: var(--color-accent-text);
+  font-size: var(--fs-small);
+}
+
+.cg__empty {
+  margin: 0;
+  color: var(--color-text-muted);
+}

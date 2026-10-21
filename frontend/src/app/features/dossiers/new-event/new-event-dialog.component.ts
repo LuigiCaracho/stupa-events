@@ -24,6 +24,7 @@ import {
   DatepickerComponent,
   DialogComponent,
   InputComponent,
+  SegmentedComponent,
   TimeInputComponent,
   ToastService,
 } from '@stupa-makers/ui-kit';
@@ -48,6 +49,7 @@ const TZID = 'Europe/Berlin';
     DatepickerComponent,
     DialogComponent,
     InputComponent,
+    SegmentedComponent,
     SelectFieldComponent,
     TimeInputComponent,
   ],
@@ -62,6 +64,7 @@ export class NewEventDialogComponent {
 
   readonly created = output<EventDto>();
   readonly closed = output<void>();
+  readonly switchToTemplate = output<void>();
 
   protected readonly busy = signal(false);
   protected readonly attempted = signal(false);

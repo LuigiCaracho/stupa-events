@@ -1,0 +1,36 @@
+:host {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.ar__filters {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.ar__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ar__hits {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ar__count {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--fs-small);
+}
+
+.ar__suggest {
+  margin: 0;
+}
+
+.ar__more {
+  justify-self: start;
+}

@@ -1,0 +1,29 @@
+<app-dialog
+  [open]="true"
+  [title]="'library.adoptTitle' | t"
+  [subtitle]="title()"
+  [closeLabel]="'action.close' | t"
+  (closed)="closed.emit()"
+>
+  <div class="ad">
+    @if (dossiers.hasValue() && options().length === 0) {
+      <p>{{ 'library.adoptNone' | t }}</p>
+    } @else {
+      <app-select
+        [label]="'library.adoptTarget' | t"
+        [placeholder]="'library.adoptPlaceholder' | t"
+        [options]="options()"
+        [clearable]="false"
+        [value]="eventId()"
+        (valueChange)="eventId.set($event)"
+      />
+      <p class="ad__hint">{{ 'library.adoptHint' | t }}</p>
+    }
+  </div>
+  <div dialog-footer class="ad__footer">
+    <app-button variant="text" (click)="closed.emit()">{{ 'action.cancel' | t }}</app-button>
+    <app-button variant="fill" [loading]="busy()" [disabled]="!eventId()" (click)="submit()">{{
+      'library.adoptSubmit' | t
+    }}</app-button>
+  </div>
+</app-dialog>

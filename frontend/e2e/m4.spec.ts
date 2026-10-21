@@ -6,7 +6,13 @@
  */
 import { type Browser, type Page, expect, test } from '@playwright/test';
 import { expectNoAxeViolations } from './support/axe';
-import { confirmTransition, createDossier, setSummary, uploadPoster } from './support/dossier';
+import {
+  confirmLocation,
+  confirmTransition,
+  createDossier,
+  setSummary,
+  uploadPoster,
+} from './support/dossier';
 import { login, postJson, waitForCleanPoster } from './support/session';
 
 const BASE_URL = process.env['E2E_BASE_URL'] ?? 'http://localhost:8081';
@@ -53,7 +59,7 @@ test('a question on the poster blocks the approval until it is resolved', async 
   await expect(
     dialog.getByText('Eine offene Rückfrage am Poster blockiert die Freigabe.'),
   ).toBeVisible();
-  await expect(dialog.getByRole('button', { name: 'Bestätigen' })).toBeDisabled();
+  await expect(dialog.getByRole('button', { name: 'Bestätigen', exact: true })).toBeDisabled();
   await dialog.getByRole('button', { name: 'Abbrechen' }).click();
 
   await tab(editor, 'Verlauf');
@@ -63,9 +69,12 @@ test('a question on the poster blocks the approval until it is resolved', async 
   await expectNoAxeViolations(editor, 'Verlauf with questions');
 
   await tab(editor, 'Übersicht');
+  await confirmLocation(editor, ids['poster']);
   await editor.getByRole('button', { name: 'Freigeben' }).first().click();
   await expect(
-    editor.getByRole('dialog', { name: 'Freigeben' }).getByRole('button', { name: 'Bestätigen' }),
+    editor
+      .getByRole('dialog', { name: 'Freigeben' })
+      .getByRole('button', { name: 'Bestätigen', exact: true }),
   ).toBeEnabled();
   await editor.context().close();
 });

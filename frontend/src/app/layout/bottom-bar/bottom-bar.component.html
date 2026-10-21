@@ -11,6 +11,18 @@
       <span class="bb__label">{{ item.labelKey | t }}</span>
     </a>
   }
+  @if (moreItems().length > 0) {
+    <button
+      type="button"
+      class="bb__item"
+      [class.is-active]="moreActive()"
+      aria-haspopup="dialog"
+      (click)="moreOpen.set(true)"
+    >
+      <span class="bb__ind"><app-icon name="menu" [size]="22" /></span>
+      <span class="bb__label">{{ 'nav.more' | t }}</span>
+    </button>
+  }
   @if (store.signedIn()) {
     <button
       type="button"
@@ -28,3 +40,22 @@
     </button>
   }
 </nav>
+
+<app-side-sheet side="bottom" [open]="moreOpen()" [heading]="'nav.more' | t" (closed)="moreOpen.set(false)">
+  <ul class="bb__more">
+    @for (item of moreItems(); track item.key) {
+      <li>
+        <a
+          class="bb__moreLink"
+          [routerLink]="item.path"
+          routerLinkActive="is-active"
+          ariaCurrentWhenActive="page"
+          (click)="moreOpen.set(false)"
+        >
+          <app-icon [name]="item.icon" [size]="22" />
+          <span>{{ item.labelKey | t }}</span>
+        </a>
+      </li>
+    }
+  </ul>
+</app-side-sheet>

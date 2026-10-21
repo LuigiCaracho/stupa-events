@@ -49,6 +49,14 @@ const BY_CODE: Record<string, TranslationKey> = {
   not_a_root: 'problem.notARoot',
   quote_expired: 'problem.quoteExpired',
   attachment_infected: 'problem.attachmentInfected',
+  slug_taken: 'problem.slugTaken',
+  already_in_format: 'problem.alreadyInFormat',
+  format_foreign: 'problem.formatForeign',
+  not_a_template: 'problem.notATemplate',
+  organization_required: 'problem.orgRequired',
+  range_too_large: 'problem.rangeTooLarge',
+  query_too_long: 'problem.queryTooLong',
+  search_timeout: 'problem.searchTimeout',
 };
 
 /**

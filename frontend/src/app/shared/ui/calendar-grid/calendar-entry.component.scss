@@ -1,0 +1,60 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.ce {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-2);
+  width: 100%;
+  min-width: 0;
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  border-inline-start: 4px solid var(--ce-tint);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-3);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  text-align: start;
+  cursor: pointer;
+}
+.ce:hover {
+  background: var(--color-surface-4);
+}
+.ce:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 1px;
+}
+
+.ce__time {
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.ce__title {
+  flex: 1 1 6rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: var(--fw-medium);
+}
+
+.ce__org {
+  color: var(--color-text-muted);
+}
+
+.ce__state {
+  font-size: var(--fs-small);
+}
+/* The entry is surface 3; there the subtle text of a muted status is below 4.5:1 (WCAG 1.4.3),
+   the muted text passes (as `.rowgroup--bg3` in styles.scss). */
+.ce ::ng-deep app-status-text.st--muted {
+  color: var(--color-text-muted);
+}
+
+:host(.ce--compact) .ce__org {
+  display: none;
+}

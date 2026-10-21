@@ -1,0 +1,28 @@
+<app-data-table
+  [columns]="columns()"
+  [rows]="editions()"
+  [rowKey]="rowKey"
+  [loading]="loading()"
+  [loadingText]="'common.loading' | t"
+  [clickable]="true"
+  [emptyText]="'format.noEditions' | t"
+  (rowClick)="open.emit($any($event))"
+>
+  <ng-template appCell="startsAt" let-row>
+    <span class="num">{{ day(row) }}</span> {{ row.title }}
+  </ng-template>
+  <ng-template appCell="state" let-row>
+    <app-status-text [kind]="state(row).kind">{{ state(row).key | t }}</app-status-text>
+  </ng-template>
+  <ng-template appCell="attendance" let-row>
+    <span class="num">{{ row.attendance ?? '–' }}</span>
+  </ng-template>
+  <ng-template appCell="costsCents" let-row>
+    <span class="num">{{ money(row) }}</span>
+  </ng-template>
+  <ng-template appCell="howtoUnverified" let-row>
+    @if (row.howtoUnverified) {
+      <app-status-text kind="warn">{{ 'format.unverified' | t }}</app-status-text>
+    }
+  </ng-template>
+</app-data-table>

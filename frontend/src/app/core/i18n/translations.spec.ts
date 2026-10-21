@@ -61,12 +61,15 @@ describe('translations', () => {
       'confirm_time',
       'set_end',
       'make_offer',
+      'fill_retrospective',
+      'fill_outcome',
+      'verify_howto',
     ];
     const missing = [...codes.map((c) => `guards.${c}`), ...fixes.map((f) => `fix.${f}`)].filter(
       (k) => !(k in de),
     );
     expect(missing).toEqual([]);
-    expect(fixes).toHaveLength(15);
+    expect(fixes).toHaveLength(18);
   });
 
   // TODO Stufe B: en catalog and the parity spec (every de key exists in en).

@@ -1,0 +1,22 @@
+<app-dialog
+  [open]="true"
+  [title]="'location.title' | t"
+  [closeLabel]="'action.close' | t"
+  (closed)="closed.emit()"
+>
+  <div class="ld">
+    <p class="ld__warn">{{ 'location.warning' | t }}</p>
+    <p class="ld__place">{{ event().venue?.name ?? event().venueText }}</p>
+    <app-segmented
+      [ariaLabel]="'location.precision' | t"
+      [options]="options"
+      [value]="precision()"
+      (valueChange)="precision.set($event === 'exact' ? 'exact' : 'building')"
+    />
+    <p class="ld__hint">{{ (precision() === 'exact' ? 'location.exactHint' : 'location.buildingHint') | t }}</p>
+  </div>
+  <div dialog-footer class="ld__footer">
+    <app-button variant="text" (click)="closed.emit()">{{ 'action.cancel' | t }}</app-button>
+    <app-button variant="fill" [loading]="busy()" (click)="submit()">{{ 'location.submit' | t }}</app-button>
+  </div>
+</app-dialog>

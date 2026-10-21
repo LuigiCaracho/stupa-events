@@ -1,0 +1,39 @@
+<article class="sh" [attr.aria-label]="hit().title">
+  <div class="sh__main">
+    <h2 class="sh__title"><app-highlighted [segments]="titleSegments()" /></h2>
+    <p class="sh__sub">{{ hit().subtitle }}</p>
+    @for (snippet of snippets(); track snippet.field) {
+      <p class="sh__snippet">
+        @if (fieldLabel(snippet.field); as key) {
+          <span class="sh__field">{{ key | t }}</span>
+        }
+        <app-highlighted [segments]="snippet.segments" />
+      </p>
+    }
+    <p class="sh__meta">
+      @if (state(); as s) {
+        <app-status-text [kind]="s.kind">{{ s.key | t }}</app-status-text>
+      }
+      @if (hit().howtoUnverified) {
+        <app-status-text kind="warn">{{ 'format.unverified' | t }}</app-status-text>
+      } @else if (hit().howtoVerifiedAt; as at) {
+        <span class="sh__muted">{{
+          'format.verifiedOn' | t: { date: (at | ldate: 'mediumDate') }
+        }}</span>
+      }
+      @if (hit().foreign) {
+        <span class="sh__muted">{{ 'search.foreign' | t }}</span>
+      }
+    </p>
+  </div>
+  <div class="sh__actions">
+    <app-button variant="tonal" size="sm" (click)="open.emit(hit())">{{
+      'search.open' | t
+    }}</app-button>
+    @if (canTemplate()) {
+      <app-button variant="text" size="sm" (click)="useTemplate.emit(hit())">{{
+        'search.useTemplate' | t
+      }}</app-button>
+    }
+  </div>
+</article>

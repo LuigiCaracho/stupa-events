@@ -1,0 +1,94 @@
+<app-list-detail [detailOpen]="openId() !== null" (back)="closeDetail()">
+  <section list class="ld-pane" aria-labelledby="lib-title">
+    <app-page-header
+      [pane]="true"
+      titleId="lib-title"
+      [titleTag]="openId() ? 'p' : 'h1'"
+      [title]="'library.title' | t"
+      [meta]="meta()"
+    />
+    <app-sticky-bar class="ld-pane__filters">
+      <div class="lib__filters" role="search" [attr.aria-label]="'library.search' | t">
+        <app-search-pill
+          [clearable]="true"
+          [label]="'library.search' | t"
+          [placeholder]="'library.searchPlaceholder' | t"
+          [value]="state.value().q"
+          (valueChange)="patch({ q: $event })"
+        />
+        <div class="lib__chips">
+          <app-filter-select
+            [label]="'search.facet.category' | t"
+            [options]="options(facets().category, 'filters.allCategories', state.value().category)"
+            [active]="!!state.value().category"
+            [value]="state.value().category"
+            (valueChange)="patch({ category: $event })"
+          />
+          <app-filter-select
+            [label]="'search.facet.organization' | t"
+            [options]="options(facets().organization, 'filters.allOrgs', state.value().organization)"
+            [active]="!!state.value().organization"
+            [value]="state.value().organization"
+            (valueChange)="patch({ organization: $event })"
+          />
+          <app-filter-select
+            [label]="'search.facet.year' | t"
+            [options]="options(facets().year, 'search.allYears', state.value().year)"
+            [active]="!!state.value().year"
+            [value]="state.value().year"
+            (valueChange)="patch({ year: $event })"
+          />
+          <app-filter-select
+            [label]="'library.facet.kind' | t"
+            [options]="options(facets().kind, 'library.allKinds', state.value().kind, kindLabel.bind(this))"
+            [active]="!!state.value().kind"
+            [value]="state.value().kind"
+            (valueChange)="patch({ kind: $event })"
+          />
+          @if (active()) {
+            <app-button variant="text" size="sm" (click)="reset()">{{
+              'dossiers.resetFilters' | t
+            }}</app-button>
+          }
+        </div>
+      </div>
+    </app-sticky-bar>
+    @if (page.error() && !page.hasValue()) {
+      <app-note kind="error" role="alert">{{ 'library.loadFailed' | t }}</app-note>
+    } @else if (!page.hasValue()) {
+      <app-skeleton variant="items" [count]="4" />
+    } @else if (items().length === 0) {
+      <app-empty-state
+        plain
+        [heading]="(active() ? 'library.emptyFiltered' : 'library.empty') | t"
+        [body]="active() ? null : ('library.emptyBody' | t)"
+      />
+    } @else {
+      <ul class="lib__list rowgroup">
+        @for (item of items(); track item.kind + item.id) {
+          <li>
+            <app-list-item
+              [title]="item.title"
+              [sub]="sub(item)"
+              [link]="link(item)"
+              linkQueryParamsHandling="preserve"
+              [selected]="item.kind === openKind() && item.id === openId()"
+            />
+          </li>
+        }
+      </ul>
+      @if (canMore()) {
+        <app-button variant="text" [loading]="loadingMore()" (click)="loadMore()">{{
+          'dossiers.more' | t
+        }}</app-button>
+      }
+    }
+  </section>
+  <div detail>
+    @if (openKind() && openId()) {
+      <app-library-detail [kind]="openKind()!" [id]="openId()!" [item]="selected()" />
+    } @else {
+      <app-empty-state plain [heading]="'library.pick' | t" />
+    }
+  </div>
+</app-list-detail>

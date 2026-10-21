@@ -35,12 +35,38 @@ export interface OrgRef {
   short: string;
 }
 
+export type RequiredProfile = 'generic' | 'party' | 'meeting' | 'trip';
+export type LocationPrecision = 'hidden' | 'building' | 'exact';
+
+/** The result of an edition (M5 contract 3.5); amounts in cents, EUR. */
+export interface Outcome {
+  attendance: number | null;
+  costsCents: number | null;
+  revenueCents: number | null;
+  notes: string | null;
+  waived: boolean;
+  waivedReason: string | null;
+}
+
+/** Slug, name and short name of an organization (the `OrgBrief` of the formats and the archive). */
+export interface OrgBrief {
+  slug: string;
+  name: string;
+  short: string;
+}
+
+export interface FormatRef {
+  slug: string;
+  title: string;
+}
+
 export interface CategoryRef {
   id: string;
   slug: string;
   name: string;
   kind: 'format' | 'fachschaft' | 'partner';
   parentId?: string | null;
+  requiredProfile?: RequiredProfile;
   /** Present on the tree answer (`GET /api/categories?tree=true`). */
   children?: CategoryRef[];
 }
@@ -125,6 +151,17 @@ export interface EventDto {
   lockReason?: LockReason | null;
   /** Set on the answer of a save that moved the start: how many checklist due dates were recomputed. */
   checklistRecomputed?: number;
+  outcome?: Outcome | null;
+  howtoVerifiedAt?: string | null;
+  howtoVerifiedBy?: string | null;
+  /** An archived dossier with a howto nobody checked (M5 contract 3.2). */
+  howtoUnverified?: boolean;
+  formatId?: string | null;
+  format?: FormatRef | null;
+  derivedFromId?: string | null;
+  facts?: Record<string, unknown> | null;
+  locationPrecision?: LocationPrecision;
+  locationConfirmedAt?: string | null;
 }
 
 export interface EventCreate {

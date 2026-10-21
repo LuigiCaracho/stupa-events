@@ -1,0 +1,57 @@
+<app-list-detail [detailOpen]="selectedSlug() !== null" (back)="closeDetail()">
+  <section list class="ld-pane" aria-labelledby="fl-title">
+    <app-page-header
+      [pane]="true"
+      titleId="fl-title"
+      [titleTag]="selectedSlug() ? 'p' : 'h1'"
+      [title]="'format.title' | t"
+      [meta]="meta()"
+    />
+    <app-sticky-bar class="ld-pane__filters">
+      <div role="search" [attr.aria-label]="'format.search' | t">
+        <app-search-pill
+          [clearable]="true"
+          [label]="'format.search' | t"
+          [placeholder]="'format.searchPlaceholder' | t"
+          [value]="q()"
+          (valueChange)="q.set($event)"
+        />
+      </div>
+    </app-sticky-bar>
+    @if (formats.error() && !formats.hasValue()) {
+      <app-note kind="error" role="alert">{{ 'format.loadFailed' | t }}</app-note>
+    } @else if (!formats.hasValue()) {
+      <app-skeleton variant="items" [count]="4" />
+    } @else if (rows().length === 0) {
+      <app-empty-state plain [heading]="'format.empty' | t" />
+    } @else {
+      <ul class="fl__list rowgroup">
+        @for (card of rows(); track card.slug) {
+          <li>
+            <app-list-item
+              [title]="card.title"
+              [sub]="sub(card)"
+              [link]="['/formate', card.slug]"
+              [selected]="card.slug === selectedSlug()"
+            >
+              @if (card.howtoStale) {
+                <app-status-text status kind="warn">{{ 'format.stale' | t }}</app-status-text>
+              } @else if (card.lastVerifiedAt; as at) {
+                <span status class="fl__muted">{{
+                  'format.verifiedOn' | t: { date: (at | ldate: 'mediumDate') }
+                }}</span>
+              }
+            </app-list-item>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+  <div detail>
+    @if (selectedSlug() !== null) {
+      <router-outlet />
+    } @else {
+      <app-empty-state plain [heading]="'format.pick' | t" />
+    }
+  </div>
+</app-list-detail>
