@@ -1,12 +1,6 @@
 /** Wire models of the in-app notifications and the preferences per kind (M4 contract 5.7). */
-export type NotificationKind =
-  | 'review_requested'
-  | 'changes_requested'
-  | 'comment_added'
-  | 'comment_resolved'
-  | 'transition_done'
-  | 'task_assigned'
-  | 'checklist_due';
+export const NOTIFICATION_KINDS = ['comment_added', 'published', 'cancelled', 'checklist_due'] as const;
+export type NotificationKind = (typeof NOTIFICATION_KINDS)[number];
 
 export interface NotificationOut {
   id: string;

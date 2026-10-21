@@ -145,6 +145,7 @@ export const lifecycleDe = {
   'hints.poster_consent_missing':
     'Auf dem Bild sind Personen erkennbar, die Einwilligung fehlt. Das Bild erscheint so nicht öffentlich.',
   'hints.poster_not_ready': 'Das Bild wird noch geprüft oder ist nicht verwendbar.',
+  'hints.no_organization': 'Das Dossier hat keine Organisation, die Redaktion muss sie zuweisen.',
   'hints.no_summary': 'Es fehlt ein Kurztext.',
   'hints.no_category': 'Es fehlt eine Kategorie.',
   'hints.no_venue': 'Es fehlt der Ort.',

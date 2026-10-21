@@ -8,7 +8,7 @@ import { NotificationsApi } from '../../notifications/notifications-api.service'
 import { NotificationPrefsComponent } from './notification-prefs.component';
 
 const prefs = [
-  { kind: 'changes_requested', inApp: true, mail: true, mailAvailable: true, essential: true },
+  { kind: 'published', inApp: true, mail: true, mailAvailable: true, essential: true },
   { kind: 'comment_added', inApp: true, mail: false, mailAvailable: true, essential: false },
 ];
 
@@ -26,7 +26,7 @@ async function setup(api: Record<string, unknown> = {}) {
 describe('NotificationPrefsComponent', () => {
   it('shows two switches per kind and locks the essential one with a note', async () => {
     const { container } = await setup();
-    expect(screen.getByText('Änderungen erbeten')).toBeInTheDocument();
+    expect(screen.getByText('Veröffentlicht')).toBeInTheDocument();
     expect(screen.getByText('Immer aktiv')).toBeInTheDocument();
     const switches = screen.getAllByRole('switch');
     expect(switches).toHaveLength(4);
@@ -40,7 +40,7 @@ describe('NotificationPrefsComponent', () => {
       prefs: jest.fn(() =>
         of([
           {
-            kind: 'comment_resolved',
+            kind: 'cancelled',
             inApp: true,
             mail: false,
             mailAvailable: false,

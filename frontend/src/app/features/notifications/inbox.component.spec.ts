@@ -12,7 +12,7 @@ import { NotificationsStore } from './notifications.store';
 
 const item = (id: string, o: Partial<NotificationOut> = {}): NotificationOut => ({
   id,
-  kind: 'changes_requested',
+  kind: 'published',
   eventId: 'e1',
   eventTitle: 'Movienight',
   params: {},
@@ -48,12 +48,12 @@ describe('InboxComponent', () => {
   it('lists entries with the kind as text and unread ones with a hidden word and a dot', async () => {
     const { container } = await setup([
       item('n1'),
-      item('n2', { kind: 'transition_done', eventTitle: null, readAt: '2026-10-02T10:00:00Z' }),
+      item('n2', { kind: 'cancelled', eventTitle: null, readAt: '2026-10-02T10:00:00Z' }),
     ]);
-    expect(await screen.findByText('Änderungen erbeten')).toBeInTheDocument();
+    expect(await screen.findByText('Veröffentlicht')).toBeInTheDocument();
     expect(screen.getByText('Ungelesen:')).toBeInTheDocument();
     expect(screen.getAllByText('Ungelesen:')).toHaveLength(1);
-    expect(screen.getByText('Statuswechsel')).toBeInTheDocument();
+    expect(screen.getByText('Abgesagt')).toBeInTheDocument();
     expect(await runAxe(document.body)).toHaveNoViolations();
     expect(container).toBeTruthy();
   });
@@ -61,7 +61,7 @@ describe('InboxComponent', () => {
   it('marks read and goes to the link on a click', async () => {
     const { api, store } = await setup([item('n1')]);
     const navigate = jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
-    await userEvent.click(await screen.findByRole('button', { name: /Änderungen erbeten/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /Veröffentlicht/ }));
     expect(api.markRead).toHaveBeenCalledWith('n1');
     expect(navigate).toHaveBeenCalledWith('/dossiers/e1');
     expect(store.open()).toBe(false);
@@ -70,7 +70,7 @@ describe('InboxComponent', () => {
   it('stays put for an entry without a link', async () => {
     await setup([item('n1', { link: '' })]);
     const navigate = jest.spyOn(TestBed.inject(Router), 'navigateByUrl');
-    await userEvent.click(await screen.findByRole('button', { name: /Änderungen erbeten/ }));
+    await userEvent.click(await screen.findByRole('button', { name: /Veröffentlicht/ }));
     expect(navigate).not.toHaveBeenCalled();
   });
 
@@ -82,10 +82,10 @@ describe('InboxComponent', () => {
   });
 
   it('offers older entries when the server has more and appends them', async () => {
-    const { api } = await setup([item('n1')], true, [item('n2', { kind: 'transition_done' })]);
+    const { api } = await setup([item('n1')], true, [item('n2', { kind: 'cancelled' })]);
     await userEvent.click(await screen.findByRole('button', { name: 'Ältere laden' }));
     expect(api.list).toHaveBeenLastCalledWith(false, 30, 'c1');
-    expect(await screen.findByText('Statuswechsel')).toBeInTheDocument();
+    expect(await screen.findByText('Abgesagt')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Ältere laden' })).toBeNull();
   });
 

@@ -1,6 +1,7 @@
 /** Catalog sanity checks. */
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { NOTIFICATION_KINDS } from '../../features/dossiers/model/notification.models';
 import { de } from './translations';
 
 const APP = join(__dirname, '..', '..');
@@ -35,6 +36,7 @@ describe('translations', () => {
       'poster_credit_missing',
       'poster_consent_missing',
       'poster_not_ready',
+      'no_organization',
       'no_summary',
       'no_category',
       'no_venue',
@@ -44,6 +46,16 @@ describe('translations', () => {
       'outcome_open',
     ];
     expect(codes.map((c) => `hints.${c}`).filter((k) => !(k in de))).toEqual([]);
+  });
+
+  it('translates every notification kind', () => {
+    expect(NOTIFICATION_KINDS.map((k) => `notification.kind.${k}`).filter((k) => !(k in de))).toEqual([]);
+  });
+
+  it('translates every reason of the clone report', () => {
+    const reasons = ['title', 'text', 'reference', 'location', 'facts', 'factsForeign', 'documents', 'howto',
+      'checklist', 'poster', 'files', 'social', 'links', 'history', 'shared'];
+    expect(reasons.map((r) => `clone.reason.${r}`).filter((k) => !(k in de))).toEqual([]);
   });
 
   it('has no key that no code uses: a dead string is deleted, not kept', () => {
