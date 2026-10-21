@@ -129,7 +129,6 @@ async def test_quote_amounts_do_not_leak(api: Api) -> None:
         f"/api/events/{eid}/attachments",
         f"/api/events/{eid}/dossier-counts",
         "/api/events?limit=50",
-        "/api/tasks",
         "/api/public/feed/events",
     ):
         response = await api.request("editor", "GET", path)

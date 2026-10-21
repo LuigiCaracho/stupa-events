@@ -1,4 +1,4 @@
-"""Checklists: templates, due dates after a date change, waivers, assignees and the T02 guard."""
+"""Checklists: templates, due dates after a date change, waivers, assignees; open items never block publishing."""
 
 from __future__ import annotations
 

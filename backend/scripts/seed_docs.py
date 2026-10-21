@@ -35,7 +35,7 @@ async def put_format(
         event.rev, event.format_id = updated.rev, updated.format_id
 
 
-async def fill_followup(
+async def fill_docs(
     session: AsyncSession, principal: Principal, event: Event, definition: dict[str, Any]
 ) -> None:
     """Write the retrospective, the outcome and the howto, and verify the howto."""

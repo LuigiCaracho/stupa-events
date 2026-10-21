@@ -1,4 +1,4 @@
-"""Comments: anchors, resolving and the guards they feed (T03, T04)."""
+"""Comments: anchors, resolving, append-only rows and notifications; open questions never block publishing."""
 
 from __future__ import annotations
 

@@ -33,7 +33,7 @@ from app.modules.taxonomy.seeding import ensure_reference
 from app.settings import get_settings
 from app.shared.permissions import permissions_of
 from app.shared.timeutil import utcnow
-from scripts import seed_followup
+from scripts import seed_docs
 
 SEED_DIR = Path(__file__).resolve().parents[1] / "seeds"
 SEEDS = SEED_DIR / "dev_events.yaml"
@@ -81,10 +81,10 @@ async def advance(
     if reached >= 1:
         await lifecycle.publish(session, principal, event.id, expected_rev=None)
     if reached >= 2:
-        await seed_followup.fill_followup(session, principal, event, definition)
+        await seed_docs.fill_docs(session, principal, event, definition)
         await lifecycle.archive(session, principal, event.id, expected_rev=None)
         if definition.get("archivedDaysAgo"):
-            await seed_followup.move_into_the_past(session, event, definition["archivedDaysAgo"])
+            await seed_docs.move_into_the_past(session, event, definition["archivedDaysAgo"])
 
 
 async def seed_event(
@@ -116,7 +116,7 @@ async def seed_event(
             }
         ),
     )
-    await seed_followup.put_format(session, principal, created, definition)
+    await seed_docs.put_format(session, principal, created, definition)
     await advance(session, principal, created, definition.get("stage", "draft"), definition)
     return True
 
@@ -132,7 +132,7 @@ async def main() -> int:
         }
         principal = seed_editor()
         results = [await seed_event(session, principal, d, ids) for d in load_definitions()]
-        await seed_followup.master_howto(session, principal, "movienight")
+        await seed_docs.master_howto(session, principal, "movienight")
         await session.commit()
     return sum(results)
 
