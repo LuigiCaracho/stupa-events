@@ -1,9 +1,8 @@
 """The checklist of a dossier: template application, items, assignees and completion.
 
 A template resolves from the main category, else from its facts profile, else `generic`.
-Applying is idempotent (`UNIQUE (event_id, template_item_id)`). Required planning items feed
-the guard `checklistDone(planning)`. Due dates follow `checklist_due`; a date set by hand
-protects the item. Assigning a person notifies them (`task_assigned`).
+Applying is idempotent (`UNIQUE (event_id, template_item_id)`). Due dates follow
+`checklist_due`; a date set by hand protects the item.
 """
 
 from __future__ import annotations
@@ -25,7 +24,7 @@ from app.modules.dossier.models_checklist import (
     ChecklistTemplate,
     ChecklistTemplateItem,
 )
-from app.modules.dossier.rules import ensure_open, ensure_permission, load_for_write, load_readable
+from app.modules.dossier.rules import ensure_permission, load_for_write, load_readable
 from app.modules.dossier.schemas_checklist import (
     ChecklistItemCreate,
     ChecklistItemOut,
@@ -35,7 +34,6 @@ from app.modules.dossier.schemas_checklist import (
 )
 from app.modules.events.models import Event
 from app.modules.notifications.recipients import _editor_subs  # noqa: PLC2701
-from app.modules.notifications.service import PendingMail, notify
 from app.modules.orgs.models import Membership
 from app.modules.taxonomy.models import Category
 from app.shared.errors import (
@@ -48,7 +46,7 @@ from app.shared.timeutil import utcnow
 
 PHASES = ("planning", "review", "live", "followup")
 WAIVER_MIN_REQUIRED = 10
-EDITING_ROLES = ("submitter", "organizer", "approver")
+EDITING_ROLES = ("submitter", "organizer")
 
 
 def _is_open(item: ChecklistItem) -> bool:
@@ -231,24 +229,9 @@ async def check_assignee(session: AsyncSession, event: Event, sub: str) -> None:
     )
 
 
-async def _assign_notice(
-    session: AsyncSession, principal: Principal, event: Event, item: ChecklistItem
-) -> list[PendingMail]:
-    if item.assignee_sub is None or item.assignee_sub == principal.sub:
-        return []
-    return await notify(
-        session,
-        "task_assigned",
-        [item.assignee_sub],
-        event,
-        {"actorName": principal.display_name or "Jemand", "itemText": item.text},
-        actor_sub=principal.sub,
-    )
-
-
 async def add_item(
     session: AsyncSession, principal: Principal, event_id: UUID, body: ChecklistItemCreate
-) -> tuple[ChecklistItemOut, list[PendingMail]]:
+) -> ChecklistItemOut:
     """Add a free item; a `dueAt` protects it from the start rule."""
     event = await load_for_write(session, principal, event_id, "event.edit")
     if body.assignee_sub:
@@ -268,8 +251,7 @@ async def add_item(
     await session.flush()
     await session.refresh(item)
     await _audit(session, principal, event, "add", itemId=item.id)
-    pending = await _assign_notice(session, principal, event, item)
-    return _out(item, await _names(session, {item.assignee_sub or ""})), pending
+    return _out(item, await _names(session, {item.assignee_sub or ""}))
 
 
 async def load_item(
@@ -301,18 +283,16 @@ def _waiver(item: ChecklistItem, reason: str | None) -> None:
 
 async def patch_item(
     session: AsyncSession, principal: Principal, item_id: UUID, body: ChecklistItemPatch
-) -> tuple[ChecklistItemOut, list[PendingMail], Event]:
+) -> ChecklistItemOut:
     """Change an item; template items keep their text, phase and required flag."""
     item, event = await load_item(session, principal, item_id)
     ensure_permission(principal, event, "event.edit")
-    ensure_open(event)
     sent = body.model_fields_set
     if item.template_item_id is not None and sent & {"text", "phase", "required"}:
         raise ConflictError(
             "A template item keeps its text, phase and required flag.", code="template_item"
         )
     was_required = item.required
-    previous_assignee = item.assignee_sub
     if "text" in sent and body.text is not None:
         item.text = body.text.strip()
     if "phase" in sent and body.phase is not None:
@@ -349,9 +329,7 @@ async def patch_item(
         itemId=item.id,
         **({"required": [was_required, item.required]} if was_required != item.required else {}),
     )
-    changed_person = item.assignee_sub != previous_assignee
-    pending = await _assign_notice(session, principal, event, item) if changed_person else []
-    return _out(item, await _names(session, {item.assignee_sub or ""})), pending, event
+    return _out(item, await _names(session, {item.assignee_sub or ""}))
 
 
 async def set_done(
@@ -359,7 +337,6 @@ async def set_done(
 ) -> ChecklistItemOut:
     """Mark an item done or open again; the editors and the assignee may do it."""
     item, event = await load_item(session, principal, item_id)
-    ensure_open(event)
     if item.assignee_sub != principal.sub:
         ensure_permission(principal, event, "event.edit")
     if done and item.waived_reason is not None:
@@ -375,7 +352,6 @@ async def delete_item(session: AsyncSession, principal: Principal, item_id: UUID
     """Delete a free item (template items can only be waived)."""
     item, event = await load_item(session, principal, item_id)
     ensure_permission(principal, event, "event.edit")
-    ensure_open(event)
     if item.template_item_id is not None:
         raise ConflictError("A template item cannot be deleted.", code="template_item")
     await session.delete(item)

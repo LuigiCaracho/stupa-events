@@ -1,41 +1,41 @@
-"""Event service: create (T00, also as a proposal), read and patch a dossier.
+"""Event service: create, read and patch a dossier.
 
 The service never commits; the router does. Every mutation writes a revision and an audit
 entry in the same transaction. Writes are optimistic: `UPDATE ... WHERE rev = :rev`, else
-409 `conflict`. Which fields a person may change in which state is decided by the pure
-`pipeline.fieldclass.plan_patch`.
+409 `conflict`. Who may change which fields in which state is decided by `events.editing`.
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import replace
 from datetime import datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import delete, func, select, text
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.audit.actions import AuditAction
 from app.modules.auth.principal import Principal
 from app.modules.events import allday, facts, revisions
-from app.modules.events.access import guard_snapshot, load_visible, poster_of, snapshot_of
+from app.modules.events.access import load_visible, poster_of
 from app.modules.events.conflict import VersionConflict
+from app.modules.events.editing import (
+    API_NAMES,
+    bumps_public_seq,
+    has_edit_right,
+    locked_problem,
+)
+from app.modules.events.lifecycle import EDITOR_RIGHT
 from app.modules.events.models import EditorDraft, Event
+from app.modules.events.postcommit import ACTION_FEED_INVALIDATE, Committed
 from app.modules.events.schemas import EventCreate, EventPatch
 from app.modules.events.states import EventState
+from app.modules.events.step import committed_of
 from app.modules.events.writer import update_event
 from app.modules.media.ref_sync import add_refs, draft_owner_id, drop_draft_refs
 from app.modules.orgs.models import Organization
 from app.modules.orgs.scope import bind
-from app.modules.pipeline.actions import Committed
-from app.modules.pipeline.actor import actor_of
-from app.modules.pipeline.fieldclass import edit_right, plan_patch
-from app.modules.pipeline.guards import organization_scope_or_proposal, proposal_quota
-from app.modules.pipeline.livecheck import enforce_live
-from app.modules.pipeline.snapshot import Snapshot
-from app.modules.pipeline.transitions import ACTION_FEED_INVALIDATE
 from app.modules.taxonomy.models import Category, Venue
 from app.shared.errors import (
     ConflictError,
@@ -44,7 +44,6 @@ from app.shared.errors import (
     NotFoundError,
     ValidationProblem,
 )
-from app.shared.timeutil import utcnow
 
 DEFAULT_DURATION = timedelta(hours=2)
 _NOT_NULL = ("title", "starts_at", "ends_at", "all_day")
@@ -54,15 +53,6 @@ _NON_FIELDS = {"rev", "note"}
 def _invalid(field: str, msg: str, code: str | None = None) -> ValidationProblem:
     return ValidationProblem(
         "Invalid request.", code=code, errors=[FieldError(field=field, msg=msg)]
-    )
-
-
-def locked_problem(fields: tuple[str, ...]) -> ConflictError:
-    """Build the 409 `field_locked` problem naming every locked field."""
-    return ConflictError(
-        "Field is locked in this state.",
-        code="field_locked",
-        errors=[FieldError(field=f, msg="locked in this state") for f in fields],
     )
 
 
@@ -90,12 +80,16 @@ async def derived_values(
     return values
 
 
+def effective_changes(event: Event, changes: Mapping[str, Any]) -> dict[str, Any]:
+    """Keep the requested column values that differ from the stored ones."""
+    return {name: value for name, value in changes.items() if getattr(event, name) != value}
+
+
 class EventService:
     """Create, read and patch dossiers for one request session."""
 
-    def __init__(self, session: AsyncSession, *, editor_four_eyes: bool | None = None) -> None:
+    def __init__(self, session: AsyncSession) -> None:
         self.session = session
-        self.editor_four_eyes = editor_four_eyes
 
     async def _organization(self, org_id: UUID) -> Organization:
         org = await self.session.get(Organization, org_id)
@@ -113,62 +107,24 @@ class EventService:
             if venue is None or not venue.active:
                 raise _invalid("venueId", "unknown venue", code="unknown_venue")
 
-    async def _open_proposals(self, sub: str) -> int:
-        await self.session.execute(
-            text("SELECT pg_advisory_xact_lock(hashtext(:sub))"), {"sub": sub}
-        )
-        count = await self.session.scalar(
-            select(func.count())
-            .select_from(Event)
-            .where(
-                Event.state == EventState.IDEA.value,
-                Event.organization_id.is_(None),
-                Event.created_by == sub,
-            )
-        )
-        return count or 0
-
     async def create(
         self, principal: Principal, body: EventCreate, *, format_id: UUID | None = None
     ) -> Event:
-        """Create a dossier in `idea` (T00); without an organization it is a proposal.
+        """Create a draft in an organization where the principal holds `event.create`.
 
         Raises:
             NotFoundError: The organization is unknown or outside the scope of the
                 principal. Both look the same, so there is no existence oracle.
-            ValidationProblem: Unknown category or venue, or `proposal_quota_exceeded`.
+            ValidationProblem: Unknown category or venue.
         """
         await bind(self.session, principal)
-        org = await self._organization(body.organization_id) if body.organization_id else None
-        org_id = org.id if org else None
-        proposals = await self._open_proposals(principal.sub) if org is None else 0
-        starts_at, ends_at, estimated = self._times_of(body)
-        scope_snapshot = Snapshot(
-            state=EventState.IDEA.value,
-            title=body.title,
-            summary=body.summary,
-            starts_at=starts_at,
-            ends_at=ends_at,
-            organization_id=org_id,
-            primary_category_id=body.primary_category_id,
-            venue_text=body.venue_text,
-            created_by=principal.sub,
-            submitted_by=None,
-            poster=None,
-            image_exception_reason=None,
-            open_proposals=proposals,
-        )
-        actor = actor_of(principal, org_id, self.editor_four_eyes)
-        now = utcnow()
-        if organization_scope_or_proposal(scope_snapshot, actor, now):
+        org = await self._organization(body.organization_id)
+        if not principal.has("event.create", org.id):
             raise NotFoundError("organization not found")
-        if proposal_quota(scope_snapshot, actor, now):
-            raise _invalid(
-                "organizationId", "too many open proposals", code="proposal_quota_exceeded"
-            )
+        starts_at, ends_at, estimated = self._times_of(body)
         await self._require_references(body.primary_category_id, body.venue_id)
         event = Event(
-            state=EventState.IDEA.value,
+            state=EventState.DRAFT.value,
             title=body.title,
             summary=body.summary,
             description_md=body.description_md,
@@ -179,7 +135,7 @@ class EventService:
             all_day=body.all_day,
             starts_on=body.starts_on,
             ends_on=(body.ends_on or body.starts_on) if body.all_day else None,
-            organization_id=org_id,
+            organization_id=org.id,
             venue_id=body.venue_id,
             venue_text=body.venue_text,
             primary_category_id=body.primary_category_id,
@@ -195,18 +151,16 @@ class EventService:
         await self.session.flush()
         await self.session.refresh(event)
         await add_refs(self.session, "event", event.id, event.description_md)
-        await revisions.append_revision(
-            self.session, event, actor=principal.sub, field_class="state"
-        )
+        await revisions.append_revision(self.session, event, actor=principal.sub)
         await revisions.append_status(
-            self.session, event, transition_id="T00", from_state=None, actor=principal.sub
+            self.session, event, transition_id="create", from_state=None, actor=principal.sub
         )
         await revisions.audit(
             self.session,
             event,
             actor=principal.sub,
             action=AuditAction.EVENT_CREATE,
-            data={"organizationId": str(org_id) if org_id else None},
+            data={"organizationId": str(org.id)},
         )
         return event
 
@@ -229,31 +183,28 @@ class EventService:
 
     async def check_edit(
         self, principal: Principal, event_id: UUID, expected_rev: int, changes: dict[str, Any]
-    ):  # noqa: ANN201
-        """Load the dossier and plan `changes` for the principal without writing.
+    ) -> tuple[Event, dict[str, Any]]:
+        """Load the dossier and check the right, the version and the state for `changes`.
 
         Returns:
-            `(event, snapshot, actor, plan)`.
+            The event and the effective changes (values that differ from the stored ones).
 
         Raises:
             NotFoundError: No read right.
-            ForbiddenError: No edit right, or a submitter on a dossier of someone else.
+            ForbiddenError: No right to edit, or a submitter on a dossier of someone else.
             VersionConflict: `expected_rev` is stale.
-            ConflictError: `field_locked` for any locked field (nothing is saved).
+            ConflictError: `field_locked` for every field of a changed archived dossier.
         """
         event = await load_visible(self.session, principal, event_id)
         await bind(self.session, principal)
-        poster = await poster_of(self.session, event)
-        snapshot = snapshot_of(event, poster)
-        actor = actor_of(principal, event.organization_id, self.editor_four_eyes)
-        if not edit_right(snapshot, actor):
-            raise ForbiddenError("Missing permission: event.edit")
+        if not has_edit_right(principal, event):
+            raise ForbiddenError("Missing permission to edit this dossier")
         if expected_rev != event.rev:
             raise VersionConflict(event)
-        plan = plan_patch(snapshot, actor, allday.resolve(event, changes))
-        if plan.locked:
-            raise locked_problem(plan.locked)
-        return event, snapshot, actor, plan
+        effective = effective_changes(event, allday.resolve(event, changes))
+        if effective and event.state == EventState.ARCHIVED:
+            raise locked_problem(tuple(API_NAMES.get(name, name) for name in effective))
+        return event, effective
 
     async def patch(
         self, principal: Principal, event_id: UUID, body: EventPatch, expected_rev: int
@@ -265,61 +216,52 @@ class EventService:
 
         Raises:
             NotFoundError, ForbiddenError, VersionConflict, ConflictError: see `check_edit`.
-            ValidationProblem: Null for a required field, an end before the start, an
-                unknown category or venue, or a live guard refuses the result.
+            ValidationProblem: Null for a required field, an end before the start, or an
+                unknown category or venue.
         """
         changes = self.changes_of(body)
-        event, snapshot, actor, plan = await self.check_edit(
-            principal, event_id, expected_rev, changes
-        )
-        if not plan.changes:
+        assigned = changes.pop("organization_id", None)
+        event, effective = await self.check_edit(principal, event_id, expected_rev, changes)
+        if assigned is not None:
+            effective["organization_id"] = await self._assign(principal, event, assigned)
+        if not effective:
             await self._drop_draft(event, principal.sub)
             return event, (), await self._committed(event)
-        starts = plan.changes.get("starts_at", event.starts_at)
-        ends = plan.changes.get("ends_at", event.ends_at)
+        starts = effective.get("starts_at", event.starts_at)
+        ends = effective.get("ends_at", event.ends_at)
         if ends < starts:
             raise _invalid("endsAt", "endsAt must not be before startsAt")
         await self._require_references(
-            plan.changes.get("primary_category_id"), plan.changes.get("venue_id")
+            effective.get("primary_category_id"), effective.get("venue_id")
         )
-        if plan.live_guards:
-            full = await guard_snapshot(
-                self.session,
-                event,
-                await poster_of(self.session, event),
-                starts_at=plan.changes.get("starts_at"),
-            )
-            enforce_live(replace(full, **plan.changes), actor, utcnow())
-        values: dict[str, Any] = dict(plan.changes)
+        values: dict[str, Any] = dict(effective)
         if "ends_at" in values:
             values["end_estimated"] = False
-        values |= await derived_values(self.session, event, plan.changes)
-        if plan.bump_public_seq:
+        values |= await derived_values(self.session, event, effective)
+        if bumps_public_seq(event, effective):
             values["public_seq"] = event.public_seq + 1
         updated = await update_event(self.session, event, values, states=[event.state])
-        await revisions.append_revision(
-            self.session,
-            updated,
-            actor=principal.sub,
-            field_class=plan.field_class,
-            note=body.note,
-        )
+        await revisions.append_revision(self.session, updated, actor=principal.sub, note=body.note)
         await revisions.audit(
             self.session,
             updated,
             actor=principal.sub,
             action=AuditAction.EVENT_UPDATE,
-            data={"fields": sorted(plan.changes), "fieldClass": plan.field_class},
+            data={"fields": sorted(effective)},
         )
         await self._drop_draft(updated, principal.sub)
-        actions = (ACTION_FEED_INVALIDATE,) if updated.state == EventState.LIVE.value else ()
+        actions = (ACTION_FEED_INVALIDATE,) if updated.state == EventState.PUBLISHED else ()
         return updated, actions, await self._committed(updated)
 
+    async def _assign(self, principal: Principal, event: Event, org_id: UUID) -> UUID:
+        if not principal.has(EDITOR_RIGHT):
+            raise ForbiddenError("Only the editorial team assigns an organization.")
+        if event.organization_id is not None:
+            raise ConflictError("The organization is set already.", code="field_locked")
+        return (await self._organization(org_id)).id
+
     async def _committed(self, event: Event) -> Committed:
-        poster = await poster_of(self.session, event)
-        return Committed(
-            event.id, event.rev, poster.id if poster else None, bool(poster and poster.derivatives)
-        )
+        return committed_of(event, await poster_of(self.session, event))
 
     async def _drop_draft(self, event: Event, sub: str) -> None:
         await self.session.execute(

@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from app.modules.auth.schemas import CamelModel
+from app.modules.events.facts import RESET_ON_CLONE
 
 type Mode = Literal["copy", "reset", "partial", "link", "never"]
 type Relation = Literal["own", "foreign"]
@@ -25,6 +26,7 @@ class Rule:
     own: Mode
     foreign: Mode
     reason: str
+    foreign_reason: str | None = None
 
     def mode(self, relation: Relation) -> Mode:
         """Return the mode for the relation of the reader to the template."""
@@ -40,12 +42,11 @@ CARRY_OVER: tuple[Rule, ...] = (
     Rule("format", "copy", "copy", "clone.reason.reference"),
     Rule("venue", "copy", "copy", "clone.reason.reference"),
     Rule("venueText", "reset", "reset", "clone.reason.location"),
-    Rule("facts", "partial", "partial", "clone.reason.facts"),
+    Rule("facts", "partial", "partial", "clone.reason.facts", "clone.reason.factsForeign"),
     Rule("documents", "copy", "partial", "clone.reason.documents"),
     Rule("howto", "copy", "copy", "clone.reason.howto"),
     Rule("checklist", "copy", "partial", "clone.reason.checklist"),
     Rule("poster", "never", "never", "clone.reason.poster"),
-    Rule("imageException", "never", "never", "clone.reason.exception"),
     Rule("files", "never", "never", "clone.reason.files"),
     Rule("socialPosts", "never", "never", "clone.reason.social"),
     Rule("links", "never", "never", "clone.reason.links"),
@@ -53,7 +54,7 @@ CARRY_OVER: tuple[Rule, ...] = (
     Rule("shared", "link", "link", "clone.reason.shared"),
 )
 RULES = {rule.part: rule for rule in CARRY_OVER}
-FACT_RESET_FOREIGN = frozenset({"budgetCents", "priceText", "meetingPoint", "protocolOwner"})
+FACTS_KEPT_FOREIGN = frozenset({"capacity", "ageLimit", "minParticipants", "maxParticipants"})
 
 
 class CarryOverLine(CamelModel):
@@ -82,15 +83,18 @@ def plan(relation: Relation, counts: SourceCounts) -> list[CarryOverLine]:
         mode = rule.mode(relation)
         if rule.part == "howto" and counts.howto_linked:
             mode = "link"
+        reason = (
+            rule.foreign_reason if relation == "foreign" and rule.foreign_reason else rule.reason
+        )
         lines.append(
-            CarryOverLine(part=rule.part, mode=mode, reason=rule.reason, count=sizes.get(rule.part))
+            CarryOverLine(part=rule.part, mode=mode, reason=reason, count=sizes.get(rule.part))
         )
     return lines
 
 
 def reset_facts(facts: dict[str, object] | None, relation: Relation) -> dict[str, object]:
-    """Return the clone facts without expiring keys (foreign: also costs and people)."""
-    from app.modules.events.facts import RESET_ON_CLONE
-
-    dropped = RESET_ON_CLONE | (FACT_RESET_FOREIGN if relation == "foreign" else frozenset())
-    return {k: v for k, v in (facts or {}).items() if k not in dropped}
+    """Return the clone facts: an own template loses its expiring keys, a foreign one keeps
+    only capacity, age limit and the participant bounds."""
+    if relation == "foreign":
+        return {k: v for k, v in (facts or {}).items() if k in FACTS_KEPT_FOREIGN}
+    return {k: v for k, v in (facts or {}).items() if k not in RESET_ON_CLONE}

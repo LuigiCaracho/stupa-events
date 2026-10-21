@@ -184,7 +184,7 @@ def new_event(
     """Build the unsaved dossier of the clone from the template and the request."""
     starts_at, ends_at, estimated, days = clone_times(source, body)
     return Event(
-        state="idea",
+        state="draft",
         title=(body.title or "").strip() or strip_edition(source.title),
         summary=source.summary,
         description_md=(
@@ -232,7 +232,7 @@ async def _copy_documents(
             event_id=event.id,
             kind=original.kind,
             title=original.title,
-            body_md=original.body_md,
+            body_md=original.body_md if relation == "own" else strip_image_refs(original.body_md),
             meta=original.meta,
             visibility=visibility,
             carry_over=True,
@@ -294,11 +294,10 @@ async def clone_event(
         session,
         event,
         actor=principal.sub,
-        field_class="state",
         note=f"Aus Vorlage „{read.event.title}“",
     )
     await revisions.append_status(
-        session, event, transition_id="T00", from_state=None, actor=principal.sub
+        session, event, transition_id="clone", from_state=None, actor=principal.sub
     )
     await revisions.audit(
         session,

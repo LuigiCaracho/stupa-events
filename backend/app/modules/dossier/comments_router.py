@@ -50,13 +50,10 @@ async def create_comment(
 
 
 @router.post("/comments/{comment_id}/resolve", response_model=CommentOut, responses=_ERRORS)
-async def resolve_comment(
-    db: DbSession, pool: ArqPool, principal: Reader, comment_id: UUID
-) -> CommentOut:
+async def resolve_comment(db: DbSession, principal: Reader, comment_id: UUID) -> CommentOut:
     """Resolve a root comment (idempotent)."""
-    out, pending = await comments.resolve(db, principal, comment_id)
+    out = await comments.resolve(db, principal, comment_id)
     await db.commit()
-    await dispatch_mails(pool, pending)
     return out
 
 

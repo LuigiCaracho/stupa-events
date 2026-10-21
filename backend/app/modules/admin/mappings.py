@@ -1,9 +1,7 @@
 """Validation of a group mapping: a pure function over role and organization.
 
 The database CHECKs of `0002_events_core` are the second net. The checks here give the
-admin a precise code per case (contract M2, 2.4). The `approver` rule is checked here
-once more; the runtime downgrade in `rbac.effective_grants` handles a trust that is
-withdrawn later.
+admin a precise code per case (contract M2, 2.4).
 """
 
 from __future__ import annotations
@@ -27,7 +25,6 @@ class MappingIssue:
 class OrgFacts:
     """What the validator needs to know about the organization of a mapping."""
 
-    trusted: bool
     active: bool
 
 
@@ -58,12 +55,6 @@ def validate_mapping(
         ]
     if organization is None or not organization.active:
         return [MappingIssue("unknown_organization", "organizationId", "Organization not found.")]
-    if role == "approver" and not organization.trusted:
-        return [
-            MappingIssue(
-                "approver_requires_trusted", "role", "Approver only in trusted organizations."
-            )
-        ]
     return []
 
 

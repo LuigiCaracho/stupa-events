@@ -3,9 +3,10 @@
 `create` is the one write path: it checks the right and the state, validates the bytes by
 sniffing, re-encodes images (no EXIF, no original is ever stored), stores the object and
 inserts the row in `pending`. The router commits, then queues the ClamAV scan. A poster in
-`idea`, `planning` and `in_review` becomes the hero at once; in `approved` and `live` the
-worker job `promote_poster` swaps it after scan and derivatives, so the published poster
-never changes to an unscanned file. Files are never deleted, only hidden (`retired_at`).
+`draft` (or the first poster of a published dossier) becomes the hero at once; a replacement
+in `published` waits for the worker job `promote_poster`, which swaps it after scan and
+derivatives, so the published poster never changes to an unscanned file. Files are never
+deleted, only hidden (`retired_at`).
 """
 
 from __future__ import annotations
@@ -27,7 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.archive.access import foreign_archived
 from app.modules.audit.actions import AuditAction
 from app.modules.auth.principal import Principal
-from app.modules.dossier.rules import ensure_open, ensure_permission, load_readable
+from app.modules.dossier.rules import ensure_permission, load_readable
 from app.modules.events import revisions
 from app.modules.events.access import poster_of
 from app.modules.events.models import Event
@@ -60,8 +61,6 @@ STALE_PENDING: Final = timedelta(minutes=10)
 CLEAN_CONCURRENCY: Final[int] = 2
 _clean_threads: Final = threading.BoundedSemaphore(CLEAN_CONCURRENCY)
 _clean_slots: Final = asyncio.Semaphore(CLEAN_CONCURRENCY)
-_PRE_REVIEW = frozenset({EventState.IDEA.value, EventState.PLANNING.value})
-_PUBLISHED = frozenset({EventState.APPROVED.value, EventState.LIVE.value})
 _PATCH_FIELDS = (
     "display_name",
     "alt_text",
@@ -128,27 +127,23 @@ def check_consent(persons_depicted: bool | None, consent_note: str | None) -> No
 def authorize_attach(principal: Principal, event: Event, kind: str) -> None:
     """Check the right to attach a file of `kind` in the current state.
 
-    Posters follow M3: `idea` and `planning` by the creator or any attacher, `in_review`
-    by approvers, `approved` by approvers and `live` by `event.edit_critical_live`. Other
-    kinds are open to every attacher until the dossier is closed.
+    A poster is set in `draft` by any attacher of the dossier and replaced in `published` by
+    `event.publish`; in `archived` it is locked. Every other kind stays open to the attachers
+    in every state, the archive included.
     """
     ensure_permission(principal, event, "dossier.attach", own_only=True)
-    if kind != "poster":
-        ensure_open(event)
+    if kind == "poster":
+        authorize_poster_change(principal, event)
+
+
+def authorize_poster_change(principal: Principal, event: Event) -> None:
+    """Check that the poster of the dossier may change in its state (409, then 403)."""
+    if event.state == EventState.DRAFT:
         return
-    org_id = event.organization_id
-    if event.state in _PRE_REVIEW:
-        return
-    needed = {
-        EventState.IN_REVIEW.value: "event.approve",
-        EventState.APPROVED.value: "event.approve",
-        EventState.LIVE.value: "event.edit_critical_live",
-    }.get(event.state)
-    if needed is None:
-        ensure_open(event)
+    if event.state != EventState.PUBLISHED:
         raise ConflictError("Field is locked in this state.", code="field_locked")
-    if not principal.has(needed, org_id):
-        raise ForbiddenError(f"Missing permission: {needed}")
+    if not principal.has("event.publish", event.organization_id):
+        raise ForbiddenError("Missing permission: event.publish")
 
 
 def _visibility(new: NewAttachment) -> str:
@@ -234,7 +229,7 @@ async def create(
         data, mime, dims = await _store_image(new)
     meta = parse_meta(new.kind, {**new.meta, **(dims if new.kind == "poster" else {})})
     _check_social(new.kind, meta, mime, missing_rights(new))
-    previous = await poster_of(session, event) if new.kind == "poster" else None
+    previous = await _current_poster(session, event) if new.kind == "poster" else None
     attachment_id = uuid.uuid4()
     kind_dir = new.kind.replace("_", "-") if new.kind != "poster" else "poster"
     row = Attachment(
@@ -276,6 +271,11 @@ async def create(
     return row
 
 
+async def _current_poster(session: AsyncSession, event: Event) -> Attachment | None:
+    poster = await poster_of(session, event)
+    return poster if poster is not None and poster.retired_at is None else None
+
+
 async def _finish(
     session: AsyncSession,
     principal: Principal,
@@ -287,24 +287,27 @@ async def _finish(
     replaced = supersedes is not None or previous is not None
     action = AuditAction.ATTACHMENT_REPLACE if replaced else AuditAction.ATTACHMENT_UPLOAD
     data = {"attachmentId": str(row.id), "kind": row.kind}
-    if row.kind == "poster" and event.state not in _PUBLISHED:
+    if row.kind == "poster" and (event.state == EventState.DRAFT or previous is None):
         for old in (previous, supersedes):
             if old is not None:
                 old.retired_at = utcnow()
         updated = await _link_hero(session, event, row.id)
-        await revisions.append_revision(
-            session, updated, actor=principal.sub, field_class="dossier"
-        )
+        await revisions.append_revision(session, updated, actor=principal.sub)
         await revisions.audit(session, updated, actor=principal.sub, action=action, data=data)
         return
     await revisions.audit(session, event, actor=principal.sub, action=action, data=data)
 
 
-async def _link_hero(session: AsyncSession, event: Event, attachment_id: UUID) -> Event:
+async def _link_hero(
+    session: AsyncSession, event: Event, attachment_id: UUID | None, *, public: bool = False
+) -> Event:
+    values: dict[str, Any] = {"hero_attachment_id": attachment_id, "rev": Event.rev + 1}
+    if public:
+        values["public_seq"] = Event.public_seq + 1
     result = await session.execute(
         update(Event)
         .where(Event.id == event.id, Event.rev == event.rev)
-        .values(hero_attachment_id=attachment_id, rev=Event.rev + 1)
+        .values(**values)
         .returning(Event)
         .execution_options(populate_existing=True, synchronize_session=False)
     )
@@ -383,7 +386,6 @@ async def patch(
     """Change visibility, name, rights fields or meta of an attachment (last writer wins)."""
     row, event = await load_attachment(session, principal, attachment_id)
     ensure_permission(principal, event, "dossier.attach", own_only=False)
-    ensure_open(event)
     visibility = changes.get("visibility")
     if visibility == "shared" and row.kind in RESTRICTED_KINDS:
         raise ValidationProblem(
@@ -432,18 +434,10 @@ def _dims(row: Attachment) -> dict[str, Any]:
     }
 
 
-def _raise_poster_in_use(exc: DBAPIError) -> None:
-    if "poster of a published event" in str(exc):
-        raise ConflictError(
-            "The poster of a published dossier cannot be changed this way.", code="poster_in_use"
-        ) from exc
-
-
 async def _flush_or_conflict(session: AsyncSession) -> None:
     try:
         await session.flush()
     except DBAPIError as exc:
-        _raise_poster_in_use(exc)
         if "ck_attachment_restricted_not_shared" in str(exc):
             raise ValidationProblem(
                 "Vergleichsangebote können nicht für alle Mitglieder freigegeben werden.",
@@ -452,22 +446,33 @@ async def _flush_or_conflict(session: AsyncSession) -> None:
         raise
 
 
-async def retire(session: AsyncSession, principal: Principal, attachment_id: UUID) -> None:
-    """Hide an attachment (409 `poster_in_use` for the live poster of a published dossier)."""
+async def retire(session: AsyncSession, principal: Principal, attachment_id: UUID) -> str:
+    """Hide an attachment and return its kind.
+
+    Hiding the current poster also empties the poster slot of the dossier.
+    """
     row, event = await load_attachment(session, principal, attachment_id)
     ensure_permission(principal, event, "dossier.attach", own_only=False)
-    ensure_open(event)
     if row.retired_at is not None:
-        return
+        return row.kind
+    if row.kind == "poster":
+        authorize_poster_change(principal, event)
     row.retired_at = utcnow()
     await _flush_or_conflict(session)
+    subject = event
+    if row.kind == "poster" and event.hero_attachment_id == row.id:
+        subject = await _link_hero(session, event, None, public=event.state == EventState.PUBLISHED)
+        await revisions.append_revision(
+            session, subject, actor=principal.sub, note="Poster entfernt"
+        )
     await revisions.audit(
         session,
-        event,
+        subject,
         actor=principal.sub,
         action=AuditAction.ATTACHMENT_RETIRE,
         data={"attachmentId": str(row.id)},
     )
+    return row.kind
 
 
 async def request_rescan(
@@ -475,8 +480,8 @@ async def request_rescan(
 ) -> Attachment:
     """Reset a failed or stuck scan to `pending` so that the caller can queue it again."""
     row, event = await load_attachment(session, principal, attachment_id)
-    if not principal.has("event.approve", event.organization_id):
-        raise ForbiddenError("Missing permission: event.approve")
+    if not principal.has("event.publish", event.organization_id):
+        raise ForbiddenError("Missing permission: event.publish")
     stuck = row.scan_status == "pending" and row.created_at < utcnow() - STALE_PENDING
     if row.scan_status != "error" and not stuck:
         raise ConflictError("Only a scan that failed can be repeated.", code="conflict")

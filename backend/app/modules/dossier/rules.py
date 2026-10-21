@@ -1,8 +1,9 @@
-"""Shared write rules of the dossier tabs: load, permission, own-dossier rule, closed state.
+"""Shared write rules of the dossier sections: load, permission, own-dossier rule.
 
 Every write route of attachments, documents, checklist, comments and quotes loads the dossier
 through `load_for_write`. An unreadable dossier is a 404 before any permission is looked at;
-a role below `event.submit` (the submitter) works on its own dossiers only.
+a role below `event.publish` (the submitter) works on its own dossiers only. The state does
+not matter: the documentation stays writable in the archive.
 """
 
 from __future__ import annotations
@@ -15,15 +16,7 @@ from app.modules.auth.principal import Principal
 from app.modules.events.access import load_visible
 from app.modules.events.models import Event
 from app.modules.orgs.scope import bind, restricted_to_own
-from app.shared.errors import ConflictError, ForbiddenError
-
-CLOSED_STATES = frozenset({"archived", "withdrawn"})
-
-
-def ensure_open(event: Event) -> None:
-    """Refuse a write on a closed dossier (409 `dossier_closed`)."""
-    if event.state in CLOSED_STATES:
-        raise ConflictError("The dossier is closed.", code="dossier_closed")
+from app.shared.errors import ForbiddenError
 
 
 def ensure_permission(
@@ -59,8 +52,7 @@ async def load_for_write(
     *,
     own_only: bool = True,
 ) -> Event:
-    """Load a dossier for a write: 404, then permission, then the closed state."""
+    """Load a dossier for a write: 404, then permission."""
     event = await load_readable(session, principal, event_id)
     ensure_permission(principal, event, permission, own_only=own_only)
-    ensure_open(event)
     return event

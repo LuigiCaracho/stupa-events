@@ -165,7 +165,7 @@ class Settings(BaseSettings):
     rl_default_write_per_hour: int = 100
     rl_default_write_session_per_hour: int = 3000
 
-    editor_four_eyes: bool = False
+    publish_requires_editor: bool = False
 
     @field_validator("cors_allow_origins", mode="before")
     @classmethod

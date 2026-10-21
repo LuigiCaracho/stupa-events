@@ -32,10 +32,10 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.db import get_sessionmaker
 from app.modules.audit.actions import AuditAction
 from app.modules.audit.service import record as audit_record
+from app.modules.events.postcommit import invalidate_public
 from app.modules.files.models import Attachment
 from app.modules.files.scanner import ScannerError, ScanVerdict, build_scanner
 from app.modules.files.storage import ObjectStorage, StorageError, build_object_storage
-from app.modules.pipeline.actions import invalidate_public
 from app.settings import Settings, load_settings
 from app.shared.timeutil import utcnow
 

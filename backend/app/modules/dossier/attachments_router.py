@@ -24,6 +24,7 @@ from app.modules.dossier.schemas import (
     Visibility,
     attachment_out,
 )
+from app.modules.events.postcommit import invalidate_public
 from app.modules.files import attachments
 from app.modules.files.attachment_types import MAX_DOCUMENT_BYTES
 from app.modules.files.attachments import NewAttachment
@@ -51,7 +52,7 @@ _FRAME_BYTES = 256 * 1024
 
 Attacher = Annotated[Principal, Depends(require_any_scope("dossier.attach"))]
 Reader = Annotated[Principal, Depends(require_principal("library.read"))]
-Approver = Annotated[Principal, Depends(require_any_scope("event.approve"))]
+Approver = Annotated[Principal, Depends(require_any_scope("event.publish"))]
 
 
 def enforce_upload_cap(request: Request) -> None:
@@ -186,12 +187,18 @@ async def upload_attachment(
 
 @router.patch("/attachments/{attachment_id}", response_model=AttachmentOut, responses=_ERRORS)
 async def patch_attachment(
-    db: DbSession, principal: Attacher, attachment_id: UUID, body: AttachmentPatch
+    request: Request,
+    db: DbSession,
+    principal: Attacher,
+    attachment_id: UUID,
+    body: AttachmentPatch,
 ) -> AttachmentOut:
     """Change visibility, name, rights fields or meta (the last writer wins)."""
     row = await attachments.patch(db, principal, attachment_id, body.model_dump(exclude_unset=True))
     out = attachment_out(row)
     await db.commit()
+    if row.kind == "poster":
+        await invalidate_public(getattr(request.app.state, "arq_pool", None))
     return out
 
 
@@ -250,10 +257,14 @@ async def replace_attachment(
     status_code=status.HTTP_204_NO_CONTENT,
     responses=_ERRORS,
 )
-async def retire_attachment(db: DbSession, principal: Attacher, attachment_id: UUID) -> Response:
+async def retire_attachment(
+    request: Request, db: DbSession, principal: Attacher, attachment_id: UUID
+) -> Response:
     """Hide an attachment; there is no delete."""
-    await attachments.retire(db, principal, attachment_id)
+    kind = await attachments.retire(db, principal, attachment_id)
     await db.commit()
+    if kind == "poster":
+        await invalidate_public(getattr(request.app.state, "arq_pool", None))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

@@ -36,14 +36,6 @@
       "path": "/events-stupa"
     },
     {
-      "name": "events-stupa-approver",
-      "path": "/events-stupa-approver"
-    },
-    {
-      "name": "events-fsi-approver",
-      "path": "/events-fsi-approver"
-    },
-    {
       "name": "events-fsi-viewer",
       "path": "/events-fsi-viewer"
     },
@@ -234,72 +226,6 @@
       ],
       "groups": [
         "/events-stupa",
-        "/events-users"
-      ],
-      "realmRoles": [
-        "offline_access"
-      ]
-    },
-    {
-      "username": "approver-stupa",
-      "enabled": true,
-      "email": "approver-stupa@example.test",
-      "emailVerified": true,
-      "firstName": "Anton",
-      "lastName": "Freigeber",
-      "credentials": [
-        {
-          "type": "password",
-          "value": "password",
-          "temporary": false
-        }
-      ],
-      "groups": [
-        "/events-stupa-approver",
-        "/events-users"
-      ],
-      "realmRoles": [
-        "offline_access"
-      ]
-    },
-    {
-      "username": "approver2-stupa",
-      "enabled": true,
-      "email": "approver2-stupa@example.test",
-      "emailVerified": true,
-      "firstName": "Berta",
-      "lastName": "Gegenzeichnerin",
-      "credentials": [
-        {
-          "type": "password",
-          "value": "password",
-          "temporary": false
-        }
-      ],
-      "groups": [
-        "/events-stupa-approver",
-        "/events-users"
-      ],
-      "realmRoles": [
-        "offline_access"
-      ]
-    },
-    {
-      "username": "approver-fsi",
-      "enabled": true,
-      "email": "approver-fsi@example.test",
-      "emailVerified": true,
-      "firstName": "Anja",
-      "lastName": "Freigeberin",
-      "credentials": [
-        {
-          "type": "password",
-          "value": "password",
-          "temporary": false
-        }
-      ],
-      "groups": [
-        "/events-fsi-approver",
         "/events-users"
       ],
       "realmRoles": [

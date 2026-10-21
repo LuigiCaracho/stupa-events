@@ -40,7 +40,7 @@ def _frozen(ids: set[UUID] | None) -> frozenset[UUID] | None:
 async def reader_of(session: AsyncSession, principal: Principal) -> Reader:
     """Resolve the rights of a principal once: reading scope and `team` documents scope."""
     scope = await readable_org_ids(session, principal)
-    submit = await org_ids_for(session, principal, "event.submit")
+    submit = await org_ids_for(session, principal, "event.publish")
     restricted = await org_ids_for(session, principal, "dossier.read_restricted")
     team = None if submit is None or restricted is None else submit | restricted
     return Reader(principal.sub, _frozen(scope), _frozen(team))

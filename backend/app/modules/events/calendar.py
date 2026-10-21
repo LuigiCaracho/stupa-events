@@ -2,7 +2,7 @@
 
 `from` and `to` are local days, both inclusive, at most 100 days apart. A dossier is chosen
 by overlap (`ends_at >= first midnight` and `starts_at < midnight after the last day`) among
-the dossiers the caller reads. `withdrawn` appears only when asked for. At most 500 entries;
+the dossiers the caller reads. At most 500 entries;
 colors are token names, never hex values.
 """
 
@@ -18,8 +18,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.auth.principal import Principal
 from app.modules.auth.schemas import CamelModel
-from app.modules.dossier.guard_data import howto_presence
 from app.modules.events.access import visible_events_query
+from app.modules.events.hints_data import howto_presence
 from app.modules.events.listing import Filters, apply_filters, local_start
 from app.modules.events.models import Event
 from app.modules.orgs.models import Organization
@@ -114,8 +114,6 @@ async def calendar(
 ) -> CalendarOut:
     """Select the readable dossiers that overlap `start` to `end` and shape the entries."""
     query = apply_filters(await visible_events_query(session, principal), filters, principal)
-    if "withdrawn" not in filters.states:
-        query = query.where(Event.state != "withdrawn")
     query = query.where(
         Event.ends_at >= local_start(start), Event.starts_at < local_start(end + timedelta(days=1))
     )

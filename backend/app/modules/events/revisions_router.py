@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
@@ -25,9 +25,6 @@ async def list_revisions(
     db: DbSession,
     principal: Reader,
     event_id: UUID,
-    field_class: Annotated[
-        Literal["critical", "text", "dossier", "state"] | None, Query(alias="fieldClass")
-    ] = None,
     limit: Annotated[int, Query(ge=1, le=MAX_LIMIT)] = DEFAULT_LIMIT,
     offset: Annotated[int, Query(ge=0)] = 0,
     min_rev: Annotated[int, Query(alias="minRev", ge=0)] = 0,
@@ -37,7 +34,6 @@ async def list_revisions(
         db,
         principal,
         event_id,
-        field_class=field_class,
         limit=limit,
         offset=offset,
         min_rev=min_rev,

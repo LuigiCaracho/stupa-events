@@ -2,8 +2,8 @@
 
 A poster is the attachment of kind `poster`. `files.attachments.create` sniffs the bytes,
 re-encodes the image (bomb guard, no EXIF), stores it in the private bucket and inserts the
-row in `pending`; in `idea`, `planning` and `in_review` it becomes the hero at once, in
-`approved` and `live` the worker swaps it after scan and derivatives. The router commits,
+row in `pending`; in `draft` it becomes the hero at once, a replacement in `published` waits
+for the worker, which swaps it after scan and derivatives. The router commits,
 then queues the ClamAV scan.
 """
 

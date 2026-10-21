@@ -227,7 +227,7 @@ async def me(
 ) -> MeOut:
     """Return the principal plus the resolved roles, permissions, groups and organizations.
 
-    The organizations carry their name, short name and `trusted` flag from one query
+    The organizations carry their name and short name from one query
     (`org_refs`). The response also renews the session cookie (see `_renew_session_cookie`).
     """
     await _renew_session_cookie(request, response, db, settings)
@@ -246,7 +246,6 @@ async def me(
                 organization_id=refs[slug].id,
                 name=refs[slug].name,
                 short=refs[slug].short,
-                trusted=refs[slug].trusted,
             )
             for slug, role in principal.organizations
             if slug in refs

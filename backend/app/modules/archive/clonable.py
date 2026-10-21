@@ -1,4 +1,4 @@
-"""Which dossiers are templates: archived ones everywhere, `live` and `followup` in own scope."""
+"""Which dossiers are templates: archived ones everywhere, `published` ones in own scope."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from sqlalchemy import ColumnElement, and_, or_, true
 
 from app.modules.events.models import Event
 
-OWN_CLONABLE = ("live", "followup")
+OWN_CLONABLE = ("published", "archived")
 
 
 def clonable_clause(scope: set[UUID] | None) -> ColumnElement[bool]:

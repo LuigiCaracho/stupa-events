@@ -22,16 +22,12 @@ from scripts.acceptance_common import check, expect, login, step
 FIXTURES = Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "search"
 MARK = "m5-corpus"
 PAGE = 50
-EXCEPTION = (
-    '{"granted_by": "seed", "reason": "Testdaten ohne Motiv", "at": "2026-01-01T00:00:00+00:00"}'
-)
 INSERT_EVENT = (
-    "INSERT INTO event (title, state, starts_at, ends_at, organization_id, format_id, created_by,"
-    " image_exception) VALUES (:title, :state, CAST(:start AS timestamptz),"
+    "INSERT INTO event (title, state, starts_at, ends_at, organization_id, format_id, created_by)"
+    " VALUES (:title, :state, CAST(:start AS timestamptz),"
     " CAST(:start AS timestamptz) + interval '3 hours',"
     " (SELECT id FROM organization WHERE slug = :org),"
-    " (SELECT id FROM format WHERE slug = :format), :mark,"
-    " CAST(:exception AS jsonb)) RETURNING id"
+    " (SELECT id FROM format WHERE slug = :format), :mark) RETURNING id"
 )
 INSERT_DOCUMENT = (
     "INSERT INTO document (event_id, kind, title, body_md, visibility)"
@@ -55,7 +51,6 @@ def load_corpus() -> dict[str, str]:
                 org=item["org"],
                 format=item.get("format"),
                 mark=MARK,
-                exception=EXCEPTION,
             )[0][0]
             for doc in item.get("documents", []):
                 ops.query(INSERT_DOCUMENT, event=event_id, **_document(doc))

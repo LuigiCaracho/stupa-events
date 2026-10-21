@@ -6,7 +6,7 @@ from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from app.modules.auth.schemas import CamelModel
 from app.modules.files.models import Attachment
@@ -90,13 +90,22 @@ class AttachmentPatch(CamelModel):
 
 
 class PosterMeta(CamelModel):
-    """The text fields of the poster upload (the file comes as multipart)."""
+    """The text fields of the poster upload (the file comes as multipart).
 
-    alt_text: str = Field(min_length=1, max_length=250)
-    credit: str = Field(min_length=1, max_length=200)
-    rights_basis: RightsBasis
+    Alt text and credit are recommended, not required: a blank value is stored as missing
+    and shows up as a hint (`poster_alt_missing`, `poster_credit_missing`).
+    """
+
+    alt_text: str | None = Field(default=None, max_length=250)
+    credit: str | None = Field(default=None, max_length=200)
+    rights_basis: RightsBasis = "unknown"
     persons_depicted: bool = False
     consent_note: str | None = Field(default=None, max_length=500)
+
+    @field_validator("alt_text", "credit", mode="after")
+    @classmethod
+    def _blank_is_missing(cls, value: str | None) -> str | None:
+        return (value or "").strip() or None
 
 
 def derivatives_out(raw: dict | None) -> DerivativesOut | None:

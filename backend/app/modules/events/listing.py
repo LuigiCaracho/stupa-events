@@ -1,8 +1,8 @@
-"""The filters and queries of `GET /events`: list view and board view."""
+"""The filters and queries of `GET /events`: the list and the calendar view."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
@@ -11,23 +11,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.auth.principal import Principal
 from app.modules.events.access import visible_events_query
-from app.modules.events.board import (
-    ACTIVE_COLUMNS,
-    COLUMNS,
-    DESCENDING_COLUMNS,
-)
-from app.modules.events.card_schemas import BoardColumn, BoardOut, ColumnKey
 from app.modules.events.cards import present_cards
 from app.modules.events.models import Event
 from app.modules.orgs.models import Organization
 from app.modules.taxonomy.models import Category
 from app.shared.search import escape_like
-from app.shared.timeutil import DEFAULT_TZID, utcnow
+from app.shared.timeutil import DEFAULT_TZID
 
 
 @dataclass(frozen=True, slots=True)
 class Filters:
-    """The query parameters of the list and the board."""
+    """The query parameters of the list and the calendar."""
 
     states: tuple[str, ...] = ()
     organization: str | None = None
@@ -54,9 +48,7 @@ def apply_filters(query: Select, filters: Filters, principal: Principal) -> Sele
         family = select(Category.id).where(or_(Category.id == root, Category.parent_id == root))
         query = query.where(Event.primary_category_id.in_(family))
     if filters.mine:
-        query = query.where(
-            or_(Event.created_by == principal.sub, Event.submitted_by == principal.sub)
-        )
+        query = query.where(Event.created_by == principal.sub)
     if filters.q:
         pattern = f"%{escape_like(filters.q.strip())}%"
         query = query.where(
@@ -84,44 +76,3 @@ async def list_cards(
     order = (Event.starts_at.desc(), Event.id) if descending else (Event.starts_at, Event.id)
     rows = await session.scalars(query.order_by(*order).limit(limit).offset(offset))
     return await present_cards(session, principal, list(rows)), total
-
-
-def _column_keys(filters: Filters) -> tuple[ColumnKey, ...]:
-    closed: tuple[ColumnKey, ...] = tuple(
-        key for key in ("archived", "withdrawn") if key in filters.states
-    )
-    return closed or ACTIVE_COLUMNS
-
-
-async def board(
-    session: AsyncSession, principal: Principal, filters: Filters, *, column_limit: int
-) -> BoardOut:
-    """Build the board: per column the total and the first `column_limit` cards."""
-    base = await visible_events_query(session, principal)
-    columns = []
-    for key in _column_keys(filters):
-        states = tuple(s for s in COLUMNS[key] if not filters.states or s in filters.states)
-        if not states:
-            columns.append(
-                BoardColumn(key=key, states=list(COLUMNS[key]), total=0, items=[], truncated=False)
-            )
-            continue
-        query = apply_filters(base, replace(filters, states=states), principal)
-        total = await session.scalar(select(func.count()).select_from(query.subquery())) or 0
-        order = (
-            (Event.starts_at.desc(), Event.id)
-            if key in DESCENDING_COLUMNS
-            else (Event.starts_at, Event.id)
-        )
-        rows = await session.scalars(query.order_by(*order).limit(column_limit))
-        cards = await present_cards(session, principal, list(rows))
-        columns.append(
-            BoardColumn(
-                key=key,
-                states=list(COLUMNS[key]),
-                total=total,
-                items=cards,
-                truncated=total > len(cards),
-            )
-        )
-    return BoardOut(columns=columns, generated_at=utcnow())

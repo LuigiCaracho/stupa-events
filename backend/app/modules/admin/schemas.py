@@ -28,9 +28,7 @@ OrganizationKind = Literal["stupa", "referat", "fachschaft", "partner", "hochsch
 CategoryKind = Literal["format", "fachschaft", "partner"]
 RequiredProfile = Literal["generic", "party", "meeting", "trip"]
 PublicPrecision = Literal["exact", "building", "hidden"]
-MappingRole = Literal[
-    "admin", "editor", "stupa", "member", "viewer", "submitter", "organizer", "approver"
-]
+MappingRole = Literal["admin", "editor", "stupa", "member", "viewer", "submitter", "organizer"]
 
 
 def _clean(value: str) -> str:
@@ -74,7 +72,6 @@ class AdminOrganization(CamelModel):
     color_token: ColorToken | None
     category_id: UUID | None
     instagram: list[str]
-    trusted: bool
     legacy_wp_ids: list[int]
     active: bool
     created_at: datetime
@@ -93,7 +90,6 @@ class OrganizationCreate(CamelModel):
     category_id: UUID | None = None
     instagram: Handles = Field(default_factory=list)
     active: bool = True
-    trusted: bool = False
 
 
 class OrganizationPatch(CamelModel):
@@ -107,7 +103,6 @@ class OrganizationPatch(CamelModel):
     category_id: UUID | None = None
     instagram: Handles | None = None
     active: bool | None = None
-    trusted: bool | None = None
 
 
 class AdminCategory(CamelModel):

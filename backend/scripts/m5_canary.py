@@ -38,9 +38,9 @@ class _Sql:
         return ops.query(statement, **params)
 
 
-def seed(organizer: httpx.Client, editor: httpx.Client, archived: str) -> Seeded:
+def seed(organizer: httpx.Client, archived: str) -> Seeded:
     """Publish a canary dossier and hang the internal strings on it and on `archived`."""
-    eid = live(organizer, editor, PUBLIC_TITLE, days=37)
+    eid = live(organizer, PUBLIC_TITLE, days=37)
     ops.query(
         "UPDATE event SET summary = :s, venue_text = 'CANARY-PUBLIC-VENUE' WHERE id = :e",
         s=PUBLIC_SUMMARY,

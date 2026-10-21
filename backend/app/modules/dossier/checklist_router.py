@@ -9,7 +9,6 @@ from fastapi import APIRouter, Depends, Response, status
 
 from app.deps import DbSession, Principal, require_any_scope, require_principal
 from app.modules.dossier import checklist
-from app.modules.dossier.deps import ArqPool
 from app.modules.dossier.schemas_checklist import (
     ApplyTemplateIn,
     ChecklistItemCreate,
@@ -18,7 +17,6 @@ from app.modules.dossier.schemas_checklist import (
     ChecklistOut,
     DoneIn,
 )
-from app.modules.notifications.service import dispatch_mails
 from app.shared.errors import ProblemDetail
 
 _PROBLEM: dict[str, Any] = {"model": ProblemDetail}
@@ -54,23 +52,21 @@ async def apply_template(
     responses=_ERRORS,
 )
 async def add_item(
-    db: DbSession, pool: ArqPool, principal: Editor, event_id: UUID, body: ChecklistItemCreate
+    db: DbSession, principal: Editor, event_id: UUID, body: ChecklistItemCreate
 ) -> ChecklistItemOut:
     """Add a free item to the checklist."""
-    out, pending = await checklist.add_item(db, principal, event_id, body)
+    out = await checklist.add_item(db, principal, event_id, body)
     await db.commit()
-    await dispatch_mails(pool, pending)
     return out
 
 
 @router.patch("/checklist-items/{item_id}", response_model=ChecklistItemOut, responses=_ERRORS)
 async def patch_item(
-    db: DbSession, pool: ArqPool, principal: Editor, item_id: UUID, body: ChecklistItemPatch
+    db: DbSession, principal: Editor, item_id: UUID, body: ChecklistItemPatch
 ) -> ChecklistItemOut:
     """Change an item; `dueAt: null` hands the date back to the start rule."""
-    out, pending, _ = await checklist.patch_item(db, principal, item_id, body)
+    out = await checklist.patch_item(db, principal, item_id, body)
     await db.commit()
-    await dispatch_mails(pool, pending)
     return out
 
 

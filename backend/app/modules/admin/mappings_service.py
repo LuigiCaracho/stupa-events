@@ -87,7 +87,7 @@ class MappingService:
 
     async def _facts(self, organization_id: UUID | None) -> OrgFacts | None:
         org = await self.session.get(Organization, organization_id) if organization_id else None
-        return OrgFacts(trusted=org.trusted, active=org.active) if org else None
+        return OrgFacts(active=org.active) if org else None
 
     async def _audit(self, mapping: GroupMapping, change: str) -> None:
         await audit_record(
@@ -187,7 +187,7 @@ class MappingService:
         by_slug = {org.slug: org for org in orgs}
         known = set((await self.session.scalars(select(GroupMapping.oidc_group))).all())
         created: list[GroupMapping] = []
-        for spec in default_mappings((org.slug, org.trusted) for org in orgs):
+        for spec in default_mappings(org.slug for org in orgs):
             if spec.group in known:
                 continue
             mapping = GroupMapping(

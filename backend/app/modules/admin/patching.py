@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.audit.actions import AuditAction
 from app.modules.audit.service import record as audit_record
 from app.modules.auth.schemas import CamelModel
-from app.modules.pipeline.actions import invalidate_public
+from app.modules.events.postcommit import invalidate_public
 from app.shared.errors import ConflictError, FieldError, ValidationProblem
 
 

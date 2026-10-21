@@ -1,4 +1,4 @@
-"""The tab counters of a dossier: `GET /events/{id}/dossier-counts`.
+"""The section counters of a dossier: `GET /events/{id}/dossier-counts`.
 
 Counters of restricted material (quotes) appear only for callers who may see it, so their
 absence reveals nothing beyond the right itself.
@@ -18,18 +18,12 @@ from app.modules.dossier.models_comments import Comment
 from app.modules.dossier.models_documents import Document
 from app.modules.dossier.models_quotes import Quote
 from app.modules.dossier.rules import load_readable
-from app.modules.events.access import guard_snapshot, poster_of
 from app.modules.files.access import readable_clause, restricted_allowed, visibility_readable
 from app.modules.files.models import Attachment
-from app.modules.pipeline.actor import actor_of
-from app.modules.pipeline.decision import guard_reasons
-from app.modules.pipeline.reasons import blockers
-from app.modules.pipeline.transitions import TRANSITIONS
-from app.shared.timeutil import utcnow
 
 
 class DossierCounts(CamelModel):
-    """The numbers on the tabs of the dossier."""
+    """The numbers on the sections of the dossier."""
 
     attachments: int
     quotes: int | None = None
@@ -37,13 +31,12 @@ class DossierCounts(CamelModel):
     open_checklist: int
     mail_templates: int
     open_comments: int
-    followup_open: int | None = None
 
 
 async def dossier_counts(
     session: AsyncSession, principal: Principal, event_id: UUID
 ) -> DossierCounts:
-    """Count what the caller sees on each tab."""
+    """Count what the caller sees in each section."""
     event = await load_readable(session, principal, event_id)
     org = event.organization_id
 
@@ -72,14 +65,7 @@ async def dossier_counts(
         if restricted_allowed(principal, org)
         else None
     )
-    followup_open = None
-    if event.state == "followup":
-        snapshot = await guard_snapshot(session, event, await poster_of(session, event))
-        actor = actor_of(principal, event.organization_id)
-        reasons = guard_reasons(TRANSITIONS["T09"], snapshot, actor, utcnow())
-        followup_open = len(blockers(reasons))
     return DossierCounts(
-        followup_open=followup_open,
         attachments=await scalar(
             select(func.count())
             .select_from(Attachment)

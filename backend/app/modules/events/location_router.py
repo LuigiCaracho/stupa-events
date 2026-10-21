@@ -1,4 +1,4 @@
-"""`POST /events/{id}/actions/confirm-location`: an approver confirms the free venue text."""
+"""`POST /events/{id}/actions/confirm-location`: a publisher confirms the free venue text."""
 
 from __future__ import annotations
 
@@ -11,15 +11,15 @@ from app.deps import DbSession, Principal, require_any_scope
 from app.modules.auth.schemas import CamelModel
 from app.modules.events.conflict import parse_if_match
 from app.modules.events.location import confirm_location
+from app.modules.events.respond import respond
 from app.modules.events.schemas import EventOut
-from app.modules.pipeline.action_response import respond
 from app.shared.errors import ProblemDetail
 
 router = APIRouter(prefix="/events/{event_id}/actions", tags=["actions"])
 
 _PROBLEM: dict[str, Any] = {"model": ProblemDetail}
 _ERRORS: dict[int | str, dict[str, Any]] = {c: _PROBLEM for c in (401, 403, 404, 409, 422)}
-Approver = Annotated[Principal, Depends(require_any_scope("event.approve"))]
+Publisher = Annotated[Principal, Depends(require_any_scope("event.publish"))]
 IfMatch = Annotated[str | None, Header(alias="If-Match")]
 
 
@@ -33,7 +33,7 @@ class ConfirmLocationIn(CamelModel):
 async def confirm_location_route(
     request: Request,
     db: DbSession,
-    principal: Approver,
+    principal: Publisher,
     event_id: UUID,
     body: ConfirmLocationIn,
     response: Response,

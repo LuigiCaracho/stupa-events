@@ -1,9 +1,9 @@
 """Worker job `promote_poster`: swap the hero of a published dossier to the replacement.
 
-A poster uploaded in `approved` or `live` waits as an ordinary clean attachment that
+A poster uploaded in `published` waits as an ordinary clean attachment that
 supersedes the current hero. Once it is scanned and derived, this job swaps the hero in one
-transaction: it hides the old poster, writes a critical revision ("Poster ersetzt") and, in
-`live`, raises `public_seq`. The feed and calendar snapshots are invalidated after the commit.
+transaction: it hides the old poster, writes a revision ("Poster ersetzt") and raises
+`public_seq`. The feed and calendar snapshots are invalidated after the commit.
 An infected replacement never gets here, so the old poster stays untouched.
 """
 
@@ -19,8 +19,8 @@ from app.db import get_sessionmaker
 from app.modules.audit.actions import AuditAction
 from app.modules.events import revisions
 from app.modules.events.models import Event
+from app.modules.events.postcommit import invalidate_public
 from app.modules.files.models import Attachment
-from app.modules.pipeline.actions import invalidate_public
 from app.shared.timeutil import utcnow
 
 PROMOTE_NOTE = "Poster ersetzt"
@@ -28,17 +28,18 @@ PROMOTE_NOTE = "Poster ersetzt"
 
 async def _swap(session: AsyncSession, new: Attachment) -> Event | None:
     event = await session.scalar(select(Event).where(Event.id == new.event_id).with_for_update())
-    if (
-        event is None
-        or event.state not in ("approved", "live")
-        or new.supersedes_id is None
-        or event.hero_attachment_id != new.supersedes_id
-    ):
+    if event is None or event.state != "published":
+        return None
+    if event.hero_attachment_id == new.id:
+        return event
+    if new.supersedes_id is None or event.hero_attachment_id != new.supersedes_id:
         return None
     old = await session.get(Attachment, new.supersedes_id)
-    values: dict[str, Any] = {"hero_attachment_id": new.id, "rev": Event.rev + 1}
-    if event.state == "live":
-        values["public_seq"] = Event.public_seq + 1
+    values: dict[str, Any] = {
+        "hero_attachment_id": new.id,
+        "rev": Event.rev + 1,
+        "public_seq": Event.public_seq + 1,
+    }
     result = await session.execute(
         update(Event)
         .where(Event.id == event.id)
@@ -54,7 +55,6 @@ async def _swap(session: AsyncSession, new: Attachment) -> Event | None:
         updated,
         actor="system:promote_poster",
         actor_type="system",
-        field_class="critical",
         note=PROMOTE_NOTE,
     )
     await revisions.audit(
@@ -88,8 +88,6 @@ async def promote_poster(ctx: dict[str, Any], attachment_id: str) -> str:
         updated = await _swap(session, new)
         if updated is None:
             return "skipped"
-        live = updated.state == "live"
         await session.commit()
-    if live:
-        await invalidate_public(ctx.get("redis"))
+    await invalidate_public(ctx.get("redis"))
     return "promoted"

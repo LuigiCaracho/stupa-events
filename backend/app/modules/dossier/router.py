@@ -52,8 +52,8 @@ async def _read_capped(file: UploadFile, max_bytes: int) -> bytes:
 
 
 def _meta(
-    alt_text: str,
-    credit: str,
+    alt_text: str | None,
+    credit: str | None,
     rights_basis: str,
     persons_depicted: bool,
     consent_note: str | None,
@@ -90,9 +90,9 @@ async def upload_poster(
     principal: Annotated[Principal, Depends(require_any_scope("dossier.attach"))],
     event_id: UUID,
     file: Annotated[UploadFile, File()],
-    alt_text: Annotated[str, Form(alias="altText")],
-    credit: Annotated[str, Form()],
-    rights_basis: Annotated[str, Form(alias="rightsBasis")],
+    alt_text: Annotated[str | None, Form(alias="altText")] = None,
+    credit: Annotated[str | None, Form()] = None,
+    rights_basis: Annotated[str, Form(alias="rightsBasis")] = "unknown",
     persons_depicted: Annotated[bool, Form(alias="personsDepicted")] = False,
     consent_note: Annotated[str | None, Form(alias="consentNote")] = None,
 ) -> AttachmentOut:

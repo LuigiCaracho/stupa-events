@@ -1,8 +1,8 @@
-"""Small dossier helpers of the M5 acceptance: a live dossier without poster, and anonymous reads.
+"""Small helpers of the acceptance: a published dossier without poster, and anonymous reads.
 
-`live` creates a dossier of the FSI, lets the editor grant the image exception and fires
-T01, T02, T04 (with the location confirmation) and T05. `anonymous` is a client without
-session for the public routes; `bump_feed` marks the public snapshots stale after SQL.
+`live` creates a dossier of the FSI and publishes it (no poster needed). `anonymous` is a
+client without session for the public routes; `bump_feed` marks the public snapshots stale
+after SQL.
 """
 
 from __future__ import annotations
@@ -14,10 +14,10 @@ import httpx
 from arq import create_pool
 from arq.connections import RedisSettings
 
-from app.modules.pipeline.actions import FEED_VERSION_KEY, REBUILD_JOB, REBUILD_JOB_ID
+from app.modules.events.postcommit import FEED_VERSION_KEY, REBUILD_JOB, REBUILD_JOB_ID
 from app.settings import get_settings
-from scripts import m4_acceptance as m4
-from scripts.acceptance_common import API, expect
+from scripts import dossier_api as dossier
+from scripts.acceptance_common import API, confirm_location, expect
 
 
 def anonymous() -> httpx.Client:
@@ -27,7 +27,6 @@ def anonymous() -> httpx.Client:
 
 def live(
     organizer: httpx.Client,
-    editor: httpx.Client,
     title: str,
     *,
     days: int = 30,
@@ -36,37 +35,21 @@ def live(
     fmt: str | None = None,
 ) -> str:
     """Create and publish a dossier of the FSI (optionally of a format); return its id."""
-    eid = m4.create(organizer, title, category=category, days=days)
+    eid = dossier.create(organizer, title, category=category, days=days)
     if fmt is not None:
         expect(
             organizer.put(
-                f"/api/events/{eid}/format", json={"slug": fmt}, headers=m4.etag(organizer, eid)
+                f"/api/events/{eid}/format",
+                json={"slug": fmt},
+                headers=dossier.etag(organizer, eid),
             ),
             200,
             f"{title}: format {fmt}",
         )
     if times is not None:
-        expect(
-            organizer.patch(
-                f"/api/events/{eid}",
-                json={"startsAt": times[0].isoformat(), "endsAt": times[1].isoformat()},
-                headers=m4.etag(organizer, eid),
-            ),
-            200,
-            f"{title}: {times[0].isoformat()}",
-        )
-    expect(
-        editor.post(
-            f"/api/events/{eid}/actions/image-exception",
-            json={"reason": "Abnahme ohne Motiv"},
-            headers=m4.etag(editor, eid),
-        ),
-        200,
-        f"{title}: image exception",
-    )
-    m4.fire(organizer, eid, "T02")
-    m4.fire(editor, eid, "T04")
-    m4.fire(editor, eid, "T05")
+        dossier.patch(organizer, eid, startsAt=times[0].isoformat(), endsAt=times[1].isoformat())
+    confirm_location(organizer, eid)
+    dossier.act(organizer, eid, "publish")
     return eid
 
 

@@ -1,7 +1,8 @@
 """Read side of the revision history: the list, the detail and the changed fields.
 
-Change notes (returns, reasons) and the internal snapshot fields (image exception, the
-people of the four-eyes chain) go only to callers with `event.edit` in the organization.
+Change notes (returns, reasons) and the internal snapshot field `created_by` go only to
+callers with `event.edit` in the organization. Snapshots written before M5b carry keys of the
+removed pipeline (`LEGACY_KEYS`); they are neither shown nor counted as a change.
 """
 
 from __future__ import annotations
@@ -22,8 +23,19 @@ from app.modules.events.card_schemas import PersonRef
 from app.modules.events.models import EventRevision
 from app.shared.errors import NotFoundError
 
-IGNORED_KEYS = frozenset({"rev"})
-INTERNAL_KEYS = frozenset({"image_exception", "created_by", "submitted_by", "approved_by"})
+LEGACY_KEYS = frozenset(
+    {
+        "image_exception",
+        "submitted_by",
+        "approved_by",
+        "publish_at",
+        "published_rev",
+        "text_reviewed_rev",
+        "flyer_checked_at",
+    }
+)
+IGNORED_KEYS = frozenset({"rev"}) | LEGACY_KEYS
+INTERNAL_KEYS = frozenset({"created_by"})
 
 
 class RevisionOut(CamelModel):
@@ -33,7 +45,6 @@ class RevisionOut(CamelModel):
     at: datetime
     actor: PersonRef
     actor_type: str
-    field_class: str
     change_note: str | None
     changed_fields: list[str]
 
@@ -72,13 +83,14 @@ def _out(
         "at": row.at,
         "actor": PersonRef(sub=row.actor_id or "", display_name=names.get(row.actor_id or "")),
         "actor_type": row.actor_type,
-        "field_class": row.field_class,
         "change_note": row.change_note if internal else None,
         "changed_fields": changed_fields(previous.snapshot if previous else None, row.snapshot),
     }
     if detail:
         shown = {
-            to_camel(k): v for k, v in row.snapshot.items() if internal or k not in INTERNAL_KEYS
+            to_camel(k): v
+            for k, v in row.snapshot.items()
+            if k not in LEGACY_KEYS and (internal or k not in INTERNAL_KEYS)
         }
         return RevisionDetail(**common, snapshot=shown)
     return RevisionOut(**common)
@@ -89,7 +101,6 @@ async def list_revisions(
     principal: Principal,
     event_id: UUID,
     *,
-    field_class: str | None,
     limit: int,
     offset: int,
     min_rev: int = 0,
@@ -97,8 +108,6 @@ async def list_revisions(
     """Return a page of revisions, newest first, with the total."""
     event = await load_visible(session, principal, event_id)
     query = select(EventRevision).where(EventRevision.event_id == event.id)
-    if field_class:
-        query = query.where(EventRevision.field_class == field_class)
     if min_rev:
         query = query.where(EventRevision.rev > min_rev)
     total = await session.scalar(select(func.count()).select_from(query.subquery())) or 0

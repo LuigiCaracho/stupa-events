@@ -1,7 +1,7 @@
 """Wire shapes of the follow-up: the outcome of an event (contract 3.5).
 
-Amounts are cents, the currency is always EUR. `waived = true` replaces the numbers by a
-reason of at least ten characters. The outcome never reaches the feed, a card or the audit.
+Amounts are cents, the currency is always EUR. `waived = true` replaces the numbers; a
+reason is optional. The outcome never reaches the feed, a card or the audit.
 """
 
 from __future__ import annotations
@@ -12,9 +12,7 @@ from typing import Annotated, Self
 from pydantic import AfterValidator, Field, model_validator
 
 from app.modules.auth.schemas import CamelModel
-from app.shared.errors import FieldError, ValidationProblem
 
-WAIVER_MIN_CHARS = 10
 _CONTROL = re.compile(r"[\x00-\x09\x0b-\x1f\x7f-\x9f\u2028\u2029]")
 
 
@@ -56,17 +54,7 @@ class OutcomeIn(CamelModel):
         return self
 
     def stored(self) -> dict[str, object]:
-        """Return the JSON stored in `event.outcome`.
-
-        Raises:
-            ValidationProblem: `waiver_reason_required` for a waiver without a real reason.
-        """
-        if self.waived and len(self.waived_reason or "") < WAIVER_MIN_CHARS:
-            raise ValidationProblem(
-                "Verzicht braucht einen Grund.",
-                code="waiver_reason_required",
-                errors=[FieldError(field="waivedReason", msg="at least 10 characters")],
-            )
+        """Return the JSON stored in `event.outcome`."""
         return self.model_dump(by_alias=True)
 
 

@@ -1,7 +1,7 @@
-"""Vocabulary of the event pipeline: states, public status and transition ids (PLAN 4.1).
+"""Vocabulary of the event dossier: the three states, the public status and the lifecycle actions.
 
-Only T01, T02, T04 and T05 are reachable in M1. The remaining states exist in the database
-so that M3 needs no migration of the CHECK constraints.
+A dossier is a `draft`, `published` or `archived`. The public status (`scheduled`,
+`cancelled`, `postponed`) is orthogonal and changes only while the dossier is published.
 """
 
 from __future__ import annotations
@@ -11,31 +11,23 @@ from typing import Literal
 
 
 class EventState(StrEnum):
-    """Pipeline state of a dossier."""
+    """Lifecycle state of a dossier."""
 
-    IDEA = "idea"
-    PLANNING = "planning"
-    IN_REVIEW = "in_review"
-    APPROVED = "approved"
-    LIVE = "live"
-    FOLLOWUP = "followup"
+    DRAFT = "draft"
+    PUBLISHED = "published"
     ARCHIVED = "archived"
-    WITHDRAWN = "withdrawn"
 
 
 class PublicStatus(StrEnum):
-    """Orthogonal public status, visible from `live` on."""
+    """Orthogonal public status, changeable while the dossier is published."""
 
     SCHEDULED = "scheduled"
     CANCELLED = "cancelled"
     POSTPONED = "postponed"
 
 
-type TransitionId = Literal["T01", "T02", "T04", "T05"]
+type LifecycleAction = Literal[
+    "publish", "unpublish", "archive", "restore", "cancel", "postpone", "reinstate"
+]
 
-EDITABLE_STATES: frozenset[EventState] = frozenset({EventState.IDEA, EventState.PLANNING})
-PUBLIC_STATES: tuple[EventState, ...] = (
-    EventState.LIVE,
-    EventState.FOLLOWUP,
-    EventState.ARCHIVED,
-)
+PUBLIC_STATES: tuple[EventState, ...] = (EventState.PUBLISHED, EventState.ARCHIVED)

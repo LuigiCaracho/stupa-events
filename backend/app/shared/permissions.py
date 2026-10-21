@@ -19,12 +19,8 @@ PERMISSION_CATALOGUE: tuple[str, ...] = (
     "event.read_all",
     "event.create",
     "event.edit",
-    "event.edit_critical_live",
-    "event.submit",
-    "event.approve",
+    "event.publish",
     "event.cancel",
-    "event.image_exception",
-    "event.assign_org",
     "event.restore",
     "dossier.attach",
     "dossier.read_restricted",
@@ -45,18 +41,15 @@ PERMISSION_CATALOGUE: tuple[str, ...] = (
     "admin.status",
 )
 
-ORG_ROLES: tuple[str, ...] = ("viewer", "submitter", "organizer", "approver")
+ORG_ROLES: tuple[str, ...] = ("viewer", "submitter", "organizer")
 GLOBAL_ROLES: tuple[str, ...] = ("admin", "editor", "stupa", "member")
 
 _SUBMITTER = frozenset(
     {"event.create", "event.edit", "dossier.attach", "comment.write", "library.read"}
 )
-_ORGANIZER = _SUBMITTER | {"event.submit", "event.cancel"}
-_APPROVER = _ORGANIZER | {"event.approve", "event.edit_critical_live"}
-_EDITOR = _APPROVER | {
+_ORGANIZER = _SUBMITTER | {"event.publish", "event.cancel"}
+_EDITOR = _ORGANIZER | {
     "event.read_all",
-    "event.image_exception",
-    "event.assign_org",
     "event.restore",
     "dossier.read_restricted",
     "library.manage",
@@ -73,7 +66,6 @@ ROLE_PERMISSIONS: Mapping[str, frozenset[str]] = {
     "viewer": frozenset({"library.read"}),
     "submitter": _SUBMITTER,
     "organizer": _ORGANIZER,
-    "approver": _APPROVER,
     "editor": _EDITOR,
     "stupa": frozenset({"event.read_all", "comment.write", "library.read"}),
     "member": frozenset({"library.read"}),
@@ -100,7 +92,7 @@ GLOBAL_GROUPS: Mapping[str, str] = {
 }
 
 _ORG_GROUP = re.compile(
-    r"^events-(?P<org>[a-z0-9][a-z0-9-]*)-(?P<role>viewer|submitter|organizer|approver)$"
+    r"^events-(?P<org>[a-z0-9][a-z0-9-]*)-(?P<role>viewer|submitter|organizer)$"
 )
 
 
@@ -152,18 +144,16 @@ class DefaultMapping:
     org: str | None = None
 
 
-def default_mappings(organizations: Iterable[tuple[str, bool]]) -> tuple[DefaultMapping, ...]:
+def default_mappings(slugs: Iterable[str]) -> tuple[DefaultMapping, ...]:
     """Return the proposed mappings (PLAN 5.6): three global ones and the org roles.
 
     Args:
-        organizations: `(slug, trusted)` of the active organizations. Only a trusted
-            organization gets an `approver` group.
+        slugs: Slugs of the active organizations.
     """
     global_rows = tuple(DefaultMapping(group, role) for group, role in GLOBAL_GROUPS.items())
     org_rows = tuple(
         DefaultMapping(f"events-{slug}-{role}", role, slug)
-        for slug, trusted in sorted(organizations)
+        for slug in sorted(slugs)
         for role in ORG_ROLES
-        if role != "approver" or trusted
     )
     return global_rows + org_rows

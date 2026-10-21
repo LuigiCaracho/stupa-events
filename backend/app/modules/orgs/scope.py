@@ -73,9 +73,9 @@ async def readable_org_ids(session: AsyncSession, principal: Principal) -> set[U
     return await _ids_of(session, principal, set(principal.org_roles))
 
 
-def restricted_to_own(principal: Principal, org_id: UUID) -> bool:
+def restricted_to_own(principal: Principal, org_id: UUID | None) -> bool:
     """Tell if the principal may touch only dossiers it created in `org_id`.
 
-    A role without `event.submit` (the submitter) works on its own dossiers only.
+    A role without `event.publish` (the submitter) works on its own dossiers only.
     """
-    return not principal.has("event.submit", org_id)
+    return not principal.has("event.publish", org_id)

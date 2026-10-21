@@ -1,6 +1,6 @@
 """Create notifications: inbox rows in the transaction of the cause, mails after the commit.
 
-`notify` is the hook that pipeline, comments and checklist call after the factual change.
+`notify` is the hook that the lifecycle, comments and checklist call after the factual change.
 It inserts the inbox rows (respecting `notification_pref.in_app`, essential kinds always)
 and returns the mails to send. After the commit the caller passes them to `dispatch_mails`,
 which claims `notif:<id>:mail` in Redis (SET NX) and enqueues them. Without a pool the mail
@@ -36,20 +36,7 @@ logger = logging.getLogger("app.mail")
 
 MAIL_KEY_TTL_SECONDS = 24 * 3600
 MAIL_ONLY_PARAMS = frozenset({"itemText"})
-_TAB = {
-    "comment_added": "/verlauf",
-    "comment_resolved": "/verlauf",
-    "task_assigned": "/checkliste",
-    "checklist_due": "/checkliste",
-    "followup_reminder": "/nachbereitung",
-    "auto_archived": "/nachbereitung",
-}
-MISSING_LABELS = {
-    "retrospective": "Rückblick",
-    "outcome": "Ergebnis",
-    "howto": "Anleitung prüfen",
-    "checklist": "offene Pflichtpunkte der Checkliste",
-}
+_ANCHOR = {"comment_added": "#verlauf", "checklist_due": "#checkliste"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -61,8 +48,8 @@ class PendingMail:
 
 
 def event_link(kind: str, event_id: UUID) -> str:
-    """Return the site-relative link of the dossier tab that a kind points to."""
-    return f"/dossiers/{event_id}{_TAB.get(kind, '')}"
+    """Return the site-relative link of the dossier section that a kind points to."""
+    return f"/dossiers/{event_id}{_ANCHOR.get(kind, '')}"
 
 
 async def _prefs(session: AsyncSession, kind: str, subs: list[str]) -> dict[str, NotificationPref]:
@@ -102,9 +89,6 @@ def _build_mail(
         "actor": params.get("actorName", "Jemand"),
         "item": params.get("itemText", ""),
         "due": params.get("dueDate", ""),
-        "days": params.get("daysOpen", 0),
-        "missing": ", ".join(MISSING_LABELS[m] for m in params.get("missing", ())),
-        "howto_unverified": bool(params.get("howtoUnverified", False)),
         "link": absolute_link(settings.public_base_url, link),
         "prefs_link": absolute_link(settings.public_base_url, "/konto"),
     }

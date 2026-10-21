@@ -85,7 +85,7 @@ def own_clause(reader: Reader, params: Params) -> str:
 def _visible(reader: Reader, filters: Filters, params: Params) -> str:
     own = own_clause(reader, params)
     if filters.clonable:
-        return f"(e.state = 'archived' OR ({own} AND e.state IN ('live', 'followup')))"
+        return f"(e.state = 'archived' OR ({own} AND e.state = 'published'))"
     return f"({own} OR e.state = 'archived')"
 
 

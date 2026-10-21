@@ -20,16 +20,12 @@ class AuditAction(StrEnum):
     LOGIN = "login"
     EVENT_CREATE = "event_create"
     EVENT_UPDATE = "event_update"
-    # A transition of the pipeline. ``data`` carries the transition id and the two states.
+    # A state change of the dossier. ``data`` carries the action and the two states.
     EVENT_TRANSITION = "event_transition"
-    EVENT_IMAGE_EXCEPTION = "event_image_exception"
     EVENT_CANCEL = "event_cancel"
     EVENT_POSTPONE = "event_postpone"
     EVENT_REINSTATE = "event_reinstate"
-    EVENT_ASSIGN_ORG = "event_assign_org"
     EVENT_REVERT = "event_revert"
-    EVENT_ACK_CHANGES = "event_ack_changes"
-    EVENT_FLYER_CONFIRM = "event_flyer_confirm"
     # M5: ids only, never amounts or texts.
     EVENT_CLONE = "event_clone"
     EVENT_OUTCOME = "event_outcome"

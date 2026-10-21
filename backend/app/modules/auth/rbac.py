@@ -5,9 +5,8 @@ The IdP groups are the only source of a membership, and the rows of `group_mappi
 group name carries no meaning in code. `effective_grants` is the one function that
 computes the roles of a group set; the resolver and `membership_sync` both call it. The
 reserved namespace `events-system:` never enters the group set. A `submitter` or
-`approver` role gives rights in its organization only. The role `approver` counts only
-while the organization is `trusted`; otherwise it falls back to `organizer`. The
-bootstrap admin lists grant the global `admin` role. A mapping to an inactive organization
+`organizer` role gives rights in its organization only. The bootstrap admin lists grant the
+global `admin` role. A mapping to an inactive organization
 grants nothing; the sync drops its memberships when `active` flips.
 
 The tables are read through lightweight table constructs, so this module needs no
@@ -47,17 +46,16 @@ _ORGANIZATION = table(
     "organization",
     column("id", Uuid),
     column("slug", SaText),
-    column("trusted", Boolean),
     column("active", Boolean),
 )
 
-MappingRow = tuple[str, UUID | None, str | None, bool | None, str]
+MappingRow = tuple[str, UUID | None, str | None, str]
 MappingRows = Sequence[MappingRow]
 
 
 @dataclass(frozen=True, slots=True)
 class EffectiveGrants:
-    """The roles a group set grants after the downgrade of untrusted approvers."""
+    """The roles a group set grants."""
 
     global_roles: frozenset[str] = frozenset()
     org_roles: dict[str, frozenset[str]] = field(default_factory=dict)
@@ -79,7 +77,6 @@ async def load_mappings(db: AsyncSession, groups: Collection[str] | None = None)
             _GROUP_MAPPING.c.role,
             _ORGANIZATION.c.id,
             _ORGANIZATION.c.slug,
-            _ORGANIZATION.c.trusted,
             _GROUP_MAPPING.c.oidc_group,
         )
         .select_from(
@@ -92,17 +89,14 @@ async def load_mappings(db: AsyncSession, groups: Collection[str] | None = None)
     if groups is not None:
         query = query.where(_GROUP_MAPPING.c.oidc_group.in_(groups))
     result = await db.execute(query)
-    return [
-        (role, org_id, slug, trusted, group) for role, org_id, slug, trusted, group in result.all()
-    ]
+    return [(role, org_id, slug, group) for role, org_id, slug, group in result.all()]
 
 
 async def effective_grants(db: AsyncSession, groups: Iterable[str]) -> EffectiveGrants:
     """Compute the effective roles of an IdP group set from `group_mapping`.
 
     A row counts when its role matches its scope: a global role without organization, an
-    organization role with one. An `approver` of an organization that is not `trusted`
-    counts as `organizer`. No group, no query.
+    organization role with one. No group, no query.
     """
     cleaned = clean_groups(groups)
     if not cleaned:
@@ -113,16 +107,15 @@ async def effective_grants(db: AsyncSession, groups: Iterable[str]) -> Effective
 def grants_from(mappings: MappingRows, groups: Iterable[str]) -> EffectiveGrants:
     """Compute the effective roles of a group set from already loaded mapping rows."""
     cleaned = clean_groups(groups)
-    rows = [row for row in mappings if row[4] in cleaned]
+    rows = [row for row in mappings if row[3] in cleaned]
     global_roles: set[str] = set()
     org_roles: dict[str, set[str]] = {}
     org_ids: dict[str, UUID] = {}
-    for role, org_id, slug, trusted, _ in rows:
+    for role, org_id, slug, _ in rows:
         if slug is None and role in GLOBAL_ROLES:
             global_roles.add(role)
         elif slug is not None and org_id is not None and role in ORG_ROLES:
-            effective = "organizer" if role == "approver" and not trusted else role
-            org_roles.setdefault(slug, set()).add(effective)
+            org_roles.setdefault(slug, set()).add(role)
             org_ids[slug] = org_id
     return EffectiveGrants(
         frozenset(global_roles),

@@ -15,7 +15,7 @@ from typing import Any
 from pydantic import TypeAdapter
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.pipeline.actions import request_rebuild
+from app.modules.events.postcommit import request_rebuild
 from app.modules.publicapi import cache, selection, service
 from app.modules.publicapi.ics.rows import ics_row, window_bounds, windowed
 from app.modules.publicapi.ics.writer import build_calendar

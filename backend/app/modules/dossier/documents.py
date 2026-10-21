@@ -22,7 +22,7 @@ from app.modules.audit.service import record as audit_record
 from app.modules.auth.principal import Principal
 from app.modules.dossier.diff import diff_lines
 from app.modules.dossier.models_documents import Document, DocumentRevision
-from app.modules.dossier.rules import ensure_open, ensure_permission, load_for_write, load_readable
+from app.modules.dossier.rules import ensure_permission, load_for_write, load_readable
 from app.modules.dossier.schemas_documents import (
     DiffOut,
     DocumentCreate,
@@ -32,7 +32,6 @@ from app.modules.dossier.schemas_documents import (
 )
 from app.modules.events.models import EditorDraft, Event
 from app.modules.files.access import visibility_readable
-from app.modules.followup.outcome import ensure_outcome_phase
 from app.modules.formats.access import ensure_can_manage
 from app.modules.formats.models import Format
 from app.modules.media.ref_sync import (
@@ -129,8 +128,6 @@ async def create(
     """Create a document with revision 1 (409 `already_exists` for a second howto)."""
     event = await load_for_write(session, principal, event_id, "event.edit")
     retrospective = body.kind == "retrospective"
-    if retrospective:
-        ensure_outcome_phase(event, utcnow())
     doc = Document(
         event_id=event.id,
         kind=body.kind,
@@ -197,7 +194,6 @@ async def authorize_write(
         await ensure_can_manage(session, principal, fmt)
         return
     ensure_permission(principal, event, "event.edit")
-    ensure_open(event)
 
 
 def _current(doc: Document) -> dict[str, Any]:

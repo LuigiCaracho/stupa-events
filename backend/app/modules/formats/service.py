@@ -21,11 +21,11 @@ from app.modules.audit.actions import AuditAction
 from app.modules.audit.service import record as audit_record
 from app.modules.auth.principal import Principal
 from app.modules.dossier import checklist
-from app.modules.dossier.guard_data import howto_presence
 from app.modules.dossier.models_documents import Document
 from app.modules.dossier.rules import ensure_permission, load_readable
 from app.modules.events import revisions
 from app.modules.events.conflict import VersionConflict
+from app.modules.events.hints_data import howto_presence
 from app.modules.events.models import Event
 from app.modules.events.schemas import EventCreate
 from app.modules.events.service import EventService
@@ -91,7 +91,7 @@ async def _insert(session: AsyncSession, principal: Principal, fmt: Format) -> F
 
 
 async def create_format(session: AsyncSession, principal: Principal, body: FormatCreate) -> Format:
-    """Create a format in an organization (`format.manage`, or `event.submit` there).
+    """Create a format in an organization (`format.manage`, or `event.publish` there).
 
     Raises:
         NotFoundError: The organization is unknown or inactive.
@@ -102,7 +102,7 @@ async def create_format(session: AsyncSession, principal: Principal, body: Forma
     if org is None or not org.active:
         raise NotFoundError("organization not found")
     await bind(session, principal)
-    if not (principal.has("format.manage") or principal.has("event.submit", org.id)):
+    if not (principal.has("format.manage") or principal.has("event.publish", org.id)):
         raise ForbiddenError("Missing permission: format.manage")
     fmt = Format(
         slug=body.slug,
@@ -136,7 +136,7 @@ async def patch_format(
 
 
 async def mark_verified(session: AsyncSession, principal: Principal, slug: str) -> Format:
-    """Date the format and its master howto as verified (editorial upkeep, no T09)."""
+    """Date the format and its master howto as verified (editorial upkeep)."""
     fmt = await load_format(session, slug)
     await ensure_can_manage(session, principal, fmt)
     await touch_format(session, fmt.id, principal.sub, utcnow())
@@ -179,18 +179,20 @@ async def save_as_format(
     """Make a dossier the first edition of a new format and its howto the master howto.
 
     Raises:
-        NotFoundError, ForbiddenError: no read right, or neither `event.submit` nor
+        NotFoundError, ForbiddenError: no read right, or neither `event.publish` nor
             `format.manage`.
         ConflictError: `already_in_format`, `slug_taken`.
-        ValidationProblem: `organization_required` for a proposal.
+        ValidationProblem: `organization_required` for a dossier without an organization.
     """
     event = await load_readable(session, principal, event_id)
     if event.organization_id is None:
         raise ValidationProblem(
             "Das Dossier braucht eine Organisation.", code="organization_required"
         )
-    if not (principal.has("format.manage") or principal.has("event.submit", event.organization_id)):
-        raise ForbiddenError("Missing permission: event.submit")
+    if not (
+        principal.has("format.manage") or principal.has("event.publish", event.organization_id)
+    ):
+        raise ForbiddenError("Missing permission: event.publish")
     if event.format_id is not None:
         raise ConflictError("Das Dossier gehört schon zu einem Format.", code="already_in_format")
     category = (
@@ -224,7 +226,7 @@ async def save_as_format(
     if howto is not None:
         await create_master(session, principal, fmt, event.id)
     updated = await update_event(session, event, {"format_id": fmt.id}, states=[event.state])
-    await revisions.append_revision(session, updated, actor=principal.sub, field_class="dossier")
+    await revisions.append_revision(session, updated, actor=principal.sub)
     return fmt, updated
 
 
@@ -240,7 +242,7 @@ async def set_event_format(
     updated = await update_event(
         session, event, {"format_id": fmt.id if fmt else None}, states=[event.state]
     )
-    await revisions.append_revision(session, updated, actor=principal.sub, field_class="dossier")
+    await revisions.append_revision(session, updated, actor=principal.sub)
     return updated
 
 

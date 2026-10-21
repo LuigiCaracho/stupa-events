@@ -18,7 +18,9 @@ from app.modules.files.models import RESTRICTED_KINDS, VISIBILITIES, Attachment
 
 
 def _sees_team(principal: Principal, org_id: UUID | None) -> bool:
-    return principal.has("event.submit", org_id) or principal.has("dossier.read_restricted", org_id)
+    return principal.has("event.publish", org_id) or principal.has(
+        "dossier.read_restricted", org_id
+    )
 
 
 def restricted_allowed(principal: Principal, org_id: UUID | None) -> bool:

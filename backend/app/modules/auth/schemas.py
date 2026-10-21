@@ -30,18 +30,13 @@ class LogoutOut(CamelModel):
 
 
 class MeOrganization(CamelModel):
-    """One organization role of the principal, with the organization's own data.
-
-    `role` is the effective role: an approver of an organization that is not trusted
-    shows as `organizer`.
-    """
+    """One organization role of the principal, with the organization's own data."""
 
     slug: str
     role: str
     organization_id: UUID
     name: str
     short: str
-    trusted: bool
 
 
 class MeOut(CamelModel):

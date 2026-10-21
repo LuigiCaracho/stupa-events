@@ -1,10 +1,9 @@
 """Organizations, group mappings and memberships: `organization`, `group_mapping`, `membership`.
 
-An organization is the organizer and the scope of a right (PLAN 3.3, 5). `trusted` lets
-an `approver` of the organization approve. `group_mapping` adds a grant that the group
-name does not express; `app.modules.auth.rbac` reads it. `membership` is the projection
-of the effective roles per person and organization; only the OIDC sync writes it, and no
-decision reads it (contract M2, 3.2).
+An organization is the organizer and the scope of a right (PLAN 3.3, 5). `group_mapping`
+adds a grant that the group name does not express; `app.modules.auth.rbac` reads it.
+`membership` is the projection of the effective roles per person and organization; only the
+OIDC sync writes it, and no decision reads it (contract M2, 3.2).
 """
 
 from __future__ import annotations
@@ -39,7 +38,6 @@ class Organization(UUIDPkMixin, TimestampMixin, Base):
         Uuid, ForeignKey("category.id", ondelete="RESTRICT"), nullable=True
     )
     contact_public: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    trusted: Mapped[bool] = mapped_column(Boolean, server_default="false")
     instagram: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default="{}")
     legacy_wp_ids: Mapped[list[int]] = mapped_column(ARRAY(Integer), server_default="{}")
     active: Mapped[bool] = mapped_column(Boolean, server_default="true")

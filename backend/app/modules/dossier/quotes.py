@@ -22,7 +22,7 @@ from app.modules.audit.actions import AuditAction
 from app.modules.audit.service import record as audit_record
 from app.modules.auth.principal import Principal
 from app.modules.dossier.models_quotes import Quote
-from app.modules.dossier.rules import ensure_open, ensure_permission, load_readable
+from app.modules.dossier.rules import ensure_permission, load_readable
 from app.modules.dossier.schemas_quotes import (
     CurrencyTotal,
     QuoteCreate,
@@ -155,7 +155,6 @@ async def create(
     if not restricted_allowed(principal, event.organization_id):
         raise ForbiddenError("Missing permission to see quotes.")
     ensure_permission(principal, event, "dossier.attach")
-    ensure_open(event)
     await _check_attachment(session, event, body.attachment_id)
     row = Quote(
         event_id=event.id,
@@ -184,7 +183,6 @@ async def _load(session: AsyncSession, principal: Principal, quote_id: UUID) -> 
     except NotFoundError:
         raise NotFoundError("quote not found") from None
     ensure_permission(principal, event, "dossier.attach")
-    ensure_open(event)
     return row, event
 
 

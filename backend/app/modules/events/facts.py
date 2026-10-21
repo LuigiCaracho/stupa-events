@@ -2,9 +2,9 @@
 
 `event.facts` holds the camelCase keys of exactly one profile (`generic`, `party`, `meeting`,
 `trip`), all models `extra=forbid`. `parse` validates a body against the profile, `error_for`
-names the first field that blocks `factsValid` (T02), and `fit` keeps the keys that the
+names the first field that the hint `facts_incomplete` points to, and `fit` keeps the keys that the
 profile of a new category knows and reports the rest. Only "party without `ageLimit`" and
-"minimum above maximum" block; everything else is optional.
+"minimum above maximum" count as incomplete; everything else is optional.
 """
 
 from __future__ import annotations
@@ -78,7 +78,7 @@ def parse(profile: str, raw: dict[str, Any]) -> dict[str, Any]:
 
 
 def error_for(profile: str, facts: dict[str, Any] | None) -> str | None:
-    """Return the API name of the first field that blocks `factsValid`, else `None`."""
+    """Return the API name of the first incomplete field, else `None`."""
     facts = facts or {}
     if profile == "party" and facts.get("ageLimit") is None:
         return "facts.ageLimit"

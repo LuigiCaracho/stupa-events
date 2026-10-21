@@ -20,7 +20,7 @@ router = APIRouter(prefix="/events/{event_id}", tags=["followup"])
 _PROBLEM: dict[str, Any] = {"model": ProblemDetail}
 _ERRORS: dict[int | str, dict[str, Any]] = {c: _PROBLEM for c in (401, 403, 404, 409, 422, 428)}
 Editor = Annotated[Principal, Depends(require_any_scope("event.edit"))]
-Submitter = Annotated[Principal, Depends(require_any_scope("event.submit"))]
+Publisher = Annotated[Principal, Depends(require_any_scope("event.publish"))]
 IfMatch = Annotated[str | None, Header(alias="If-Match")]
 
 
@@ -44,7 +44,7 @@ async def put_outcome(
 
 @router.post("/actions/verify-howto", response_model=EventOut, responses=_ERRORS)
 async def verify_howto(
-    db: DbSession, principal: Submitter, event_id: UUID, response: Response
+    db: DbSession, principal: Publisher, event_id: UUID, response: Response
 ) -> EventOut:
     """Mark the howto verified; after the archive this also dates the format."""
     event = await howto.verify(db, principal, event_id)
@@ -56,7 +56,7 @@ async def verify_howto(
 
 @router.delete("/actions/verify-howto", response_model=EventOut, responses=_ERRORS)
 async def unverify_howto(
-    db: DbSession, principal: Submitter, event_id: UUID, response: Response
+    db: DbSession, principal: Publisher, event_id: UUID, response: Response
 ) -> EventOut:
     """Take the verification away again, as long as the dossier is not archived."""
     event = await howto.unverify(db, principal, event_id)

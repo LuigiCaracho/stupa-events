@@ -3,17 +3,18 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.auth.principal import Principal
-from app.modules.dossier.guard_data import howto_presence
 from app.modules.dossier.schemas import attachment_out
-from app.modules.events.access import snapshot_of
+from app.modules.events.allowed import allowed_actions
+from app.modules.events.editing import editable_fields
+from app.modules.events.hints import missing_info, warning_count
+from app.modules.events.hints_data import hint_inputs, howto_presence
 from app.modules.events.models import Event
-from app.modules.events.schemas import EventOut, ImageExceptionOut, PublicReasonOut
+from app.modules.events.schemas import EventOut, PublicReasonOut
 from app.modules.files.models import Attachment
 from app.modules.followup.schemas import OutcomeOut
 from app.modules.formats.models import Format
@@ -21,20 +22,9 @@ from app.modules.formats.schemas import FormatRef
 from app.modules.orgs.models import Organization
 from app.modules.orgs.schemas import OrgRef
 from app.modules.orgs.scope import bind
-from app.modules.pipeline.actor import actor_of
-from app.modules.pipeline.allowed import allowed_actions
-from app.modules.pipeline.decision import allowed_transitions
-from app.modules.pipeline.fieldclass import editable_fields, lock_reason
 from app.modules.taxonomy.models import Category, Venue
 from app.modules.taxonomy.schemas import CategoryRef, VenueRef
-
-
-def _exception_out(raw: dict | None) -> ImageExceptionOut | None:
-    if not raw:
-        return None
-    return ImageExceptionOut(
-        granted_by=raw["granted_by"], reason=raw["reason"], at=datetime.fromisoformat(raw["at"])
-    )
+from app.settings import get_settings
 
 
 def _venue_ref(venue: Venue | None) -> VenueRef | None:
@@ -101,7 +91,23 @@ async def present(
         else {}
     )
     howtos = await howto_presence(session, events)
-    return [_one(principal, e, orgs, categories, posters, venues, formats, howtos) for e in events]
+    inputs = await hint_inputs(session, events, posters, categories)
+    requires_editor = get_settings().publish_requires_editor
+    return [
+        _one(
+            principal,
+            e,
+            orgs,
+            categories,
+            posters,
+            venues,
+            formats,
+            howtos,
+            requires_editor,
+            inputs,
+        )
+        for e in events
+    ]
 
 
 def _one(
@@ -113,12 +119,12 @@ def _one(
     venues: dict,
     formats: dict,
     howtos: set,
+    requires_editor: bool,
+    inputs: dict,
 ) -> EventOut:
     poster = posters.get(event.hero_attachment_id)
     org = orgs.get(event.organization_id)
     category = categories.get(event.primary_category_id)
-    actor = actor_of(principal, event.organization_id)
-    snapshot = snapshot_of(event, poster)
     venue = venues.get(event.venue_id)
     format_ = formats.get(event.format_id)
     return EventOut(
@@ -142,25 +148,17 @@ def _one(
         cost_text=event.cost_text,
         ticket_url=event.ticket_url,
         website_url=event.website_url,
-        publish_at=event.publish_at,
         public_reason=_reason_out(event),
         end_estimated=event.end_estimated,
-        text_reviewed_rev=event.text_reviewed_rev,
-        published_rev=event.published_rev,
-        flyer_checked_at=event.flyer_checked_at,
         primary_category=CategoryRef.model_validate(category) if category else None,
         poster=attachment_out(poster) if poster else None,
-        image_exception=_exception_out(event.image_exception),
         rev=event.rev,
         created_by=event.created_by,
-        submitted_by=event.submitted_by,
-        approved_by=event.approved_by,
         created_at=event.created_at,
         updated_at=event.updated_at,
-        allowed_transitions=allowed_transitions(snapshot, actor),  # type: ignore[arg-type]
-        allowed_actions=allowed_actions(snapshot, actor),  # type: ignore[arg-type]
-        editable_fields=editable_fields(snapshot, actor),
-        lock_reason=lock_reason(snapshot, actor),
+        allowed_actions=allowed_actions(principal, event, requires_editor=requires_editor),  # type: ignore[arg-type]
+        editable_fields=editable_fields(principal, event),
+        hint_count=warning_count(missing_info(inputs[event.id])),
         outcome=OutcomeOut.model_validate(event.outcome) if event.outcome else None,
         howto_verified_at=event.howto_verified_at,
         howto_verified_by=event.howto_verified_by,

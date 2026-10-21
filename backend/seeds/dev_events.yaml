@@ -3,7 +3,7 @@ events:
   - title: "Movienight: Beispielfilm"
     organization: fsi
     category: kino
-    stage: planning
+    stage: draft
     startsInDays: 14
     durationHours: 3
     venueText: "Kinosaal 9-133"
@@ -11,7 +11,7 @@ events:
   - title: "Spieleabend der Fachschaft"
     organization: fsi
     category: get-together
-    stage: idea
+    stage: draft
     startsInDays: 21
     durationHours: 4
     venueText: "FSI-Raum 9-U09"
@@ -19,7 +19,7 @@ events:
   - title: "Workshop: Löten für Einsteiger:innen"
     organization: makers
     category: workshop
-    stage: idea
+    stage: draft
     startsInDays: 28
     durationHours: 2
     venueText: "Maker Space 9-229"
@@ -27,7 +27,7 @@ events:
   - title: "Filmquiz: Wer weiß mehr?"
     organization: fsi
     category: kino
-    stage: in_review
+    stage: draft
     startsInDays: 35
     durationHours: 3
     venueText: "Kinosaal 9-133"
@@ -35,7 +35,7 @@ events:
   - title: "Sommerfest der Fachschaft"
     organization: fsi
     category: get-together
-    stage: approved
+    stage: draft
     startsInDays: 49
     durationHours: 5
     venueText: "Innenhof Gebäude 9"
@@ -43,7 +43,7 @@ events:
   - title: "Spieleabend: Brettspielklassiker"
     organization: fsi
     category: get-together
-    stage: live
+    stage: published
     startsInDays: 7
     durationHours: 4
     venueText: "FSI-Raum 9-U09"
@@ -51,11 +51,11 @@ events:
   - title: "Löten für Einsteiger:innen: Rückblick"
     organization: makers
     category: workshop
-    stage: followup
+    stage: published
     startsInDays: 3
     durationHours: 2
     venueText: "Maker Space 9-229"
-    summary: "Der Workshop ist vorbei, die Nachbereitung steht aus."
+    summary: "Veröffentlicht; der Worker archiviert ihn zwölf Stunden nach dem Ende."
   - title: "Archivtreffen"
     organization: makers
     category: workshop
@@ -66,12 +66,6 @@ events:
     summary: "Abgeschlossen und im Archiv."
     outcome: {attendance: 14, costsCents: 0}
     retrospective: "Kurzes Treffen, alle Punkte besprochen."
-  - title: "Vorschlag: Karaoke-Abend"
-    category: get-together
-    stage: idea
-    startsInDays: 60
-    durationHours: 3
-    summary: "Ein Vorschlag von einer Person ohne Organisation."
   - title: "Movienight WS25/26: Das große Kino"
     organization: fsi
     category: kino

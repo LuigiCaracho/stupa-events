@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, Header, Query, Request, Response, status
 from app.deps import DbSession, Principal, require_any_scope, require_principal
 from app.modules.archive.schemas import CloneOut
 from app.modules.events.conflict import require_if_match, set_etag, with_current
+from app.modules.events.postcommit import invalidate_public
 from app.modules.events.presenter import present
 from app.modules.events.schemas import EventOut
 from app.modules.formats import queries, service
@@ -26,7 +27,6 @@ from app.modules.formats.schemas import (
     NewEditionIn,
     SaveAsFormatIn,
 )
-from app.modules.pipeline.actions import invalidate_public
 from app.shared.errors import ProblemDetail
 from app.shared.paging import DEFAULT_LIMIT, MAX_LIMIT, Page
 
@@ -35,7 +35,7 @@ router = APIRouter(tags=["formats"])
 _PROBLEM: dict[str, Any] = {"model": ProblemDetail}
 _ERRORS: dict[int | str, dict[str, Any]] = {c: _PROBLEM for c in (401, 403, 404, 409, 422, 428)}
 Reader = Annotated[Principal, Depends(require_principal("library.read"))]
-Manager = Annotated[Principal, Depends(require_any_scope("format.manage", "event.submit"))]
+Manager = Annotated[Principal, Depends(require_any_scope("format.manage", "event.publish"))]
 Creator = Annotated[Principal, Depends(require_any_scope("event.create"))]
 Editor = Annotated[Principal, Depends(require_any_scope("event.edit"))]
 IfMatch = Annotated[str | None, Header(alias="If-Match")]

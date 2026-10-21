@@ -1,8 +1,8 @@
 """Catalog of notification kinds (contract M4, 5.7).
 
 A kind groups the notifications that belong together. The account settings offer exactly
-these keys. `changes_requested` is essential: the user cannot switch it off. A kind with
-`mail = False` only fills the in-app inbox.
+these keys. An `essential` kind cannot be switched off by the user; none is today. A kind
+with `mail = False` only fills the in-app inbox.
 
 Copied from STUPA-Workflow@93c33d6 backend/app/modules/notifications/kinds.py (rewritten for M4)
 """
@@ -22,15 +22,10 @@ class Kind:
 
 
 KINDS: tuple[Kind, ...] = (
-    Kind("review_requested", mail=True),
-    Kind("changes_requested", mail=True, essential=True),
     Kind("comment_added", mail=True),
-    Kind("comment_resolved", mail=False),
-    Kind("transition_done", mail=False),
-    Kind("task_assigned", mail=True),
+    Kind("published", mail=True),
+    Kind("cancelled", mail=True),
     Kind("checklist_due", mail=True),
-    Kind("followup_reminder", mail=True),
-    Kind("auto_archived", mail=True),
 )
 
 NOTIFICATION_KINDS: tuple[str, ...] = tuple(k.key for k in KINDS)

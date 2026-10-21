@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from app.modules.pipeline.actions import FEED_VERSION_KEY
+from app.modules.events.postcommit import FEED_VERSION_KEY
 
 logger = logging.getLogger("app.public")
 

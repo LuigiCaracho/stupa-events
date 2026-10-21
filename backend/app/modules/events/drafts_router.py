@@ -10,7 +10,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Header, Request, Response, status
 from fastapi.routing import APIRoute
 
-from app.deps import DbSession, Principal, SettingsDep, require_any_scope
+from app.deps import DbSession, Principal, require_any_scope
 from app.modules.auth.schemas import CamelModel
 from app.modules.events import drafts
 from app.modules.events.conflict import parse_if_match, with_current
@@ -82,7 +82,6 @@ def _out(row: Any) -> DraftOut:
 )
 async def put_draft(
     db: DbSession,
-    settings: SettingsDep,
     principal: Editor,
     event_id: UUID,
     body: DraftIn,
@@ -92,7 +91,7 @@ async def put_draft(
     expected = parse_if_match(if_match)
     if expected is None:
         raise PreconditionRequiredError("An If-Match header is required.")
-    service = EventService(db, editor_four_eyes=settings.editor_four_eyes)
+    service = EventService(db)
     async with with_current(db, principal):
         row = await drafts.put_draft(db, service, principal, event_id, body.fields, expected)
     out = _out(row)

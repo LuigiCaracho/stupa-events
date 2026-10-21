@@ -4,7 +4,7 @@ c: the golden files stay byte-equal (unit tests), every file and the dev calenda
 `icalendar` and pass the RFC 5545 rules of `m5_icsrules`; a cancellation shows
 `STATUS:CANCELLED`, a postponement a higher `SEQUENCE`, the repeated hour of 25.10.2026 is
 written in UTC. d: the canary (contract 10.1) is hung onto two dev dossiers and every public
-and foreign-facing answer is scanned. e: Schemathesis runs against the dev API. f: a T05
+and foreign-facing answer is scanned. e: Schemathesis runs against the dev API. f: a publish
 yields a new snapshot; without Redis the feed and the calendars still answer from the view.
 """
 
@@ -20,7 +20,7 @@ from typing import Any
 import httpx
 from icalendar import Calendar
 
-from scripts import m4_acceptance as m4
+from scripts import dossier_api as dossier
 from scripts import m4_ops as ops
 from scripts.acceptance_common import check, expect, login, step
 from scripts.m5_canary import foreign_requests, public_requests, seed
@@ -68,30 +68,28 @@ def check_ics(organizer: httpx.Client, editor: httpx.Client) -> None:
         body = golden.read_bytes()
         Calendar.from_ical(body)
         check(not problems(body), f"c: golden {golden.name} parses and passes the rules")
-    cancelled = live(organizer, editor, "M5 ICS Absage", days=33)
-    postponed = live(organizer, editor, "M5 ICS Verschiebung", days=34)
+    cancelled = live(organizer, "M5 ICS Absage", days=33)
+    postponed = live(organizer, "M5 ICS Verschiebung", days=34)
     second = live(
         organizer,
-        editor,
         "M5 Umstellung zweite",
         times=(SECOND_0230, SECOND_0230 + timedelta(minutes=15)),
     )
     first = live(
         organizer,
-        editor,
         "M5 Umstellung erste",
         times=(FIRST_0230, FIRST_0230 + timedelta(minutes=15)),
     )
     before = _vevents(_calendar("/ics/all.ics"))
     expect(
         editor.post(
-            f"/api/events/{cancelled}/actions/cancel",
+            f"/api/events/{cancelled}/cancel",
             json={
                 "reason": "Saal belegt",
                 "publicReasonCode": "room",
                 "publicReasonText": "Saal belegt",
             },
-            headers=m4.etag(editor, cancelled),
+            headers=dossier.etag(editor, cancelled),
         ),
         200,
         "c: cancel",
@@ -99,14 +97,14 @@ def check_ics(organizer: httpx.Client, editor: httpx.Client) -> None:
     new_start = (datetime.now(UTC) + timedelta(days=41)).replace(minute=0, second=0, microsecond=0)
     expect(
         editor.post(
-            f"/api/events/{postponed}/actions/postpone",
+            f"/api/events/{postponed}/postpone",
             json={
                 "reason": "Referent:in krank",
                 "publicReasonCode": "speaker",
                 "newStartsAt": new_start.isoformat(),
                 "newEndsAt": (new_start + timedelta(hours=3)).isoformat(),
             },
-            headers=m4.etag(editor, postponed),
+            headers=dossier.etag(editor, postponed),
         ),
         200,
         "c: postpone",
@@ -147,14 +145,13 @@ def _october_change(second: str, first: str) -> None:
 
 def check_canary(
     organizer: httpx.Client,
-    editor: httpx.Client,
     member: httpx.Client,
     makers: httpx.Client,
     viewer: httpx.Client,
     archived: str,
 ) -> None:
     """Item d: no internal string and no amount reaches the public or a foreign reader."""
-    canary = seed(organizer, editor, archived)
+    canary = seed(organizer, archived)
     try:
         with anonymous() as client:
             leaks, positive = public_requests(client)
@@ -232,8 +229,8 @@ def _feed_paging(client: httpx.Client, since: datetime, eid: str) -> None:
     check(spaced.status_code == 400, "f: since with an unencoded plus -> 400")
 
 
-def check_cache(organizer: httpx.Client, editor: httpx.Client) -> None:
-    """Item f: T05 makes a new snapshot and ETag; without Redis the view answers."""
+def check_cache(organizer: httpx.Client) -> None:
+    """Item f: publishing makes a new snapshot and ETag; without Redis the view answers."""
     with anonymous() as client:
         version = _fresh_snapshot()
         old = client.get("/api/public/feed/events", params={"limit": 500}).headers["etag"]
@@ -245,11 +242,11 @@ def check_cache(organizer: httpx.Client, editor: httpx.Client) -> None:
             "f: 304 with the current ETag",
         )
         since = datetime.now(UTC).replace(microsecond=0)
-        eid = live(organizer, editor, "M5 Cache", days=36)
+        eid = live(organizer, "M5 Cache", days=36)
         new_version = _fresh_snapshot()
         check(int(new_version) > int(version), f"f: feed version {version} -> {new_version}")
         page = client.get("/api/public/feed/events", params={"limit": 500})
-        check(page.headers["etag"] != old, "f: a new ETag after T05")
+        check(page.headers["etag"] != old, "f: a new ETag after publishing")
         check(eid in page.text, "f: the new dossier is in the feed")
         stale = client.get(
             "/api/public/feed/events", params={"limit": 500}, headers={"If-None-Match": old}

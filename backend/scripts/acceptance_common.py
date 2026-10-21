@@ -73,10 +73,9 @@ def login(username: str) -> httpx.Client:
 
 
 def confirm_location(client: httpx.Client, event_id: str) -> None:
-    """Confirm a free venue text as the logged-in approver, as T04 requires since M5.
+    """Confirm a free venue text as the logged-in publisher, so that it shows in the feed.
 
-    A caller without `event.approve` gets 403 and nothing changes, which is what the
-    scripts that test the refusal of T04 for organizers want.
+    A caller without `event.publish` gets 403 and nothing changes.
     """
     event = client.get(f"/api/events/{event_id}").json()
     if (

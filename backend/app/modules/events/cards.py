@@ -1,17 +1,18 @@
-"""Build `EventCard` rows with batched lookups: references, people, guard inputs, next move."""
+"""Build `EventCard` rows with batched lookups: references, people, hints and open questions."""
 
 from __future__ import annotations
 
 from collections.abc import Sequence
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.auth.models import Principal as PrincipalRow
 from app.modules.auth.principal import Principal
-from app.modules.events.board import PRIMARY_TRANSITION, moves_for
-from app.modules.events.card_extras import CardExtras, load_card_extras
+from app.modules.dossier.models_comments import Comment
 from app.modules.events.card_schemas import EventCard, PersonRef
+from app.modules.events.hints import missing_info, warning_count
+from app.modules.events.hints_data import hint_inputs, howto_presence
 from app.modules.events.models import Event
 from app.modules.events.presenter import howto_unverified
 from app.modules.files.models import Attachment
@@ -19,16 +20,8 @@ from app.modules.formats.models import Format
 from app.modules.orgs.models import Organization
 from app.modules.orgs.schemas import OrgRef
 from app.modules.orgs.scope import bind
-from app.modules.pipeline.actor import actor_of
-from app.modules.pipeline.decision import allowed_transitions, decide
-from app.modules.pipeline.reasons import blockers
-from app.modules.pipeline.schemas import reason_out
-from app.modules.pipeline.transitions import TRANSITIONS
 from app.modules.taxonomy.models import Category, Venue
 from app.modules.taxonomy.schemas import CategoryRef
-from app.shared.timeutil import utcnow
-
-MAX_BLOCKERS = 3
 
 
 async def _by_id[T](session: AsyncSession, model: type[T], ids: set) -> dict:
@@ -45,6 +38,19 @@ async def _names(session: AsyncSession, subs: set[str]) -> dict[str, str | None]
     return dict(rows.all()) if subs else {}
 
 
+async def _open_questions(session: AsyncSession, events: Sequence[Event]) -> dict:
+    rows = await session.execute(
+        select(Comment.event_id, func.count())
+        .where(
+            Comment.event_id.in_([e.id for e in events]),
+            Comment.parent_id.is_(None),
+            Comment.resolved_at.is_(None),
+        )
+        .group_by(Comment.event_id)
+    )
+    return dict(rows.all())
+
+
 def _venue_label(event: Event, venue: Venue | None) -> str | None:
     if venue is None:
         return event.venue_text
@@ -56,6 +62,8 @@ async def present_cards(
 ) -> list[EventCard]:
     """Turn events into cards, reading references, posters and names once."""
     await bind(session, principal)
+    if not events:
+        return []
     orgs = await _by_id(
         session, Organization, {e.organization_id for e in events if e.organization_id}
     )
@@ -68,58 +76,33 @@ async def present_cards(
     )
     formats = await _by_id(session, Format, {e.format_id for e in events if e.format_id})
     names = await _names(session, {e.created_by for e in events})
-    extras = await load_card_extras(session, events)
-    now = utcnow()
+    inputs = await hint_inputs(session, events, posters, categories)
+    questions = await _open_questions(session, events)
+    howtos = await howto_presence(session, events)
     return [
-        _card(principal, e, orgs, categories, venues, posters, formats, names, extras, now)
+        EventCard(
+            id=e.id,
+            title=e.title,
+            state=e.state,
+            public_status=e.public_status,  # type: ignore[arg-type]
+            starts_at=e.starts_at,
+            ends_at=e.ends_at,
+            tzid=e.tzid,
+            organization=OrgRef.model_validate(orgs[e.organization_id])
+            if e.organization_id in orgs
+            else None,
+            venue_label=_venue_label(e, venues.get(e.venue_id)),
+            primary_category=CategoryRef.model_validate(categories[e.primary_category_id])
+            if e.primary_category_id in categories
+            else None,
+            has_poster=inputs[e.id].poster is not None,
+            created_by=PersonRef(sub=e.created_by, display_name=names.get(e.created_by)),
+            rev=e.rev,
+            open_questions=questions.get(e.id, 0),
+            hint_count=warning_count(missing_info(inputs[e.id])),
+            all_day=e.all_day,
+            format_slug=formats[e.format_id].slug if e.format_id in formats else None,
+            howto_unverified=howto_unverified(e, e.id in howtos),
+        )
         for e in events
     ]
-
-
-def _card(
-    principal: Principal,
-    event: Event,
-    orgs: dict,
-    categories: dict,
-    venues: dict,
-    posters: dict,
-    formats: dict,
-    names: dict[str, str | None],
-    extras: CardExtras,
-    now,  # noqa: ANN001
-) -> EventCard:
-    poster = posters.get(event.hero_attachment_id)
-    snapshot = extras.snapshot(event, poster)
-    actor = actor_of(principal, event.organization_id)
-    allowed = allowed_transitions(snapshot, actor)
-    primary = PRIMARY_TRANSITION.get(event.state)
-    next_transition = primary if primary in allowed else None
-    found = []
-    if next_transition is not None:
-        verdict = decide(TRANSITIONS[next_transition], snapshot, actor, now)
-        found = blockers(list(verdict.reasons))
-    org, category = orgs.get(event.organization_id), categories.get(event.primary_category_id)
-    return EventCard(
-        id=event.id,
-        title=event.title,
-        state=event.state,
-        public_status=event.public_status,  # type: ignore[arg-type]
-        starts_at=event.starts_at,
-        ends_at=event.ends_at,
-        tzid=event.tzid,
-        organization=OrgRef.model_validate(org) if org else None,
-        venue_label=_venue_label(event, venues.get(event.venue_id)),
-        primary_category=CategoryRef.model_validate(category) if category else None,
-        publish_at=event.publish_at,
-        has_poster=poster is not None and poster.retired_at is None,
-        created_by=PersonRef(sub=event.created_by, display_name=names.get(event.created_by)),
-        rev=event.rev,
-        allowed_transitions=allowed,  # type: ignore[arg-type]
-        next_transition=next_transition,  # type: ignore[arg-type]
-        blockers=[reason_out(r) for r in found[:MAX_BLOCKERS]],
-        blocker_count=len(found),
-        moves=moves_for(event.state, allowed),  # type: ignore[arg-type]
-        all_day=event.all_day,
-        format_slug=formats[event.format_id].slug if event.format_id in formats else None,
-        howto_unverified=howto_unverified(event, extras.has_howto(event.id)),
-    )

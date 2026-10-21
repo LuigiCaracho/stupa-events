@@ -1,13 +1,12 @@
 """Project the effective roles of the OIDC groups onto the `membership` table.
 
 The IdP is the only source of a membership. The sync reads the cached
-`principal.oidc_groups`, asks `rbac.effective_grants` what the groups mean (after the
-downgrade of untrusted approvers) and writes `membership` to match. It reads no IdP.
+`principal.oidc_groups`, asks `rbac.effective_grants` what the groups mean and writes
+`membership` to match. It reads no IdP.
 Nobody else writes the table, and no decision reads it: rights come from
 `Principal.has` (contract M2, 3.2 and 4). The sync never commits; the caller owns the
 transaction. It runs after the principal upsert of a login or a revalidation, after a
-change of a mapping or of `organization.trusted`, and for a deactivated person (empty
-wish list).
+change of a mapping, and for a deactivated person (empty wish list).
 
 Copied from STUPA-Workflow@93c33d6 backend/app/modules/admin/membership_sync.py (events roles)
 """

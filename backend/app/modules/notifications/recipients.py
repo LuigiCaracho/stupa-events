@@ -22,7 +22,6 @@ from app.modules.orgs.models import GroupMapping, Membership
 from app.shared.permissions import ORG_ROLES
 
 _COMMENT = table("comment", column("event_id", Uuid), column("author_sub", Text))
-_ORGANIZER_ROLES = ("organizer", "approver")
 _SYSTEM_PREFIX = "system:"
 
 
@@ -73,7 +72,7 @@ async def _commenter_subs(session: AsyncSession, event: Event) -> list[str]:
 
 
 def _owners(event: Event) -> list[str]:
-    return [s for s in (event.created_by, event.submitted_by) if s]
+    return [event.created_by] if event.created_by else []
 
 
 def clean(subs: Iterable[str], actor_sub: str | None) -> list[str]:
@@ -88,26 +87,28 @@ async def recipients_for(
 ) -> list[str]:
     """Return the subs a kind reaches for the dossier, without the acting person.
 
-    Kinds that address one person (`comment_resolved`, `task_assigned`, `checklist_due`)
-    are not resolved here: the caller names the recipient.
+    `checklist_due` addresses one person and is not resolved here: the caller names the
+    recipient.
 
     Raises:
         KeyError: The kind has no group rule.
     """
     org = event.organization_id
     match kind:
-        case "review_requested":
-            subs = [*await _org_subs(session, org, ("approver",)), *await _editor_subs(session)]
-        case "changes_requested":
-            subs = [*_owners(event), *await _org_subs(session, org, ("organizer",))]
         case "comment_added":
             subs = [
                 *_owners(event),
-                *await _org_subs(session, org, _ORGANIZER_ROLES),
+                *await _org_subs(session, org, ("organizer",)),
                 *await _commenter_subs(session, event),
             ]
-        case "transition_done" | "followup_reminder" | "auto_archived":
-            subs = [*_owners(event), *await _org_subs(session, org, ("organizer",))]
+        case "published":
+            subs = [*await _editor_subs(session), *await _org_subs(session, org, ORG_ROLES)]
+        case "cancelled":
+            subs = [
+                *await _editor_subs(session),
+                *await _org_subs(session, org, ORG_ROLES),
+                *_owners(event),
+            ]
         case _:
             raise KeyError(kind)
     return clean(subs, actor_sub)

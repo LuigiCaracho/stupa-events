@@ -1,9 +1,9 @@
-"""The follow-up part of the dev seed: format, outcome, retrospective, howto and the past.
+"""The documentation part of the dev seed: format, outcome, retrospective, howto and the past.
 
-An archived dev dossier needs what T09 asks for (M5): a retrospective, an outcome and a
-verified howto. This module adds them through the real services, so the seed stays a user of
-the API's rules. Archived editions move into the past with one `UPDATE` at the end, because
-the pipeline only lets a dossier start in the future.
+An archived dev dossier carries a retrospective, an outcome and a verified howto. This module
+adds them through the real services, so the seed stays a user of the API's rules. Archived
+editions move into the past with one `UPDATE` at the end, because a dossier can only be
+created in the future.
 """
 
 from __future__ import annotations
@@ -17,7 +17,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.auth.principal import Principal
 from app.modules.dossier import documents
 from app.modules.dossier.schemas_documents import DocumentCreate
-from app.modules.events.location import confirm_location
 from app.modules.events.models import Event
 from app.modules.followup import howto, outcome
 from app.modules.followup.schemas import OutcomeIn
@@ -36,19 +35,12 @@ async def put_format(
         event.rev, event.format_id = updated.rev, updated.format_id
 
 
-async def confirm_free_venue(session: AsyncSession, principal: Principal, event: Event) -> None:
-    """Confirm a free venue text as a building (T04 refuses it unconfirmed)."""
-    if event.venue_text and event.venue_id is None:
-        await confirm_location(session, principal, event.id, "building")
-
-
 async def fill_followup(
     session: AsyncSession, principal: Principal, event: Event, definition: dict[str, Any]
 ) -> None:
-    """Write the retrospective, the outcome and the howto, and verify the howto (state followup)."""
+    """Write the retrospective, the outcome and the howto, and verify the howto."""
     if not definition.get("retrospective"):
         return
-    now = utcnow()
     await documents.create(
         session,
         principal,
@@ -62,11 +54,11 @@ async def fill_followup(
             event.id,
             DocumentCreate(kind="howto", title="Anleitung", body_md=definition["howto"]),
         )
-        await howto.verify(session, principal, event.id, now=now)
+        await howto.verify(session, principal, event.id)
     fresh = await session.get(Event, event.id)
     assert fresh is not None
     body = OutcomeIn.model_validate(definition["outcome"])
-    await outcome.put_outcome(session, principal, event.id, body, fresh.rev, now=now)
+    await outcome.put_outcome(session, principal, event.id, body, fresh.rev)
 
 
 async def move_into_the_past(session: AsyncSession, event: Event, days_ago: int) -> None:

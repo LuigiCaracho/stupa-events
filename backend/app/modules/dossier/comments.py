@@ -2,8 +2,8 @@
 
 A root comment may point at a field (`hero` for the poster), an attachment, a checklist item
 or a text range of a document revision. Replies hang under a root and carry no anchor. The
-guards read the open root comments (`open_comments`, `open_hero_comments` in
-`dossier.guard_data`). Comments never appear in `event_revision`. They are never edited or
+cards count the open root comments as open questions. Comments never appear in
+`event_revision`. They are never edited or
 deleted; resolving only sets `resolved_at/by` (the table trigger enforces it).
 """
 
@@ -28,8 +28,7 @@ from app.modules.events.models import Event
 from app.modules.files.access import attachment_readable
 from app.modules.files.models import Attachment
 from app.modules.media.ref_sync import add_refs
-from app.modules.notifications.service import PendingMail, notify, notify_event
-from app.modules.pipeline.guards.common import FIELD_NAMES
+from app.modules.notifications.service import PendingMail, notify_event
 from app.shared.errors import (
     ConflictError,
     FieldError,
@@ -40,6 +39,15 @@ from app.shared.errors import (
 from app.shared.timeutil import utcnow
 
 HERO = "hero"
+FIELD_NAMES: dict[str, str] = {
+    "title": "title",
+    "summary": "summary",
+    "starts_at": "startsAt",
+    "ends_at": "endsAt",
+    "organization_id": "organizationId",
+    "primary_category_id": "primaryCategoryId",
+    "venue_text": "venueText",
+}
 ALLOWED_FIELDS = frozenset({HERO, *FIELD_NAMES, *FIELD_NAMES.values()})
 _ANCHOR_KEYS = frozenset({"field", "attachmentId", "checklistItemId", "documentId"})
 
@@ -214,9 +222,9 @@ async def _toggle(
     if row.parent_id is not None:
         raise ConflictError("Only a root comment can be resolved.", code="not_a_root")
     if not (
-        row.author_sub == principal.sub or principal.has("event.approve", event.organization_id)
+        row.author_sub == principal.sub or principal.has("event.publish", event.organization_id)
     ):
-        raise ForbiddenError("Only the author or an approver may do this.")
+        raise ForbiddenError("Only the author or someone who may publish may do this.")
     changed = (row.resolved_at is not None) != resolve
     if changed:
         row.resolved_at, row.resolved_by = (utcnow(), principal.sub) if resolve else (None, None)
@@ -232,22 +240,10 @@ async def _toggle(
     return row, event, changed
 
 
-async def resolve(
-    session: AsyncSession, principal: Principal, comment_id: UUID
-) -> tuple[CommentOut, list[PendingMail]]:
-    """Resolve a root comment (idempotent) and tell its author when someone else did."""
-    row, event, changed = await _toggle(session, principal, comment_id, resolve=True)
-    pending: list[PendingMail] = []
-    if changed and row.author_sub != principal.sub:
-        pending = await notify(
-            session,
-            "comment_resolved",
-            [row.author_sub],
-            event,
-            {"actorName": principal.display_name or "Jemand"},
-            actor_sub=principal.sub,
-        )
-    return _out(row, await _names(session, {row.author_sub})), pending
+async def resolve(session: AsyncSession, principal: Principal, comment_id: UUID) -> CommentOut:
+    """Resolve a root comment (idempotent)."""
+    row, _, _ = await _toggle(session, principal, comment_id, resolve=True)
+    return _out(row, await _names(session, {row.author_sub}))
 
 
 async def reopen(session: AsyncSession, principal: Principal, comment_id: UUID) -> CommentOut:

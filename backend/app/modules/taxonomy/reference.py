@@ -122,7 +122,6 @@ def _organization(
     category: str | None = None,
     color: str | None = None,
     legacy: tuple[int, ...] = (),
-    trusted: bool = False,
 ) -> dict[str, Any]:
     return {
         "id": reference_id("organization", slug),
@@ -133,12 +132,11 @@ def _organization(
         "category_id": reference_id("category", category) if category else None,
         "color_token": color,
         "legacy_wp_ids": list(legacy),
-        "trusted": trusted,
     }
 
 
 ORGANIZATIONS: Final[tuple[dict[str, Any], ...]] = (
-    _organization("stupa", "Studierendenparlament", "stupa", "STUPA", legacy=(1578,), trusted=True),
+    _organization("stupa", "Studierendenparlament", "stupa", "STUPA", legacy=(1578,)),
     _organization("makers", "MAKERS", "referat", "MAKERS", category="makers", legacy=(2257,)),
     _organization(
         "fsi",
