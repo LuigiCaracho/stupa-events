@@ -74,6 +74,12 @@ def _upload_client(limiter: InMemoryRateLimiter, principal: object | None) -> Te
         dependencies=[Depends(antiabuse.rate_limit_media_images)],
     )
     router.add_api_route(
+        "/find",
+        lambda: "ok",
+        methods=["GET"],
+        dependencies=[Depends(antiabuse.rate_limit_search)],
+    )
+    router.add_api_route(
         "/cap",
         lambda: "ok",
         methods=["POST"],
@@ -94,7 +100,10 @@ def _upload_client(limiter: InMemoryRateLimiter, principal: object | None) -> Te
     app.dependency_overrides[antiabuse.get_rate_limiter] = lambda: limiter
     app.dependency_overrides[get_current_principal] = lambda: principal
     app.dependency_overrides[get_settings] = lambda: make_settings(
-        rl_attachments_per_hour=2, rl_media_images_per_hour=1, attachment_max_bytes=100
+        rl_attachments_per_hour=2,
+        rl_media_images_per_hour=1,
+        rl_search_per_minute=2,
+        attachment_max_bytes=100,
     )
     return TestClient(app)
 
@@ -135,3 +144,12 @@ def test_client_ip_and_limiter_selection() -> None:
     off = antiabuse.get_rate_limiter(request, make_settings(rate_limit_enabled=False))  # type: ignore[arg-type]
     assert type(off).__name__ == "NullRateLimiter"
     assert antiabuse.get_rate_limiter(request, make_settings()) is off  # type: ignore[arg-type]
+
+
+def test_search_limit_is_per_principal_per_minute_and_skips_anonymous() -> None:
+    limiter = InMemoryRateLimiter()
+    signed = _upload_client(limiter, make_principal())
+    assert [signed.get("/find").status_code for _ in range(3)] == [200, 200, 429]
+    assert _upload_client(limiter, make_principal(sub="sub-2")).get("/find").status_code == 200
+    anonymous = _upload_client(InMemoryRateLimiter(), None)
+    assert [anonymous.get("/find").status_code for _ in range(4)] == [200, 200, 200, 200]

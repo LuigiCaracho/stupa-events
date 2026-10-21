@@ -26,7 +26,7 @@ from PIL import Image
 from app.modules.notifications.mail import compute_idempotency_key
 from scripts import acceptance_common as common
 from scripts import m4_ops as ops
-from scripts.acceptance_common import API, check, expect, login, step
+from scripts.acceptance_common import check, confirm_location, expect, login, step
 from tests._support.factories import png_bytes
 from tests._support.samples import EICAR, bomb_png, jpeg_with_gps, ooxml_bytes, pdf_bytes, svg_bytes
 
@@ -70,6 +70,8 @@ def etag(client: httpx.Client, eid: str) -> dict[str, str]:
 
 def fire(client: httpx.Client, eid: str, tid: str, status: int = 200, **body: object) -> dict:
     """Fire a transition and check the status."""
+    if tid == "T04":
+        confirm_location(client, eid)
     response = client.post(
         f"/api/events/{eid}/transitions/{tid}", json=body, headers=etag(client, eid)
     )
@@ -213,6 +215,7 @@ def check_hero_question(organizer: httpx.Client, editor: httpx.Client) -> None:
     )
     report = expect(editor.get(f"/api/events/{eid}/guards/T04"), 200, "e: guard report")
     check("open_comment_on_hero" in [r["code"] for r in report["reasons"]], "e: guard names it")
+    confirm_location(editor, eid)
     blocked = editor.post(f"/api/events/{eid}/transitions/T04", json={}, headers=etag(editor, eid))
     expect(blocked, 422, "e: T04 blocked")
     check(blocked.json()["code"] == "open_comment_on_hero", "e: code open_comment_on_hero")
@@ -376,7 +379,7 @@ def check_quotes(organizer: httpx.Client, editor: httpx.Client) -> None:
     expect(organizer.post(f"/api/quotes/{quote['id']}/select"), 200, "i: organizer selects")
     for path in (f"/api/events/{eid}", f"/api/events/{eid}/revisions", "/api/events"):
         check("123457" not in organizer.get(path).text, f"i: no amount in {path}")
-    check("123457" not in httpx.get(f"{API}/api/public/feed/events").text, "i: no amount in feed")
+    check(all("123457" not in page.text for page in common.feed_pages()), "i: no amount in feed")
     check(not ops.query("SELECT 1 FROM audit_entry WHERE data::text LIKE '%123457%'"), "i: audit")
 
 

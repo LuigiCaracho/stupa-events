@@ -144,7 +144,7 @@ def test_lock_reason_and_editable_fields() -> None:
     assert lock_reason(snap(state="live"), actor("editor")) is None
     assert lock_reason(snap(state="archived"), actor("editor")) == "closed"
     open_fields = editable_fields(snap(state="planning"), actor("organizer"))
-    assert set(open_fields) == {API_NAMES[n] for n in CRITICAL_FIELDS | TEXT_FIELDS} - {"allDay"}
+    assert set(open_fields) == {API_NAMES[n] for n in CRITICAL_FIELDS | TEXT_FIELDS}
     assert editable_fields(snap(state="live"), actor("organizer")) == sorted(
         API_NAMES[n] for n in TEXT_FIELDS
     ) or set(editable_fields(snap(state="live"), actor("organizer"))) == {

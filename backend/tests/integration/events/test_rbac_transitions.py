@@ -59,6 +59,20 @@ async def dossier_in(api: Api, state: str) -> str:
     return event["id"]
 
 
+async def finish_followup(api: Api, eid: str) -> None:
+    """Give a follow-up dossier what T09 asks for: an outcome and a retrospective."""
+    await api.sql(
+        "UPDATE event SET outcome = CAST(:o AS jsonb) WHERE id = :i",
+        o='{"attendance": 10, "costsCents": 0, "waived": false}',
+        i=eid,
+    )
+    await api.sql(
+        "INSERT INTO document (event_id, kind, title, body_md) "
+        "VALUES (:i, 'retrospective', 'Rückblick', 'Gut gelaufen.')",
+        i=eid,
+    )
+
+
 @pytest.mark.parametrize("tid", sorted(SOURCE_STATE))
 async def test_every_user_gets_the_status_the_oracle_names(api: Api, tid: str) -> None:
     wrong = []
@@ -66,6 +80,8 @@ async def test_every_user_gets_the_status_the_oracle_names(api: Api, tid: str) -
         eid = await dossier_in(api, SOURCE_STATE[tid])
         if tid == "T03":
             await api.add_open_comment(eid)
+        if tid == "T09":
+            await finish_followup(api, eid)
         got = (await api.fire(user, eid, tid, note="Test")).status_code
         if user in INVISIBLE:
             want = 404

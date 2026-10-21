@@ -171,3 +171,42 @@ async def test_the_plan_lock_alone_also_closes_a_revert(
     assert (await api.fire("editor", eid, "T04")).status_code == 200
     refused = await api.action("editor", eid, "revert-revision", rev=event["rev"])
     assert refused.status_code == 409 and refused.json()["code"] == "field_locked"
+
+
+async def test_a_revert_of_the_venue_text_hides_it_again_until_it_is_confirmed(api: Api) -> None:
+    event = await api.to_state("live", venueText="Saal im Rathaus")
+    eid, first = event["id"], event["rev"]
+    changed = await api.patch("editor", eid, venueText="Privatweg 5, Reutlingen")
+    assert changed.status_code == 200, changed.text
+    await api.confirm_location(eid)
+    shown = await api.request(None, "GET", "/api/public/feed/events")
+    assert "Privatweg 5" in shown.text
+    reverted = await api.action("editor", eid, "revert-revision", rev=first)
+    assert reverted.status_code == 200, reverted.text
+    after = await api.get("editor", eid)
+    assert after["venueText"] == "Saal im Rathaus" and after["locationPrecision"] == "hidden"
+    feed = await api.request(None, "GET", "/api/public/feed/events")
+    assert "Privatweg" not in feed.text and "Saal im Rathaus" not in feed.text
+
+
+async def test_a_revert_of_an_all_day_event_moves_its_days_with_the_instants(api: Api) -> None:
+    event = await api.to_state(
+        "live", allDay=True, startsOn=future(10).date().isoformat(), startsAt=None, endsAt=None
+    )
+    eid, first = event["id"], event["rev"]
+    moved = await api.patch("editor", eid, startsOn=future(20).date().isoformat())
+    assert moved.status_code == 200, moved.text
+    reverted = await api.action("editor", eid, "revert-revision", rev=first)
+    assert reverted.status_code == 200, reverted.text
+    after = await api.get("editor", eid)
+    assert after["startsOn"] == event["startsOn"] and after["endsOn"] == event["endsOn"]
+
+
+async def test_a_revert_across_the_all_day_switch_is_refused(api: Api) -> None:
+    event = await api.to_state("live")
+    first = event["rev"]
+    await api.sql(
+        "UPDATE event SET all_day = true, starts_on = current_date, ends_on = current_date"
+    )
+    refused = await api.action("editor", event["id"], "revert-revision", rev=first)
+    assert refused.status_code == 409 and refused.json()["code"] == "revert_allday_changed"

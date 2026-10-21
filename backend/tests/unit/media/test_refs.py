@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from app.modules.media.refs import image_ids_in, image_path, is_image_path
+from app.modules.media.refs import image_ids_in, image_path, is_image_path, strip_image_refs
 
 A = UUID("0b7c6f0e-3a51-4c3e-9b8e-6f1d2a3b4c5d")
 B = UUID("1b7c6f0e-3a51-4c3e-9b8e-6f1d2a3b4c5d")
@@ -55,3 +55,10 @@ def test_ids_ignore_other_destinations() -> None:
         f"![y](/api/media/images/{str(B).upper()})"
     )
     assert image_ids_in(text) == []
+
+
+def test_strip_image_refs_keeps_the_label_only() -> None:
+    uid = "5b0f8f0e-3f5b-4c1e-9d63-0a1f2b3c4d5e"
+    text = f"a ![Saal](/api/media/images/{uid}) b [Link](/api/media/images/{uid}) ![x](https://e.x/y.png)"
+    assert strip_image_refs(text) == "a Saal b Link ![x](https://e.x/y.png)"
+    assert strip_image_refs(None) is None

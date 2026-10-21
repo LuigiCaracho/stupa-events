@@ -28,7 +28,7 @@ from sqlalchemy.exc import DBAPIError
 
 from app.settings import get_settings
 from scripts import acceptance_common as common
-from scripts.acceptance_common import API, check, expect, login, step
+from scripts.acceptance_common import API, check, confirm_location, expect, feed_items, login, step
 from scripts.keycloak_admin import Keycloak
 from scripts.m3_worker import ended, run_advance_once, shift_dates
 
@@ -75,6 +75,8 @@ def if_match(client: httpx.Client, eid: str) -> dict[str, str]:
 
 def fire(client: httpx.Client, eid: str, tid: str, status: int = 200, **body: object) -> dict:
     """Fire a transition and check the status."""
+    if tid == "T04":
+        confirm_location(client, eid)
     return expect(
         client.post(
             f"/api/events/{eid}/transitions/{tid}", json=body, headers=if_match(client, eid)
@@ -121,8 +123,7 @@ def grant_exception(editor: httpx.Client, eid: str) -> None:
 
 def feed_item(eid: str) -> dict | None:
     """Return the feed item of a dossier, or `None`."""
-    items = httpx.get(f"{API}/api/public/feed/events", params={"limit": 500}).json()["items"]
-    return next((i for i in items if i["id"] == eid), None)
+    return next((i for i in feed_items() if i["id"] == eid), None)
 
 
 def prepare_scheduled(organizer: httpx.Client, editor: httpx.Client) -> tuple[str, datetime]:

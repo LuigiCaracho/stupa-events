@@ -18,7 +18,7 @@ REALM = Path(__file__).resolve().parents[4] / "deploy" / "keycloak" / "stupa-eve
 
 async def test_seed_is_idempotent(api: Api, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(seed_dev, "get_sessionmaker", lambda: api.maker)
-    assert await seed_dev.main() == 9
+    assert await seed_dev.main() == 12
     async with api.maker() as session:
         mappings_after_first = (
             await session.execute(
@@ -47,8 +47,8 @@ async def test_seed_is_idempotent(api: Api, monkeypatch: pytest.MonkeyPatch) -> 
     assert by_title["Löten für Einsteiger:innen: Rückblick"] == "followup"
     assert by_title["Spieleabend: Brettspielklassiker"] == "live"
     assert {t: v for t, _, v in states}["Movienight: Beispielfilm"] == "Kinosaal 9-133"
-    assert revisions == 35
-    assert chain == 35 + mappings_after_first
+    assert revisions == 76
+    assert chain == 81 + mappings_after_first
 
 
 async def test_the_proposal_has_no_organization_and_belongs_to_the_member(

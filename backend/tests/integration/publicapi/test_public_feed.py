@@ -231,11 +231,20 @@ async def test_the_venue_name_comes_from_the_venue_and_a_private_one_is_hidden(a
             "RETURNING id"
         )
     )
-    shown = await go_live(api, venueId=str(public[0]), venueText="Freitext", title="Mit Ort")
-    hidden = await go_live(api, venueId=str(private[0][0]), title="Privat")
-    items = {i["id"]: i for i in (await api.request(None, "GET", FEED)).json()["items"]}
-    assert items[shown["id"]]["venueText"] == public[1]
-    assert items[hidden["id"]]["venueText"] is None
-    SCHEMA.validate(
-        {"schema": 2, "generatedAt": "2030-01-01T00:00:00Z", "items": list(items.values())}
-    )
+    try:
+        shown = await go_live(api, venueId=str(public[0]), venueText="Freitext", title="Mit Ort")
+        hidden = await go_live(api, venueId=str(private[0][0]), title="Privat")
+        items = {i["id"]: i for i in (await api.request(None, "GET", FEED)).json()["items"]}
+        assert items[shown["id"]]["venueText"] == public[1]
+        assert items[hidden["id"]]["venueText"] is None
+        SCHEMA.validate(
+            {
+                "schema": 2,
+                "generatedAt": "2030-01-01T00:00:00Z",
+                "nextCursor": None,
+                "items": list(items.values()),
+            }
+        )
+    finally:
+        await api.sql("UPDATE event SET venue_id = NULL WHERE venue_id = :v", v=private[0][0])
+        await api.sql("DELETE FROM venue WHERE id = :v", v=private[0][0])

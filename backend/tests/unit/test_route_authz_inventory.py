@@ -17,6 +17,7 @@ from fastapi.routing import APIRoute
 from app.api_routers import ROUTERS
 from app.deps import require_principal
 from app.main import api_router
+from app.modules.publicapi.ics_router import router as ics_router
 
 Route = tuple[str, str, APIRoute]
 
@@ -28,7 +29,7 @@ PUBLIC_ALLOWLIST: frozenset[tuple[str, str]] = frozenset(
         ("POST", "/api/auth/logout"),
     }
 )
-PUBLIC_PREFIX = "/api/public/"
+PUBLIC_PREFIXES = ("/api/public/", "/ics/")
 FORBIDDEN_PUBLIC_DEPENDENCIES = frozenset({"get_session", "get_current_principal"})
 SESSION_ONLY_ALLOWLIST: frozenset[tuple[str, str]] = frozenset(
     {("GET", "/api/auth/me"), ("POST", "/api/auth/sessions/revoke")}
@@ -38,6 +39,7 @@ _MAPPINGS = frozenset({"admin.mappings"})
 _TAXONOMY = frozenset({"taxonomy.manage"})
 _ATTACH = frozenset({"dossier.attach"})
 _EDIT = frozenset({"event.edit"})
+_FORMAT = frozenset({"format.manage", "event.submit"})
 ROUTE_PERMS: dict[tuple[str, str], frozenset[str]] = {
     ("GET", "/api/notifications"): _READ,
     ("GET", "/api/notifications/unread-count"): _READ,
@@ -91,6 +93,28 @@ ROUTE_PERMS: dict[tuple[str, str], frozenset[str]] = {
         {"event.edit_critical_live"}
     ),
     ("POST", "/api/events/{event_id}/actions/confirm-flyer"): frozenset({"event.edit"}),
+    ("GET", "/api/search"): _READ,
+    ("GET", "/api/archive/{event_id}"): _READ,
+    ("GET", "/api/templates"): _READ,
+    ("GET", "/api/library"): _READ,
+    ("POST", "/api/library/documents/{document_id}/adopt"): _EDIT,
+    ("POST", "/api/events/{event_id}/clone"): frozenset({"event.create"}),
+    ("GET", "/api/events/{event_id}/clone-preview"): frozenset({"event.create"}),
+    ("GET", "/api/events/{event_id}/last-time"): _READ,
+    ("GET", "/api/formats"): _READ,
+    ("GET", "/api/formats/{slug}"): _READ,
+    ("POST", "/api/formats"): _FORMAT,
+    ("PATCH", "/api/formats/{slug}"): _FORMAT,
+    ("POST", "/api/formats/{slug}/howto"): _FORMAT,
+    ("POST", "/api/formats/{slug}/verify"): _FORMAT,
+    ("POST", "/api/formats/{slug}/new-edition"): frozenset({"event.create"}),
+    ("POST", "/api/events/{event_id}/save-as-format"): _FORMAT,
+    ("PUT", "/api/events/{event_id}/format"): _EDIT,
+    ("POST", "/api/events/{event_id}/actions/confirm-location"): frozenset({"event.approve"}),
+    ("PUT", "/api/events/{event_id}/facts"): _EDIT,
+    ("PUT", "/api/events/{event_id}/outcome"): _EDIT,
+    ("POST", "/api/events/{event_id}/actions/verify-howto"): frozenset({"event.submit"}),
+    ("DELETE", "/api/events/{event_id}/actions/verify-howto"): frozenset({"event.submit"}),
     ("PUT", "/api/events/{event_id}/draft"): frozenset({"event.edit"}),
     ("GET", "/api/events/{event_id}/draft"): frozenset({"event.edit"}),
     ("DELETE", "/api/events/{event_id}/draft"): frozenset({"event.edit"}),
@@ -172,7 +196,11 @@ def flatten(router: APIRouter, prefix: str = "") -> Iterable[Route]:
 
 def _routes() -> list[Route]:
     """List the routes of the app: the own `/api` router and every module router."""
-    found = list(flatten(api_router)) + [r for router in ROUTERS for r in flatten(router, "/api")]
+    found = (
+        list(flatten(api_router))
+        + [r for router in ROUTERS for r in flatten(router, "/api")]
+        + list(flatten(ics_router))
+    )
     return list({(method, path): (method, path, route) for method, path, route in found}.values())
 
 
@@ -180,7 +208,7 @@ def open_routes(routes: Iterable[Route]) -> list[str]:
     """Name the non-public routes without a gate, or with a permission-less gate off the list."""
     problems = []
     for method, path, route in routes:
-        if (method, path) in PUBLIC_ALLOWLIST or path.startswith(PUBLIC_PREFIX):
+        if (method, path) in PUBLIC_ALLOWLIST or path.startswith(PUBLIC_PREFIXES):
             continue
         if not _gated(route.dependant):
             problems.append(f"{method} {path}: no gate")
@@ -202,7 +230,7 @@ def test_every_route_has_an_expected_permission_set() -> None:
     gates = {
         (m, p): _gate_perms(r.dependant)
         for m, p, r in _routes()
-        if (m, p) not in PUBLIC_ALLOWLIST and not p.startswith(PUBLIC_PREFIX)
+        if (m, p) not in PUBLIC_ALLOWLIST and not p.startswith(PUBLIC_PREFIXES)
     }
     assert set(gates) == set(ROUTE_PERMS), {
         "unlisted": sorted(set(gates) - set(ROUTE_PERMS)),
@@ -216,7 +244,7 @@ def test_public_routes_use_only_the_public_session() -> None:
     offenders = [
         f"{method} {path}"
         for method, path, route in _routes()
-        if path.startswith(PUBLIC_PREFIX)
+        if path.startswith(PUBLIC_PREFIXES)
         and any(
             getattr(call, "__name__", "") in FORBIDDEN_PUBLIC_DEPENDENCIES
             for call in _calls(route.dependant)

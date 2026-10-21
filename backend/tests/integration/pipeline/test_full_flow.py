@@ -23,6 +23,25 @@ async def feed_ids(api: Api) -> list[str]:
     return [item["id"] for item in feed["items"]]
 
 
+async def finish_followup(api: Api, eid: str, rev: int) -> None:
+    """Enter the retrospective and the outcome, as the organizers do in the follow-up tab."""
+    note = await api.request(
+        "organizer-fsi",
+        "POST",
+        f"/api/events/{eid}/documents",
+        json={"kind": "retrospective", "bodyMd": "Es war schön."},
+    )
+    assert note.status_code == 201, note.text
+    outcome = await api.request(
+        "organizer-fsi",
+        "PUT",
+        f"/api/events/{eid}/outcome",
+        json={"attendance": 40, "costsCents": 12000},
+        headers={"If-Match": f'"{rev}"'},
+    )
+    assert outcome.status_code == 200, outcome.text
+
+
 async def test_idea_to_archive_with_every_state_change(api: Api) -> None:
     event = await api.to_state("planning")
     eid = event["id"]
@@ -66,6 +85,13 @@ async def test_idea_to_archive_with_every_state_change(api: Api) -> None:
     followup = await api.get("editor", eid)
     assert followup["state"] == "followup"
     assert "followup=0" in await run_worker(api, ends + timedelta(hours=14))
+    refused = await api.fire("organizer-fsi", eid, "T09")
+    assert refused.status_code == 422
+    assert [r["code"] for r in refused.json()["reasons"]] == [
+        "retrospective_missing",
+        "outcome_missing",
+    ]
+    await finish_followup(api, eid, followup["rev"])
     archived = (await api.fire("organizer-fsi", eid, "T09")).json()
     assert archived["state"] == "archived" and await feed_ids(api) == [eid]
     reopened = await api.fire("editor", eid, "T10", note="Noch etwas nachtragen")

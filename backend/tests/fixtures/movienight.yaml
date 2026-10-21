@@ -1,0 +1,30 @@
+# Synthetic Movienight stock (M5 contract 12.3): 23 copies as in KARTE 2.7. Film titles, dates and numbers are invented;
+# only the counts (8 / 8 / 7), the weekday distribution and the title patterns come from the archive.
+format: movienight
+organization: fsi
+category: kino
+semesterPoster: {width: 1440, height: 1800}
+editions:
+  - {title: "STUPA Movienight: Arrival (OmU)", semester: "WS25/26", weekday: Di, state: archived}
+  - {title: "Whiplash – STUPA Movienight", semester: "WS25/26", weekday: Di, state: archived, full: true}
+  - {title: "STUPA Movienight: Nosferatu (OmU)", semester: "WS25/26", weekday: Di, state: archived}
+  - {title: "Das Boot – STUPA Movienight", semester: "WS25/26", weekday: Di, state: archived}
+  - {title: "STUPA Movienight: Stalker (OmU)", semester: "WS25/26", weekday: Di, state: archived}
+  - {title: "Blade Runner – STUPA Movienight", semester: "WS25/26", weekday: Di, state: archived}
+  - {title: "STUPA Movienight: Metropolis (OmU)", semester: "WS25/26", weekday: Di, state: archived}
+  - {title: "Alien – STUPA Movienight", semester: "WS25/26", weekday: Do, state: archived}
+  - {title: "STUPA Movienight: Parasite (OmU)", semester: "SoSe26", weekday: Do, state: followup}
+  - {title: "Amélie – STUPA Movienight", semester: "SoSe26", weekday: Do, state: followup}
+  - {title: "STUPA Movienight: Lola rennt (OmU)", semester: "SoSe26", weekday: Do, state: followup}
+  - {title: "Oldboy – STUPA Movienight", semester: "SoSe26", weekday: Do, state: followup}
+  - {title: "STUPA Movienight: Solaris (OmU)", semester: "SoSe26", weekday: Fr, state: followup}
+  - {title: "Brazil – STUPA Movienight", semester: "SoSe26", weekday: Fr, state: followup}
+  - {title: "STUPA Movienight: Gattaca (OmU)", semester: "SoSe26", weekday: Fr, state: followup}
+  - {title: "Moon – STUPA Movienight", semester: "SoSe26", weekday: Fr, state: followup}
+  - {title: "STUPA Movienight: Her (OmU)", semester: "WS26/27", weekday: Fr, state: live}
+  - {title: "Ex Machina – STUPA Movienight", semester: "WS26/27", weekday: Mo, state: live}
+  - {title: "STUPA Movienight: Primer (OmU)", semester: "WS26/27", weekday: Mo, state: live}
+  - {title: "Dark City – STUPA Movienight", semester: "WS26/27", weekday: Mo, state: live}
+  - {title: "STUPA Movienight: Memento (OmU)", semester: "WS26/27", weekday: Mo, state: live, halloween: first}
+  - {title: "Stalag 17 – STUPA Movienight", semester: "WS26/27", weekday: Mi, state: live, halloween: second}
+  - {title: "STUPA Movienight: Der Himmel über Berlin (OmU)", semester: "WS26/27", weekday: Mi, state: live}

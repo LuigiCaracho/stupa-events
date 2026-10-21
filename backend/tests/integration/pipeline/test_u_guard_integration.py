@@ -56,6 +56,7 @@ async def test_u_guard_08_the_poster_of_a_live_event_stays(api: Api) -> None:
 
 async def test_u_guard_13_two_concurrent_approvals_one_wins(api: Api) -> None:
     eid = await stupa_in_review(api)
+    await api.confirm_location(eid)
     rev = (await api.get("editor", eid))["rev"]
     first, second = await asyncio.gather(
         api.fire("approver2-stupa", eid, "T04", if_match_rev=rev),

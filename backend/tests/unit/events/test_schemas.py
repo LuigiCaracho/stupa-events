@@ -59,8 +59,7 @@ def test_patch_tracks_given_fields_and_takes_an_optional_revision() -> None:
     assert patch.model_fields_set == {"rev", "venue_text"}
     with pytest.raises(ValidationError):
         EventPatch.model_validate({"rev": 0})
-    with pytest.raises(ValidationError):
-        EventPatch.model_validate({"rev": 1, "allDay": True})
+    assert EventPatch.model_validate({"rev": 1, "allDay": True}).all_day is True
 
 
 def test_note_and_exception_reason_limits() -> None:

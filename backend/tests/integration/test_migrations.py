@@ -13,7 +13,7 @@ pytestmark = pytest.mark.integration
 
 def test_single_head_with_short_revision_ids(alembic_cfg: Config) -> None:
     script = ScriptDirectory.from_config(alembic_cfg)
-    assert script.get_heads() == ["0005_dossier_knowledge"]
+    assert script.get_heads() == ["0006_archive_feed"]
     assert all(len(rev.revision) <= 32 for rev in script.walk_revisions())
     assert script.get_base() == "0001_baseline"
 

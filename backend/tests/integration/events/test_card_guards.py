@@ -22,6 +22,7 @@ async def guard_codes(api: Api, user: str, eid: str, tid: str) -> list[str]:
 async def test_a_quarantined_attachment_blocks_on_the_card_too(api: Api) -> None:
     event = await api.approved_ready_event()
     eid = event["id"]
+    await api.confirm_location(eid)
     await api.sql(
         "INSERT INTO attachment (event_id, display_name, storage_name, mime, size_bytes, sha256, "
         "scan_status) VALUES (:e, 'x.pdf', 'x', 'application/pdf', 1, 'bb', 'pending')",

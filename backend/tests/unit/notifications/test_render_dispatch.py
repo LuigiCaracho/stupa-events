@@ -20,6 +20,9 @@ _CTX = {
     "due": "05.07.2026",
     "link": "https://x.test/dossiers/1",
     "prefs_link": "https://x.test/konto",
+    "days": 7,
+    "missing": "Rückblick, Ergebnis",
+    "howto_unverified": True,
 }
 
 
@@ -129,3 +132,11 @@ async def test_a_failed_enqueue_releases_the_claim_so_a_retry_can_send() -> None
     pool.fail = False
     await dispatch_mails(pool, [item])
     assert [j[0] for j in pool.jobs] == ["send_mail"]
+
+
+def test_followup_reminder_with_nothing_missing_asks_only_for_the_close() -> None:
+    _, text, html = render_system_mail("followup_reminder", {**_CTX, "missing": ""})
+    for body in (text, html):
+        assert "Es fehlt noch" not in body
+        assert "nur noch das Abschließen" in body
+        assert "auch wenn noch etwas fehlt" not in body

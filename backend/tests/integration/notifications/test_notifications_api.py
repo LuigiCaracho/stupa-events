@@ -86,7 +86,7 @@ async def test_dedupe_key_blocks_double_rows(api: Api) -> None:
 
 async def test_prefs_api(api: Api) -> None:
     got = (await api.request("editor", "GET", "/api/account/notification-prefs")).json()
-    assert len(got["items"]) == 7
+    assert len(got["items"]) == 9
     assert all(i["inApp"] and i["mail"] == i["mailAvailable"] for i in got["items"])
     assert [i["kind"] for i in got["items"] if i["essential"]] == ["changes_requested"]
 

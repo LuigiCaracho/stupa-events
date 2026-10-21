@@ -1,0 +1,22 @@
+# The 20 sample searches of M5 contract 6.4: input, who asks, scope and filters, and the exact
+# set of titles that must come back (`first` names a title that must rank first).
+- {n: 1, q: "Fachschaftssitzung", as: organizer-fsi, expect: ["Sitzung FSI", "STUPA-Sitzung", "Sommerfest der Fachschaft"]}
+- {n: 2, q: "movienight", as: organizer-fsi, first: "Movienight: Whiplash", expect: ["Movienight: Whiplash", "Movienight: Halloween-Special", "Movienight: Das Finale", "STUPA Movienight: Arrival (OmU)", "Nosferatu – STUPA Movienight"]}
+- {n: 3, q: "Movienight Halloween", as: organizer-fsi, expect: ["Movienight: Halloween-Special"]}
+- {n: 4, q: "Hüttencafe", as: organizer-fsi, expect: ["Hüttencafé"]}
+- {n: 5, q: "Huettencafe", as: organizer-fsi, expect: ["Hüttencafé"]}
+- {n: 6, q: "Praesidium", as: organizer-fsi, expect: ["Offenes Präsidium"]}
+- {n: 7, q: "Weissbier", as: organizer-fsi, expect: ["Weißbier-Abend"]}
+- {n: 8, q: "Kinoabnd", as: organizer-fsi, expect: ["Kinoabend"]}
+- {n: 9, q: "Parti", as: organizer-makers, expect: ["Party", "LAN Party"]}
+- {n: 10, q: "LAN Partie", as: organizer-fsi, expect: ["LAN Party", "FSI LAN-Party 2026"]}
+- {n: 11, q: "Skiausfart", as: organizer-fsi, expect: ["Skiausfahrt Davos"]}
+- {n: 12, q: "game togther", as: organizer-fsi, expect: ["Game Together"]}
+- {n: 13, q: "Popcornmaschine", as: organizer-fsi, expect: ["Filmquiz: Wer errät mehr?"]}
+- {n: 14, q: "Technikverleih", as: organizer-fsi, scope: documents, expect: ["Anfrage Technikverleih"]}
+- {n: 15, q: "Sitzung", as: organizer-fsi, params: {org: fsi}, expect: ["Sitzung FSI"]}
+- {n: 16, q: "Movienight", as: organizer-fsi, params: {year: 2025}, expect: ["STUPA Movienight: Arrival (OmU)", "Nosferatu – STUPA Movienight"]}
+- {n: 17, q: "Movienight", as: organizer-makers, params: {state: archived}, expect: ["Movienight: Das Finale", "STUPA Movienight: Arrival (OmU)", "Nosferatu – STUPA Movienight"]}
+- {n: 18, q: "100%", as: organizer-fsi, expect: []}
+- {n: 19, q: "Kontext-Notiz", as: organizer-makers, expect: []}
+- {n: 20, q: "x", as: organizer-fsi, expect: []}

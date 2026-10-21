@@ -1,0 +1,40 @@
+# Synthetic corpus of the 20 search cases (M5 contract 6.4). Titles and dates are invented;
+# only the patterns come from KARTE 2.7. `state` decides who sees a dossier: archived ones
+# are readable for everybody, the others only in their own organization.
+events:
+  - {title: "Sitzung FSI", org: fsi, state: live, start: "2026-12-01T18:00:00+01:00"}
+  - {title: "STUPA-Sitzung", org: stupa, state: archived, start: "2026-02-10T18:00:00+01:00"}
+  - {title: "Sommerfest der Fachschaft", org: fsi, state: approved, start: "2027-06-20T15:00:00+02:00"}
+  - {title: "Movienight: Whiplash", org: fsi, state: live, format: movienight, start: "2026-12-10T20:00:00+01:00"}
+  - {title: "Movienight: Halloween-Special", org: fsi, state: followup, format: movienight, start: "2026-10-31T20:00:00+01:00"}
+  - {title: "Movienight: Das Finale", org: fsi, state: archived, format: movienight, start: "2026-02-03T20:00:00+01:00"}
+  - {title: "STUPA Movienight: Arrival (OmU)", org: fsi, state: archived, format: movienight, start: "2025-06-10T20:00:00+02:00"}
+  - {title: "Nosferatu – STUPA Movienight", org: fsi, state: archived, format: movienight, start: "2024-12-31T23:30:00Z"}
+  - {title: "Hüttencafé", org: fsi, state: archived, start: "2026-01-15T14:00:00+01:00"}
+  - {title: "Offenes Präsidium", org: praesidium, state: archived, start: "2026-03-02T11:00:00+01:00"}
+  - {title: "Weißbier-Abend", org: fsi, state: archived, start: "2026-04-17T19:00:00+02:00"}
+  - title: "Kinoabend"
+    org: fsi
+    state: archived
+    start: "2026-05-05T20:00:00+02:00"
+    documents:
+      - {kind: notes, title: "Interne Notiz", visibility: team, body: "Kontext-Notiz: der Hausmeister will vorab Bescheid."}
+  - {title: "Party", org: stupa, state: archived, start: "2026-06-12T21:00:00+02:00"}
+  - {title: "LAN Party", org: stupa, state: archived, start: "2026-07-03T17:00:00+02:00"}
+  - {title: "FSI LAN-Party 2026", org: fsi, state: live, start: "2026-11-27T17:00:00+01:00"}
+  - {title: "Skiausfahrt Davos", org: stupa, state: archived, start: "2026-01-23T06:00:00+01:00"}
+  - {title: "Game Together", org: fsi, state: archived, start: "2026-02-19T19:00:00+01:00"}
+  - title: "Filmquiz: Wer errät mehr?"
+    org: fsi
+    state: archived
+    start: "2026-03-12T19:00:00+01:00"
+    documents:
+      - {kind: howto, title: "Anleitung Filmquiz", visibility: shared, body: "Die Popcornmaschine vorher im Kino anmelden."}
+  - title: "Spieleabend Technik"
+    org: tec
+    state: archived
+    start: "2026-05-28T19:00:00+02:00"
+    documents:
+      - {kind: mail_template, title: "Anfrage Technikverleih", visibility: shared, body: "Hallo, wir möchten Technik ausleihen."}
+formats:
+  - {slug: kinoabend-format, title: "Kinoabend", org: fsi, description: "Filmabende der Fachschaft."}

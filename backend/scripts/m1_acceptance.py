@@ -30,7 +30,16 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from app.db import get_sessionmaker
 from app.modules.audit.service import AuditService
 from app.settings import get_settings
-from scripts.acceptance_common import API, check, expect, login, step, to_api
+from scripts.acceptance_common import (
+    API,
+    check,
+    confirm_location,
+    expect,
+    feed_pages,
+    login,
+    step,
+    to_api,
+)
 
 
 def poster_png() -> bytes:
@@ -67,6 +76,8 @@ def create_dossier(client: httpx.Client, title: str) -> dict[str, Any]:
 
 def fire(client: httpx.Client, event_id: str, transition: str, status: int = 200) -> Any:
     """Fire `transition` on the event; return the response body."""
+    if transition == "T04":
+        confirm_location(client, event_id)
     etag = client.get(f"/api/events/{event_id}").headers.get("etag", "")
     response = client.post(
         f"/api/events/{event_id}/transitions/{transition}", json={}, headers={"If-Match": etag}
@@ -112,9 +123,10 @@ def happy_path(organizer: httpx.Client, editor: httpx.Client) -> str:
     check(bool(approved["slug"]) and approved["approvedBy"], f"T04 set slug {approved['slug']}")
     live = fire(editor, eid, "T05")
     check(live["state"] == "live", "event is live")
-    feed = httpx.get(f"{API}/api/public/feed/events", timeout=20.0)
-    check("set-cookie" not in feed.headers, "feed sets no cookie")
-    item = next((i for i in expect(feed, 200, "public feed")["items"] if i["id"] == eid), None)
+    pages = feed_pages()
+    check(all("set-cookie" not in page.headers for page in pages), "feed sets no cookie")
+    items = [i for page in pages for i in expect(page, 200, "public feed")["items"]]
+    item = next((i for i in items if i["id"] == eid), None)
     check(item is not None, "event appears in the feed")
     assert item is not None
     check(item["image"] is not None and item["image"]["alt"], f"feed image {item['image']['url']}")

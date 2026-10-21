@@ -19,7 +19,7 @@ from app.modules.dossier.deps import public_storage
 from app.modules.files.storage import StorageError
 from app.modules.publicapi import service
 from app.modules.publicapi.db import get_public_session
-from app.modules.publicapi.router import _matches
+from app.modules.publicapi.etag import matches as _matches
 from tests._support.factories import make_settings
 from tests._support.memory_storage import MemoryStorage
 
@@ -54,6 +54,24 @@ def row(**over: Any) -> SimpleNamespace:
         },
         "hero_alt": "Alt",
         "hero_credit": "Credit",
+        "updated_at": datetime(2026, 10, 18, 9, tzinfo=UTC),
+        "public_reason_code": "none",
+        "public_reason_text": None,
+        "starts_on": None,
+        "ends_on": None,
+        "public_seq": 1,
+        "category_parent_slug": None,
+        "category_parent_name": None,
+        "category_parent_kind": None,
+        "format_slug": None,
+        "format_title": None,
+        "venue_name": "Kinosaal",
+        "venue_address": None,
+        "venue_city": None,
+        "ticket_url": None,
+        "website_url": None,
+        "cost_text": None,
+        "description_md": None,
     }
     return SimpleNamespace(**{**base, **over})
 
@@ -90,7 +108,6 @@ def test_feed_never_carries_internal_fields() -> None:
         "note",
         "hero",
         "organizationSlug",
-        "updatedAt",
     ):
         assert forbidden not in dumped
 

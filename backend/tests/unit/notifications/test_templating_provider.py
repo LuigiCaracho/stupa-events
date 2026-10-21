@@ -50,7 +50,7 @@ def test_broken_or_hostile_templates_raise(
         render_mail(subject_i18n=subject, body_i18n=body, context=context)
 
 
-def test_m4_kinds() -> None:
+def test_kinds_m5() -> None:
     assert set(NOTIFICATION_KINDS) == {
         "review_requested",
         "changes_requested",
@@ -59,6 +59,8 @@ def test_m4_kinds() -> None:
         "transition_done",
         "task_assigned",
         "checklist_due",
+        "followup_reminder",
+        "auto_archived",
     }
 
 

@@ -72,6 +72,40 @@ def login(username: str) -> httpx.Client:
     return client
 
 
+def confirm_location(client: httpx.Client, event_id: str) -> None:
+    """Confirm a free venue text as the logged-in approver, as T04 requires since M5.
+
+    A caller without `event.approve` gets 403 and nothing changes, which is what the
+    scripts that test the refusal of T04 for organizers want.
+    """
+    event = client.get(f"/api/events/{event_id}").json()
+    if (
+        event.get("venueId") is None
+        and event.get("venueText")
+        and not event.get("locationConfirmedAt")
+    ):
+        client.post(
+            f"/api/events/{event_id}/actions/confirm-location", json={"precision": "building"}
+        )
+
+
+def feed_pages() -> list[httpx.Response]:
+    """Read the whole public feed page by page (the dev database outgrows one page)."""
+    pages: list[httpx.Response] = []
+    cursor = None
+    while True:
+        params = {"limit": 500, **({"cursor": cursor} if cursor else {})}
+        pages.append(httpx.get(f"{API}/api/public/feed/events", params=params, timeout=20.0))
+        cursor = pages[-1].json().get("nextCursor")
+        if not cursor:
+            return pages
+
+
+def feed_items() -> list[dict[str, Any]]:
+    """Return every item of the public feed."""
+    return [item for page in feed_pages() for item in page.json()["items"]]
+
+
 def expect(response: httpx.Response, status: int, what: str) -> Any:
     """Check the status of `response`; return its JSON body."""
     body = response.json() if response.content else {}

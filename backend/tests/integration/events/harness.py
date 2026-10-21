@@ -36,6 +36,7 @@ from app.modules.dossier.derive import derive_poster
 from app.modules.dossier.previews import build_preview
 from app.modules.dossier.promote import promote_poster
 from app.modules.files.scanner import ScanVerdict
+from app.modules.formats.seed import INSERT_FORMAT, seed_rows
 from app.modules.orgs.models import GroupMapping
 from app.modules.publicapi.db import get_public_session
 from app.shared.permissions import GroupGrant, grants_from_groups
@@ -88,9 +89,18 @@ class FakePool:
         self.keys[key] = value
         return True
 
+    async def exists(self, key: str) -> int:
+        return int(key in self.keys)
+
     async def incr(self, key: str) -> int:
         self.counters[key] = self.counters.get(key, 0) + 1
         return self.counters[key]
+
+    async def get(self, key: str) -> bytes | None:
+        return str(self.counters[key]).encode() if key in self.counters else None
+
+    async def hgetall(self, key: str) -> dict[bytes, bytes]:
+        return {}
 
     async def enqueue_job(self, name: str, *args: Any, **kwargs: Any) -> object:
         self.jobs.append((name, args, kwargs))
@@ -183,6 +193,8 @@ class Api:
         if_match_rev: int | None = None,
         **body: Any,
     ) -> Response:
+        if transition == "T04":
+            await self.confirm_location(event_id)
         headers = await self._if_match(event_id, transition, without_if_match, if_match_rev)
         return await self.request(
             user,
@@ -206,6 +218,18 @@ class Api:
         return await self.request(
             user, "POST", f"/api/events/{event_id}/actions/{name}", json=body, headers=headers
         )
+
+    async def confirm_location(self, event_id: str) -> None:
+        """Confirm a free venue text as the editor, as T04 requires since M5 (no-op otherwise)."""
+        event = await self.get("editor", event_id)
+        if event["venueId"] is None and event["venueText"] and event["locationConfirmedAt"] is None:
+            response = await self.request(
+                "editor",
+                "POST",
+                f"/api/events/{event_id}/actions/confirm-location",
+                json={"precision": "building"},
+            )
+            assert response.status_code == 200, response.text
 
     async def get(self, user: str, event_id: str) -> dict:
         response = await self.request(user, "GET", f"/api/events/{event_id}")
@@ -347,6 +371,9 @@ def clean_events(engine: Engine) -> Iterator[None]:
                     "group_mapping RESTART IDENTITY CASCADE"
                 )
             )
+            conn.execute(text("DELETE FROM venue WHERE legacy_wp_id IS NULL"))
+            for row in seed_rows():
+                conn.execute(INSERT_FORMAT, row)
 
     wipe()
     yield

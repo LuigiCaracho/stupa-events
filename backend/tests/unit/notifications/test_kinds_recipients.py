@@ -21,6 +21,8 @@ def test_mail_channels() -> None:
         "comment_added",
         "task_assigned",
         "checklist_due",
+        "followup_reminder",
+        "auto_archived",
     }
 
 

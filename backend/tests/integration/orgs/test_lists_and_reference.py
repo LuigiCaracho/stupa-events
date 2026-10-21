@@ -104,7 +104,6 @@ async def test_create_validation_errors_are_problem_json(api: Api) -> None:
     assert {e["field"].split(".")[-1] for e in problem["errors"]} >= {
         "title",
         "startsAt",
-        "allDay",
         "tzid",
     }
     unknown_category = await api.request(

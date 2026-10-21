@@ -324,10 +324,20 @@ async def test_allowed_actions_and_transitions_in_event_out(api: Api) -> None:
         "public-text",
         "revert-revision",
         "acknowledge-changes",
+        "verify-howto",
+        "confirm-location",
+        "save-as-format",
+        "clone",
     ]
     assert editor["allowedTransitions"] == ["T07"]
     organizer = await api.get("organizer-fsi", event["id"])
-    assert organizer["allowedActions"] == ["cancel", "postpone"]
+    assert organizer["allowedActions"] == [
+        "cancel",
+        "postpone",
+        "verify-howto",
+        "save-as-format",
+        "clone",
+    ]
     viewer = await api.get("viewer-fsi", event["id"])
     assert viewer["allowedActions"] == [] and viewer["allowedTransitions"] == []
 

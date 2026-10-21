@@ -35,6 +35,7 @@ from app.modules.taxonomy.seeding import ensure_reference
 from app.settings import get_settings
 from app.shared.permissions import permissions_of
 from app.shared.timeutil import utcnow
+from scripts import seed_followup
 
 SEED_DIR = Path(__file__).resolve().parents[1] / "seeds"
 SEEDS = SEED_DIR / "dev_events.yaml"
@@ -89,12 +90,20 @@ async def _ids(session: AsyncSession, model: type[Organization] | type[Category]
     return {slug: id_ for slug, id_ in await session.execute(select(model.slug, model.id))}
 
 
-async def advance(session: AsyncSession, principal: Principal, event: Event, stage: str) -> None:
+async def advance(
+    session: AsyncSession,
+    principal: Principal,
+    event: Event,
+    stage: str,
+    definition: dict[str, Any] | None = None,
+) -> None:
     """Move a new dossier to `stage` through the services, as the editors would.
 
     The follow-up stages use a clock set after the end of the event, because a dossier
-    only leaves `live` once it ended.
+    only leaves `live` once it ended. Archiving needs the follow-up (M5): retrospective,
+    outcome and a verified howto, which the definition supplies.
     """
+    definition = definition or {}
     reached = STAGE_ORDER.index(stage)
     pipeline = PipelineService(session, editor_four_eyes=False)
     if reached >= 1:
@@ -103,13 +112,17 @@ async def advance(session: AsyncSession, principal: Principal, event: Event, sta
         await grant_image_exception(session, principal, event.id, SEED_EXCEPTION)
         await pipeline.stage_fire(principal, event.id, "T02")
     if reached >= 3:
+        await seed_followup.confirm_free_venue(session, principal, event)
         await pipeline.stage_fire(principal, event.id, "T04")
     if reached >= 4:
         await pipeline.stage_fire(principal, event.id, "T05")
     if reached >= 5:
         await pipeline.stage_system_fire(event.id, "T08", event.ends_at + timedelta(hours=13))
     if reached >= 6:
+        await seed_followup.fill_followup(session, principal, event, definition)
         await pipeline.stage_fire(principal, event.id, "T09")
+        if definition.get("archivedDaysAgo"):
+            await seed_followup.move_into_the_past(session, event, definition["archivedDaysAgo"])
 
 
 async def seed_event(
@@ -149,7 +162,8 @@ async def seed_event(
             }
         ),
     )
-    await advance(session, principal, created, definition.get("stage", "idea"))
+    await seed_followup.put_format(session, principal, created, definition)
+    await advance(session, principal, created, definition.get("stage", "idea"), definition)
     return True
 
 
@@ -164,6 +178,7 @@ async def main() -> int:
         }
         principal = seed_editor()
         results = [await seed_event(session, principal, d, ids) for d in load_definitions()]
+        await seed_followup.master_howto(session, principal, "movienight")
         await session.commit()
     return sum(results)
 

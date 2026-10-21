@@ -84,11 +84,9 @@ async def test_states_from_in_review_on_are_field_locked(api: Api) -> None:
     )
     assert locked.status_code == 409 and locked.json()["code"] == "field_locked"
     await api.fire("editor", ready["id"], "T04")
+    rev = (await api.get("editor", ready["id"]))["rev"]
     again = await api.request(
-        "editor",
-        "PATCH",
-        f"/api/events/{ready['id']}",
-        json={"rev": ready["rev"] + 1, "summary": "x"},
+        "editor", "PATCH", f"/api/events/{ready['id']}", json={"rev": rev, "summary": "x"}
     )
     assert again.json()["code"] == "field_locked"
 
@@ -143,6 +141,8 @@ async def test_past_events_cannot_be_submitted_but_running_ones_can(api: Api) ->
 
 async def test_concurrent_approvals_exactly_one_wins(api: Api) -> None:
     ready = await api.approved_ready_event()
+    await api.confirm_location(ready["id"])
+    ready = await api.get("editor", ready["id"])
     results = await asyncio.gather(
         *(api.fire("editor", ready["id"], "T04", if_match_rev=ready["rev"]) for _ in range(4))
     )

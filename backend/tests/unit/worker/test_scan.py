@@ -54,6 +54,11 @@ class _Scanner:
 class _Pool:
     def __init__(self) -> None:
         self.jobs: list[tuple[Any, ...]] = []
+        self.bumps = 0
+
+    async def incr(self, key: str) -> int:
+        self.bumps += 1
+        return self.bumps
 
     async def enqueue_job(self, *args: Any, **kwargs: Any) -> None:
         self.jobs.append((*args, kwargs))
@@ -103,6 +108,7 @@ async def test_clean_poster_is_stored_audited_and_handed_to_derive(audit: list[A
     assert ctx["files_sessionmaker"].committed
     assert audit[0]["action"] == "attachment_scan"
     assert pool.jobs[0][:2] == ("derive_poster", str(row.id))
+    assert pool.bumps == 0
 
 
 async def test_other_kinds_are_not_derived(audit: list[Any]) -> None:
@@ -125,7 +131,17 @@ async def test_finding_removes_the_object_and_quarantines(audit: list[Any]) -> N
     assert row.storage_key is None
     assert "k" not in ctx["object_storage"].blobs
     assert audit[0]["action"] == "attachment_quarantine"
-    assert ctx["redis"].jobs == []
+    assert [job[0] for job in ctx["redis"].jobs] == ["rebuild_public_cache"]
+
+
+@pytest.mark.parametrize("kind,bumps", [("poster", 1), ("quote", 0)])
+async def test_a_poster_verdict_bumps_the_feed_version(
+    audit: list[Any], kind: str, bumps: int
+) -> None:
+    row, pool = _attachment(kind), _Pool()
+    ctx = _ctx(row, ScanVerdict(clean=False, signature="Eicar-Test"), redis=pool)
+    assert await scan.scan_attachment(ctx, str(row.id)) == "infected"
+    assert pool.bumps == bumps
 
 
 async def test_missing_row_and_missing_backends() -> None:

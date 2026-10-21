@@ -15,7 +15,7 @@ from app.shared.permissions import permissions_of
 from tests.integration.events.harness import Api
 from tests.unit.test_route_authz_inventory import (
     PUBLIC_ALLOWLIST,
-    PUBLIC_PREFIX,
+    PUBLIC_PREFIXES,
     ROUTE_PERMS,
     _calls,
     _routes,
@@ -63,7 +63,7 @@ def _protected() -> list[tuple[str, str, str, frozenset[str]]]:
     return [
         (method, path, _gate_kind(route), ROUTE_PERMS[(method, path)])
         for method, path, route in _routes()
-        if (method, path) not in PUBLIC_ALLOWLIST and not path.startswith(PUBLIC_PREFIX)
+        if (method, path) not in PUBLIC_ALLOWLIST and not path.startswith(PUBLIC_PREFIXES)
     ]
 
 
