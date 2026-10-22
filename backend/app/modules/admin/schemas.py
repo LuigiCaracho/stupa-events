@@ -54,6 +54,7 @@ Text = Annotated[
     AfterValidator(_clean),
 ]
 OptText = Annotated[str | None, Field(max_length=200), AfterValidator(_clean_optional)]
+Description = Annotated[str | None, Field(max_length=300), AfterValidator(_clean_optional)]
 Notes = Annotated[str | None, Field(max_length=2000), AfterValidator(_clean_optional)]
 Handles = Annotated[list[str], Field(max_length=10), AfterValidator(_instagram)]
 Latitude = Annotated[Decimal, Field(ge=-90, le=90, max_digits=9, decimal_places=6)]
@@ -119,6 +120,7 @@ class AdminCategory(CamelModel):
     legacy_wp_id: int | None
     sort: int
     active: bool
+    description: str | None
     created_at: datetime
     updated_at: datetime
 
@@ -135,6 +137,7 @@ class CategoryCreate(CamelModel):
     required_profile: RequiredProfile = "generic"
     sort: int = Field(default=0, ge=0, le=10000)
     active: bool = True
+    description: Description = None
 
 
 class CategoryPatch(CamelModel):
@@ -148,6 +151,7 @@ class CategoryPatch(CamelModel):
     required_profile: RequiredProfile | None = None
     sort: int | None = Field(default=None, ge=0, le=10000)
     active: bool | None = None
+    description: Description = None
 
 
 class AdminVenue(CamelModel):

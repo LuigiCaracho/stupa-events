@@ -78,11 +78,12 @@ reportAttributeAccessIssue = false
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
-addopts = "-m 'not integration and not e2e and not live'"
+addopts = "-m 'not integration and not e2e and not live and not perf'"
 markers = [
     "integration: needs testcontainers (Postgres/Redis), Docker required",
     "e2e: end-to-end against an ephemeral compose stack",
     "live: talks to a real external system, never part of CI",
+    "perf: 5000-event latency check against a throwaway Postgres, run on demand (-m perf)",
 ]
 
 [tool.coverage.run]

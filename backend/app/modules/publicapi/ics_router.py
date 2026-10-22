@@ -14,17 +14,23 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.publicapi import cache, serving
+from app.modules.publicapi import cache, ratelimit, respcache, serving
 from app.modules.publicapi.db import get_public_session
 from app.modules.publicapi.etag import matches
+from app.modules.publicapi.ics.rows import ics_row
+from app.modules.publicapi.ics.writer import build_calendar
+from app.modules.publicapi.query.pages import event_row
 from app.settings import Settings, get_settings
+from app.shared.antiabuse import client_ip, get_rate_limiter
 from app.shared.errors import NotFoundError, ProblemDetail
+from app.shared.ratelimit import RateLimiter
 
 router = APIRouter(prefix="/ics", tags=["ics"])
 
 ICS_CACHE_CONTROL = "public, max-age=3600"
 DISPOSITION = 'inline; filename="stupa-events.ics"'
 SLUG = re.compile(r"^[a-z0-9][a-z0-9-]{0,59}$")
+EVENT_SLUG = re.compile(r"^[a-z0-9][a-z0-9-]{0,79}$")
 PublicSession = Annotated[AsyncSession, Depends(get_public_session)]
 _PROBLEM: dict[str, Any] = {"model": ProblemDetail}
 _CALENDAR: dict[int | str, dict[str, Any]] = {
@@ -79,3 +85,46 @@ async def category_events(
     if not SLUG.match(slug):
         raise NotFoundError("calendar not found")
     return await _respond(request, session, settings, cache.ics_name(slug), slug)
+
+
+@router.api_route(
+    "/e/{slug}.ics",
+    methods=["GET", "HEAD"],
+    response_class=Response,
+    responses={**_CALENDAR, 429: _PROBLEM},
+)
+async def one_event(
+    request: Request,
+    session: PublicSession,
+    settings: Annotated[Settings, Depends(get_settings)],
+    limiter: Annotated[RateLimiter, Depends(get_rate_limiter)],
+    slug: str,
+) -> Response:
+    """Return the calendar file of one event (past ones too), as a download."""
+    if not EVENT_SLUG.match(slug):
+        raise NotFoundError("calendar not found")
+
+    async def build() -> respcache.Built:
+        row = await event_row(session, slug)
+        if row is None:
+            raise NotFoundError("calendar not found")
+        body = build_calendar(
+            [ics_row(row)],
+            base_url=settings.public_base_url,
+            uid_domain=settings.ics_uid_domain,
+            name=row.title,
+        )
+        return respcache.Built(body, serving.ICS_TYPE)
+
+    async def count() -> None:
+        await ratelimit.public_limit(limiter, settings, client_ip(request))
+
+    return await respcache.serve(
+        request,
+        key=respcache.cache_key(f"/ics/e/{slug}", {}),
+        ttl=300,
+        cache_control=respcache.LONG,
+        build=build,
+        on_miss=count,
+        headers={"Content-Disposition": f'attachment; filename="{slug}.ics"'},
+    )

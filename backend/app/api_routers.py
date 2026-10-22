@@ -29,6 +29,7 @@ from app.modules.library.router import router as library_router
 from app.modules.notifications.router import router as notifications_router
 from app.modules.orgs.router import router as orgs_router
 from app.modules.publicapi.router import router as public_router
+from app.modules.publicapi.site_router import router as public_site_router
 from app.modules.search.router import router as search_router
 from app.modules.taxonomy.router import router as taxonomy_router
 
@@ -55,4 +56,5 @@ ROUTERS: tuple[APIRouter, ...] = (
     account_router,
     *DOSSIER_ROUTERS,
     public_router,
+    public_site_router,
 )

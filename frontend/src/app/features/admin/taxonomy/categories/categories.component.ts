@@ -37,6 +37,7 @@ interface CategoryValue {
   parentId: string;
   short: string;
   colorToken: ColorToken | '';
+  description: string;
   requiredProfile: RequiredProfile;
   active: boolean;
 }
@@ -70,6 +71,7 @@ export class CategoriesComponent extends TaxonomyTable<AdminCategory, CategoryVa
     parentId: '',
     short: '',
     colorToken: '' as ColorToken | '',
+    description: '',
     requiredProfile: 'generic' as RequiredProfile,
     active: true,
   });
@@ -81,6 +83,7 @@ export class CategoriesComponent extends TaxonomyTable<AdminCategory, CategoryVa
     { key: 'parentId', label: this.i18n.translate('admin.col.parent'), width: '14rem' },
     { key: 'short', label: this.i18n.translate('admin.col.short'), width: '8rem' },
     { key: 'colorToken', label: this.i18n.translate('admin.col.color'), width: '10rem' },
+    { key: 'description', label: this.i18n.translate('admin.col.description'), width: '18rem' },
     { key: 'requiredProfile', label: this.i18n.translate('admin.col.profile'), width: '10rem' },
     { key: 'active', label: this.i18n.translate('admin.col.active'), width: '7rem' },
     {
@@ -131,6 +134,7 @@ export class CategoriesComponent extends TaxonomyTable<AdminCategory, CategoryVa
       parentId: row.parentId ?? '',
       short: row.short ?? '',
       colorToken: row.colorToken ?? '',
+      description: row.description ?? '',
       requiredProfile: row.requiredProfile,
       active: row.active,
     };
@@ -143,6 +147,7 @@ export class CategoriesComponent extends TaxonomyTable<AdminCategory, CategoryVa
       parentId: v.parentId || null,
       short: v.short.trim() || null,
       colorToken: v.colorToken || null,
+      description: v.description.trim() || null,
       requiredProfile: v.requiredProfile,
       active: v.active,
     };
@@ -159,6 +164,7 @@ const BLANK: CategoryValue = {
   parentId: '',
   short: '',
   colorToken: '',
+  description: '',
   requiredProfile: 'generic',
   active: true,
 };
@@ -171,6 +177,7 @@ const DRAFT: AdminCategory = {
   parentId: null,
   short: null,
   colorToken: null,
+  description: null,
   requiredProfile: 'generic',
   legacyWpId: null,
   sort: 0,

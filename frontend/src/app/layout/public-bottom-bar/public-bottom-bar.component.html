@@ -1,0 +1,14 @@
+<nav class="bb" [attr.aria-label]="'nav.main' | t">
+  @for (item of items; track item.key) {
+    <a
+      class="bb__item"
+      [routerLink]="item.path"
+      routerLinkActive="is-active"
+      [routerLinkActiveOptions]="{ exact: item.exact }"
+      ariaCurrentWhenActive="page"
+    >
+      <span class="bb__ind"><app-icon [name]="item.icon" [size]="22" /></span>
+      <span class="bb__label">{{ item.labelKey | t }}</span>
+    </a>
+  }
+</nav>

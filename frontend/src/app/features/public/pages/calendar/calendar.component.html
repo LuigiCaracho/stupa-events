@@ -1,0 +1,61 @@
+<div class="cal__head">
+  <h1 class="cal__title">{{ 'public.calendar.title' | t }}</h1>
+  <div class="cal__nav" role="group" [attr.aria-label]="'calendar.mode' | t">
+    <app-button
+      variant="tonal"
+      [iconOnly]="true"
+      [ariaLabel]="'calendar.prev' | t"
+      [disabled]="!canPrev()"
+      (click)="step(-1)"
+    >
+      <span aria-hidden="true">‹</span>
+    </app-button>
+    <h2 class="cal__month" aria-live="polite">{{ title() }}</h2>
+    <app-button
+      variant="tonal"
+      [iconOnly]="true"
+      [ariaLabel]="'calendar.next' | t"
+      [disabled]="!canNext()"
+      (click)="step(1)"
+    >
+      <span aria-hidden="true">›</span>
+    </app-button>
+    <app-button variant="outlined" [disabled]="isThisMonth()" (click)="today()">{{
+      'calendar.goToday' | t
+    }}</app-button>
+  </div>
+</div>
+
+<div class="cal__tools">
+  <app-filter-select
+    size="md"
+    [label]="'public.filter.category' | t"
+    [options]="options()"
+    [value]="shownCategory()"
+    [active]="shownCategory() !== ''"
+    (valueChange)="setCategory($event)"
+  />
+  <a appLinkButton="outlined" routerLink="/abos" [fragment]="subscribeFragment()">{{
+    'public.calendar.subscribe' | t
+  }}</a>
+</div>
+
+@if (truncated()) {
+  <app-note kind="warn">{{ 'calendar.truncated' | t }}</app-note>
+}
+
+@if (error(); as kind) {
+  <app-load-error [kind]="kind" (retry)="reload()" />
+} @else if (!loaded()) {
+  <app-skeleton variant="panel" [label]="'common.loading' | t" />
+} @else if (empty()) {
+  <app-empty-state plain icon="cal" [heading]="'public.calendar.empty' | t" />
+} @else {
+  <app-calendar-grid
+    mode="month"
+    [entries]="entries()"
+    [anchor]="anchor()"
+    (anchorChange)="openDay($event)"
+    (entryOpen)="open($event)"
+  />
+}

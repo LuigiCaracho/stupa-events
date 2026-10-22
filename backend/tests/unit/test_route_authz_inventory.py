@@ -18,6 +18,8 @@ from app.api_routers import ROUTERS
 from app.deps import require_principal
 from app.main import api_router
 from app.modules.publicapi.ics_router import router as ics_router
+from app.modules.publicapi.shell.router import router as shell_router
+from app.shared.errors import is_cookie_free_path
 
 Route = tuple[str, str, APIRoute]
 
@@ -29,7 +31,6 @@ PUBLIC_ALLOWLIST: frozenset[tuple[str, str]] = frozenset(
         ("POST", "/api/auth/logout"),
     }
 )
-PUBLIC_PREFIXES = ("/api/public/", "/ics/")
 FORBIDDEN_PUBLIC_DEPENDENCIES = frozenset({"get_session", "get_current_principal"})
 SESSION_ONLY_ALLOWLIST: frozenset[tuple[str, str]] = frozenset(
     {("GET", "/api/auth/me"), ("POST", "/api/auth/sessions/revoke")}
@@ -193,6 +194,7 @@ def _routes() -> list[Route]:
         list(flatten(api_router))
         + [r for router in ROUTERS for r in flatten(router, "/api")]
         + list(flatten(ics_router))
+        + list(flatten(shell_router))
     )
     return list({(method, path): (method, path, route) for method, path, route in found}.values())
 
@@ -201,7 +203,7 @@ def open_routes(routes: Iterable[Route]) -> list[str]:
     """Name the non-public routes without a gate, or with a permission-less gate off the list."""
     problems = []
     for method, path, route in routes:
-        if (method, path) in PUBLIC_ALLOWLIST or path.startswith(PUBLIC_PREFIXES):
+        if (method, path) in PUBLIC_ALLOWLIST or is_cookie_free_path(path):
             continue
         if not _gated(route.dependant):
             problems.append(f"{method} {path}: no gate")
@@ -223,7 +225,7 @@ def test_every_route_has_an_expected_permission_set() -> None:
     gates = {
         (m, p): _gate_perms(r.dependant)
         for m, p, r in _routes()
-        if (m, p) not in PUBLIC_ALLOWLIST and not p.startswith(PUBLIC_PREFIXES)
+        if (m, p) not in PUBLIC_ALLOWLIST and not is_cookie_free_path(p)
     }
     assert set(gates) == set(ROUTE_PERMS), {
         "unlisted": sorted(set(gates) - set(ROUTE_PERMS)),
@@ -237,7 +239,7 @@ def test_public_routes_use_only_the_public_session() -> None:
     offenders = [
         f"{method} {path}"
         for method, path, route in _routes()
-        if path.startswith(PUBLIC_PREFIXES)
+        if is_cookie_free_path(path)
         and any(
             getattr(call, "__name__", "") in FORBIDDEN_PUBLIC_DEPENDENCIES
             for call in _calls(route.dependant)

@@ -49,6 +49,7 @@ export interface AdminCategory {
   parentId: string | null;
   short: string | null;
   colorToken: ColorToken | null;
+  description: string | null;
   requiredProfile: RequiredProfile;
   legacyWpId: number | null;
   sort: number;
@@ -60,7 +61,7 @@ export interface AdminCategory {
 export type CategoryWrite = Partial<
   Pick<
     AdminCategory,
-    'name' | 'kind' | 'parentId' | 'short' | 'colorToken' | 'requiredProfile' | 'sort' | 'active'
+    'name' | 'kind' | 'parentId' | 'short' | 'colorToken' | 'description' | 'requiredProfile' | 'sort' | 'active'
   >
 > & { slug?: string };
 

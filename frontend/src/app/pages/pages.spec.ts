@@ -1,4 +1,4 @@
-/** Specs for the shell pages: login, account, home, error pages, placeholder. */
+/** Specs for the shell pages: login, account, error pages, placeholder. */
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
@@ -10,7 +10,6 @@ import { FSI_MEMBERSHIP } from '../../testing/event-fixtures';
 import { createLocationMock, provideLocationMock } from '../../testing/location-mock';
 import { AccountComponent } from './account/account.component';
 import { ForbiddenComponent } from './forbidden.component';
-import { HomeComponent } from './home/home.component';
 import { LoginComponent } from './login/login.component';
 import { NotFoundComponent } from './not-found.component';
 import { PlaceholderComponent } from './placeholder/placeholder.component';
@@ -43,15 +42,6 @@ describe('LoginComponent', () => {
   it('has no axe violations', async () => {
     const { container } = await render(LoginComponent, { providers: providers() });
     expect(await runAxe(container)).toHaveNoViolations();
-  });
-});
-
-describe('HomeComponent', () => {
-  it('offers the login', async () => {
-    const location = createLocationMock();
-    await render(HomeComponent, { providers: providers(location) });
-    await userEvent.click(screen.getByRole('button', { name: 'Mit Hochschul-Login anmelden' }));
-    expect(location.assign).toHaveBeenCalled();
   });
 });
 

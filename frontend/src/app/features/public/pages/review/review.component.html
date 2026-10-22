@@ -1,0 +1,58 @@
+<header class="rv__head">
+  <h1 class="rv__title">{{ 'public.review.title' | t }}</h1>
+  <p class="rv__lede">{{ 'public.review.lede' | t }}</p>
+</header>
+
+@if (years().length > 0) {
+  <ul class="rv__years" [attr.aria-label]="'public.review.years' | t">
+    @for (y of years(); track y) {
+      <li>
+        <a
+          class="chip"
+          routerLink="/rueckblick"
+          [queryParams]="{ year: y }"
+          [attr.aria-current]="y === shownYear() ? 'true' : null"
+          >{{ y }}</a
+        >
+      </li>
+    }
+  </ul>
+}
+
+@if (list.error(); as kind) {
+  <app-load-error [kind]="kind" (retry)="list.reload()" />
+} @else if (list.loading() && list.items().length === 0) {
+  <app-skeleton variant="panel" [label]="'common.loading' | t" />
+} @else if (empty()) {
+  <app-empty-state plain icon="image" [heading]="'public.review.empty' | t" />
+} @else {
+  @for (g of groups(); track g.group.key) {
+    <section class="rv__group" [attr.aria-label]="g.label">
+      <h2 class="rv__h2">{{ g.label }}</h2>
+      <ul class="rv__grid">
+        @for (item of g.items; track item.card.slug) {
+          <li class="rv__card">
+            <a class="rv__link" [routerLink]="item.card.path">
+              <app-event-poster [image]="item.card.image" [alt]="item.card.image?.alt ?? ''" />
+              <span class="rv__name">{{ item.card.title }}</span>
+              <span class="rv__date">{{ item.date }}</span>
+              @if (item.status; as s) {
+                <app-status-text [kind]="s.kind">{{ s.key | t }}</app-status-text>
+              }
+            </a>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+  @if (list.moreError(); as kind) {
+    <app-load-error [kind]="kind" (retry)="list.loadMore()" />
+  }
+  @if (list.hasMore()) {
+    <div class="rv__more">
+      <app-button variant="tonal" [loading]="list.loadingMore()" (click)="list.loadMore()">{{
+        'public.search.more' | t
+      }}</app-button>
+    </div>
+  }
+}

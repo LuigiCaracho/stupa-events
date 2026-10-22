@@ -1,0 +1,65 @@
+@if (notFound()) {
+  <app-empty-state plain level="1" icon="tag" [heading]="'public.category.notFound' | t">
+    <a appLinkButton="tonal" routerLink="/suche">{{ 'public.event.toSearch' | t }}</a>
+  </app-empty-state>
+} @else if (error(); as kind) {
+  <app-load-error [kind]="kind" (retry)="reload()" />
+} @else if (category(); as c) {
+  <header class="cat__head">
+    <h1 class="cat__title">{{ c.name }}</h1>
+    @if (c.description) {
+      <p class="cat__desc">{{ c.description }}</p>
+    }
+    <div>
+      <a appLinkButton="tonal" routerLink="/abos" [fragment]="'k=' + c.slug">{{
+        'public.category.subscribe' | t
+      }}</a>
+    </div>
+  </header>
+
+  <section class="cat__section" aria-labelledby="cat-upcoming">
+    <h2 id="cat-upcoming" class="cat__h2">{{ 'public.category.upcoming' | t }}</h2>
+    @if (upcoming.error(); as kind) {
+      <app-load-error [kind]="kind" (retry)="upcoming.reload()" />
+    } @else if (upcoming.loading() && upcoming.items().length === 0) {
+      <app-skeleton
+        variant="items"
+        [lead]="true"
+        [grouped]="true"
+        [count]="3"
+        [label]="'common.loading' | t"
+      />
+    } @else if (upcoming.items().length === 0) {
+      <app-empty-state plain icon="cal" [heading]="'public.category.empty' | t: { name: c.name }" />
+    } @else {
+      <div class="rowgroup">
+        @for (card of upcoming.items(); track card.slug) {
+          <app-public-event-row [card]="card" thumb />
+        }
+      </div>
+      @if (upcoming.hasMore()) {
+        <div class="cat__more">
+          <app-button
+            variant="tonal"
+            [loading]="upcoming.loadingMore()"
+            (click)="upcoming.loadMore()"
+            >{{ 'public.search.more' | t }}</app-button
+          >
+        </div>
+      }
+    }
+  </section>
+
+  @if (reviewItems().length > 0) {
+    <section class="cat__section" aria-labelledby="cat-review">
+      <h2 id="cat-review" class="cat__h2">{{ 'public.category.review' | t }}</h2>
+      <div class="rowgroup">
+        @for (card of reviewItems(); track card.slug) {
+          <app-public-event-row [card]="card" muted />
+        }
+      </div>
+    </section>
+  }
+} @else {
+  <app-skeleton variant="lines" [count]="3" [label]="'common.loading' | t" />
+}

@@ -8,7 +8,7 @@ const cat = (id: string, parentId: string | null = null): AdminCategory => ({
   kind: 'fachschaft',
   parentId,
   short: null,
-  colorToken: null,
+  colorToken: null, description: null,
   requiredProfile: 'generic',
   legacyWpId: null,
   sort: 0,

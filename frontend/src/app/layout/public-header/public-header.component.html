@@ -1,11 +1,28 @@
-<!-- Copied from STUPA-Workflow@93c33d6 frontend/src/app/layout/public-header/public-header.component.html -->
 <header class="pub">
   <a class="pub__brand" routerLink="/" [attr.aria-label]="'app.title' | t">
-    <img class="pub__logo" [src]="logoSrc()" alt="" />
-    <img class="pub__mark" [src]="markSrc" alt="" />
+    <img class="pub__mark" [src]="markSrc" alt="" width="32" height="32" />
+    <span class="pub__title" aria-hidden="true">{{ 'app.title' | t }}</span>
   </a>
+  <nav class="pub__nav" [attr.aria-label]="'nav.main' | t">
+    @for (item of items; track item.key) {
+      <a
+        class="pub__link"
+        [routerLink]="item.path"
+        routerLinkActive="is-active"
+        [routerLinkActiveOptions]="{ exact: item.exact }"
+        ariaCurrentWhenActive="page"
+        >{{ item.labelKey | t }}</a
+      >
+    }
+  </nav>
   <span class="pub__spacer"></span>
-
+  <app-search-pill
+    class="pub__search"
+    mode="button"
+    size="md"
+    [placeholder]="'public.search.placeholder' | t"
+    (activate)="openSearch()"
+  />
   <button
     type="button"
     class="pub__icon"
@@ -16,8 +33,9 @@
   >
     <app-icon [name]="theme.resolved() === 'dark' ? 'sun' : 'moon'" [size]="19" />
   </button>
-
-  @if (!auth.isAuthenticated()) {
+  @if (auth.isAuthenticated()) {
+    <a class="pub__login" routerLink="/dossiers">{{ 'public.nav.toDossier' | t }}</a>
+  } @else {
     <button type="button" class="pub__login" (click)="login()">{{ 'action.login' | t }}</button>
   }
 </header>

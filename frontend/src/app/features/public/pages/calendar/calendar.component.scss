@@ -1,0 +1,67 @@
+@use 'breakpoints' as bp;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: var(--space-4);
+  box-sizing: border-box;
+}
+@include bp.not-phone {
+  :host {
+    padding-inline: var(--space-5);
+  }
+}
+@include bp.phone {
+  :host {
+    --control-height: 2.75rem;
+  }
+  :host ::ng-deep .ce {
+    min-height: 2.75rem;
+  }
+}
+
+.cal__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-5);
+}
+.cal__title {
+  margin: 0;
+  font-size: var(--fs-d2);
+  line-height: var(--lh-d2);
+  font-weight: var(--fw-semibold);
+}
+.cal__nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.cal__month {
+  min-width: 9rem;
+  margin: 0;
+  text-align: center;
+  font-size: var(--fs-h2);
+  line-height: var(--lh-h2);
+  font-weight: var(--fw-semibold);
+}
+@include bp.phone {
+  .cal__month {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .cal__nav {
+    width: 100%;
+  }
+}
+.cal__tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}

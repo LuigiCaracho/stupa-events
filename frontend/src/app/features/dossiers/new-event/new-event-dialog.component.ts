@@ -30,7 +30,7 @@ import {
 } from '@stupa-makers/ui-kit';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { zonedToIso } from '../api/event-time';
+import { zonedToIso } from '@shared/event-time';
 import type { CategoryRef, EventCreate, EventDto, OrgRef } from '../api/event.models';
 import { EventsApi } from '../api/events-api.service';
 import { categoryOptions as treeOptions } from '../api/category-options';

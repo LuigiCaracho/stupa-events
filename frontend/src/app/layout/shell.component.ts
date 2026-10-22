@@ -1,5 +1,12 @@
 /** Copied from STUPA-Workflow@93c33d6 frontend/src/app/layout/shell.component.ts */
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
@@ -15,6 +22,7 @@ import { NavRailComponent } from './nav-rail/nav-rail.component';
 import { CommandPaletteComponent } from './palette/command-palette.component';
 import { PageFrameService } from './page-frame.service';
 import { PaletteService } from './palette/palette.service';
+import { PublicBottomBarComponent } from './public-bottom-bar/public-bottom-bar.component';
 import { PublicHeaderComponent } from './public-header/public-header.component';
 import { SiteFooterComponent } from './site-footer/site-footer.component';
 
@@ -24,7 +32,8 @@ import { SiteFooterComponent } from './site-footer/site-footer.component';
  * - `rail`: a signed-in principal. The navigation rail at the start edge, or the bottom
  *   bar on a phone. The branded footer shows only on a route with `footer: true` (the
  *   start page and the public pages).
- * - `public`: nobody signed in. The public top bar and the branded footer, always.
+ * - `public`: nobody signed in, or a route with `frame: 'public'` (the public site; also for a signed-in person who
+ *   opens an event link from a mail). The public top bar, the phone bottom bar and the branded footer, always.
  * - `bare`: route data `chrome: false` (login). Only the page.
  * - `pending`: the session is not known yet. Only the page, so no frame flashes up
  *   and changes a moment later.
@@ -54,6 +63,7 @@ export type ShellFrame = 'rail' | 'public' | 'bare' | 'pending';
     NavRailComponent,
     BottomBarComponent,
     PublicHeaderComponent,
+    PublicBottomBarComponent,
     SiteFooterComponent,
   ],
   host: { '(document:keydown)': 'onKey($event)' },
@@ -88,6 +98,8 @@ export class ShellComponent {
 
   /** Full-width content from route data `wide`, for example the budget tab with two sidebars. */
   readonly wide = signal(false);
+  /** Route data `frame: 'public'` forces the public frame, with or without a session. */
+  private readonly publicRoute = signal(false);
   /** Route data `chrome: false` turns the frame off (the login page). */
   private readonly chrome = signal(true);
   /** The first answer of `/auth/me` arrived (a principal or none). */
@@ -95,6 +107,7 @@ export class ShellComponent {
 
   readonly frame = computed<ShellFrame>(() => {
     if (!this.chrome()) return 'bare';
+    if (this.publicRoute()) return 'public';
     if (!this.sessionKnown()) return 'pending';
     return this.auth.isAuthenticated() ? 'rail' : 'public';
   });
@@ -125,7 +138,9 @@ export class ShellComponent {
         let wide = false;
         let footer = false;
         let chrome = true;
+        let isPublic = false;
         while (r) {
+          isPublic = r.snapshot.data['frame'] === 'public' || isPublic;
           wide = r.snapshot.data['wide'] === true || wide;
           footer = r.snapshot.data['footer'] === true || footer;
           if (r.snapshot.data['chrome'] === false) chrome = false;
@@ -134,6 +149,7 @@ export class ShellComponent {
         this.wide.set(wide);
         this.footerRoute.set(footer);
         this.chrome.set(chrome);
+        this.publicRoute.set(isPublic);
       });
   }
 }

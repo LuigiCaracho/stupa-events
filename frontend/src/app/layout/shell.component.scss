@@ -83,16 +83,23 @@
    `--app-bottom-inset` tells fixed and sticky elements of a page (the meeting dock, a
    selection bar) how far up the bar reaches; the bar already keeps the gesture area free,
    so `--app-bottom-safe-area` is 0 for them. */
-.frame--phone {
+.frame--phone,
+.frame--pbar {
   --app-bottom-inset: calc(var(--bottom-bar-height) + env(safe-area-inset-bottom));
   --app-bottom-safe-area: 0px;
 }
-.frame--phone .frame__body {
+.frame--phone .frame__body,
+.frame--pbar .frame__body {
   padding-bottom: var(--app-bottom-inset);
 }
 .frame--phone .main {
   --main-pad-top: var(--space-4);
   --main-pad-bottom: var(--space-6);
+}
+.frame--pbar .main {
+  --main-pad-top: var(--space-4);
+  --main-pad-bottom: var(--space-6);
+  overscroll-behavior-y: contain;
 }
 
 /* The public frame: the bar is above, so the content starts closer to it. */
@@ -113,7 +120,8 @@
 }
 
 /* Toasts sit above the phone bar instead of on it. */
-.frame--phone ~ app-toast ::ng-deep .toasts {
+.frame--phone ~ app-toast ::ng-deep .toasts,
+.frame--pbar ~ app-toast ::ng-deep .toasts {
   inset-block-end: calc(var(--bottom-bar-height) + env(safe-area-inset-bottom) + var(--space-3));
 }
 

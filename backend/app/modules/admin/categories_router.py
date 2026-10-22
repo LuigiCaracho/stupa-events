@@ -30,7 +30,7 @@ _ERRORS: dict[int | str, dict[str, Any]] = {
     422: _PROBLEM,
 }
 Manager = Annotated[Principal, Depends(require_principal("taxonomy.manage"))]
-_NULLABLE = frozenset({"parent_id", "short", "color_token"})
+_NULLABLE = frozenset({"parent_id", "short", "color_token", "description"})
 
 
 async def _check_parent(db: AsyncSession, category_id: UUID | None, parent_id: UUID | None) -> None:

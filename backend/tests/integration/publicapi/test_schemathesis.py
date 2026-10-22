@@ -28,8 +28,10 @@ from schemathesis.specs.openapi.checks import (
     status_code_conformance,
 )
 
+from app.shared.errors import is_cookie_free_path
 from tests.integration.archive.fixture import archived_movienight
 from tests.integration.events.harness import Api
+from tests.integration.publicapi import site_data
 
 pytestmark = pytest.mark.integration
 SCHEMA_FILE = Path(__file__).resolve().parents[2] / "schema" / "feed-v2.json"
@@ -42,6 +44,18 @@ CHECKS = [
     response_headers_conformance,
 ]
 EXAMPLES = 200
+CONTRACT = {
+    name: jsonschema_rs.validator_for(schema)
+    for name, schema in json.loads((SCHEMA_FILE.parent / "public-site-v1.json").read_text()).items()
+}
+CONTRACT_OF = {
+    "/api/public/events": "search",
+    "/api/public/events/{slug}": "detail",
+    "/api/public/today": "today",
+    "/api/public/categories": "categories",
+    "/api/public/calendar": "calendar",
+    "/api/public/archive": "archive",
+}
 
 
 def draw(operation: Any, mode: GenerationMode) -> list[Any]:
@@ -65,18 +79,34 @@ def draw(operation: Any, mode: GenerationMode) -> list[Any]:
 def public_operations(api: Api) -> list[Any]:
     schema = schemathesis.openapi.from_dict(api.app.openapi())
     found = [result.ok() for result in schema.get_all_operations()]
-    return [op for op in found if op.path.startswith(("/api/public/", "/ics/"))]
+    return [op for op in found if is_cookie_free_path(op.path.replace("{slug}", "x"))]
 
 
 async def test_schemathesis(api: Api) -> None:
+    site_data.configure(api)
     await archived_movienight(api)
     await api.to_state("published", title="Zweiter Termin")
     operations = public_operations(api)
     assert {op.path for op in operations} == {
         "/api/public/feed/events",
         "/api/public/media/{name}",
+        "/api/public/events",
+        "/api/public/events/{slug}",
+        "/api/public/today",
+        "/api/public/categories",
+        "/api/public/calendar",
+        "/api/public/archive",
         "/ics/all.ics",
         "/ics/k/{slug}.ics",
+        "/ics/e/{slug}.ics",
+        "/",
+        "/suche",
+        "/kalender",
+        "/rueckblick",
+        "/e/{slug}",
+        "/k/{slug}",
+        "/sitemap.xml",
+        "/robots.txt",
     }
     sent = 0
     for operation in operations:
@@ -98,6 +128,10 @@ async def test_schemathesis(api: Api) -> None:
                     and response.request.method == "GET"
                 ):
                     FEED_SCHEMA.validate(response.json())
+                if response.status_code == 200 and response.request.method == "GET":
+                    contract = CONTRACT_OF.get(operation.path)
+                    if contract:
+                        CONTRACT[contract].validate(response.json())
                 sent += 1
     assert sent >= 4 * EXAMPLES
 

@@ -18,6 +18,7 @@ const ROUTES: Routes = [
   { path: 'dossiers', component: StubPage, data: { footer: true } },
   { path: 'login', component: StubPage, data: { chrome: false } },
   { path: 'start', component: StubPage },
+  { path: 'oeffentlich', component: StubPage, data: { frame: 'public', footer: true } },
 ];
 
 const PRINCIPAL = {
@@ -66,7 +67,9 @@ describe('ShellComponent', () => {
   it('loads the command palette on the first Strg+K in the rail frame, not before', async () => {
     const { container, fixture } = await setup(true);
     expect(container.querySelector('app-command-palette')).toBeNull();
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true, cancelable: true }));
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true, cancelable: true }),
+    );
     fixture.detectChanges();
     await fixture.whenStable();
     fixture.detectChanges();
@@ -76,7 +79,12 @@ describe('ShellComponent', () => {
 
   it('keeps the command palette out of the public frame and leaves Strg+K to the browser', async () => {
     const { container, fixture } = await setup(false);
-    const key = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true, cancelable: true });
+    const key = new KeyboardEvent('keydown', {
+      key: 'k',
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
     document.dispatchEvent(key);
     fixture.detectChanges();
     expect(container.querySelector('app-command-palette')).toBeNull();
@@ -107,6 +115,20 @@ describe('ShellComponent', () => {
   it('leaves the footer out on a work page without footer: true', async () => {
     const { container } = await setup(true, '/start');
     expect(container.querySelector('app-site-footer')).toBeNull();
+  });
+
+  it('forces the public frame on a public route, also for a signed-in principal', async () => {
+    const { container } = await setup(true, '/oeffentlich');
+    expect(container.querySelector('app-public-header')).not.toBeNull();
+    expect(container.querySelector('app-nav-rail')).toBeNull();
+    expect(container.querySelector('app-site-footer')).not.toBeNull();
+    expect(container.querySelector('app-inbox')).toBeNull();
+  });
+
+  it('shows the public frame at once on a public route, before the session is known', async () => {
+    const { container, http } = await setup(null, '/oeffentlich');
+    expect(container.querySelector('app-public-header')).not.toBeNull();
+    http.expectOne('/api/auth/me').flush(PRINCIPAL);
   });
 
   it('offers the skip link', async () => {

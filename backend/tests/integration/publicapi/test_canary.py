@@ -88,6 +88,41 @@ async def public_responses(api: Api, slugs: list[str]) -> list[Response]:
     return responses
 
 
+async def site_responses(api: Api, event_slugs: list[str], slugs: list[str]) -> list[Response]:
+    get = lambda path, **params: api.request(None, "GET", path, params=params)  # noqa: E731
+    out = [
+        await get("/api/public/events"),
+        await get("/api/public/events", q="CANARY"),
+        await get("/api/public/events", q="CANARY-INTERNAL"),
+        await get("/api/public/events", q="FORMATDESC"),
+        await get("/api/public/events", past=1),
+        await get("/api/public/events", organization="fsi", category="kino"),
+        await get("/api/public/events", cursor="###"),
+        await get("/api/public/events", **{"from": "kaputt"}),
+        await get("/api/public/today"),
+        await get("/api/public/categories"),
+        await get("/api/public/archive"),
+        await get("/api/public/calendar", month=datetime.now().strftime("%Y-%m")),
+        await get("/api/public/calendar", month="1999-01"),
+        await get("/ics/all.ics"),
+        await get("/", q="CANARY"),
+        await get("/suche", q="CANARY"),
+        await get("/kalender"),
+        await get("/rueckblick"),
+        await get("/sitemap.xml"),
+        await get("/robots.txt"),
+    ]
+    for slug in event_slugs + ["nope"]:
+        out += [
+            await get(f"/api/public/events/{slug}"),
+            await get(f"/ics/e/{slug}.ics"),
+            await get(f"/e/{slug}"),
+        ]
+    for slug in slugs:
+        out += [await get(f"/k/{slug}"), await get("/api/public/events", category=slug)]
+    return out
+
+
 async def category_slugs(api: Api) -> list[str]:
     return [row[0] for row in await api.sql("SELECT slug FROM category ORDER BY slug")]
 
@@ -268,3 +303,34 @@ async def test_every_state_reaches_the_view_only_when_allowed(api: Api) -> None:
     assert {s for s, i in ids.items() if i in shown} == {"published", "archived"}
     ics = (await api.request(None, "GET", "/ics/all.ics")).content.decode()
     assert {s for s, i in ids.items() if f"UID:{i}@" in ics} == {"published", "archived"}
+
+
+async def test_nothing_internal_reaches_the_site_routes_or_the_html_shell(api: Api) -> None:
+    from tests.integration.publicapi import site_data
+
+    site_data.configure(api)
+    canary = await seed_canary(api)
+    ids = [canary.published, canary.archived, canary.hidden_text, canary.private_venue]
+    ids += [canary.hidden_venue, *canary.drafts]
+    slugs = [r[0] for r in await api.sql("SELECT slug FROM event WHERE id = ANY(:ids)", ids=ids)]
+    responses = await site_responses(api, slugs, await category_slugs(api))
+    assert not leaks(*responses)
+    by_url = {str(r.request.url): r for r in responses}
+    listing = by_url["http://test/api/public/events"].text
+    assert PUBLIC_TITLE in listing and PUBLIC_SUMMARY in listing
+    published_slug = (await api.sql("SELECT slug FROM event WHERE id = :e", e=canary.published))[0][
+        0
+    ]
+    detail = by_url[f"http://test/api/public/events/{published_slug}"].text
+    assert "CANARY-PUBLIC-DESCRIPTION" in detail and "CANARY-PUBLIC-VENUE" in detail
+    shell = by_url[f"http://test/e/{published_slug}"].text
+    assert PUBLIC_TITLE in shell and "CANARY-PUBLIC-VENUE" in shell
+    calendar = by_url[f"http://test/ics/e/{published_slug}.ics"].text
+    assert PUBLIC_TITLE in calendar
+    draft_slugs = [
+        r[0]
+        for r in await api.sql("SELECT slug FROM event WHERE id = ANY(:ids)", ids=canary.drafts)
+    ]
+    for slug in draft_slugs:
+        assert by_url[f"http://test/api/public/events/{slug}"].status_code == 404
+        assert by_url[f"http://test/e/{slug}"].status_code == 404

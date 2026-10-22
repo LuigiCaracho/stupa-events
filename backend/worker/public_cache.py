@@ -3,9 +3,9 @@
 PLAN 8.1: the worker computes, requests only read. The job reads the version counter before
 it reads the view and stores that version with every snapshot, so a change that lands while
 it runs makes the snapshots stale instead of silently wrong. It reads the view through the
-role `events_public` (never a table), builds the feed items with `textHtml`, the calendar of
-all events and the calendar of every category with events in the window and of every parent
-category, and writes all snapshots in one `MULTI`. More rows than `PUBLIC_SNAPSHOT_MAX_ROWS`
+role `events_public` (never a table), builds the feed items with `textHtml`, the sitemap, the
+calendar of all events and the calendar of every category with events in the window and of every
+parent category, and writes all snapshots in one `MULTI`. More rows than `PUBLIC_SNAPSHOT_MAX_ROWS`
 are logged as `snapshot_too_large`; the API then stays on its live path.
 """
 
@@ -25,6 +25,7 @@ from app.modules.publicapi.ics.rows import ics_row, windowed
 from app.modules.publicapi.ics.writer import build_calendar
 from app.modules.publicapi.schemas import PublicEventOut
 from app.modules.publicapi.serving import ICS_TYPE
+from app.modules.publicapi.shell import sitemap
 from app.settings import Settings, load_settings
 from app.shared.timeutil import utcnow
 
@@ -71,6 +72,12 @@ def calendars(
     return found
 
 
+def _sitemap(rows: list[Any], active: list[str], base: str, now: datetime) -> bytes:
+    window = now - sitemap.WINDOW
+    events = [(r.slug, r.updated_at) for r in rows if r.ends_at >= window]
+    return sitemap.build(base, events, active)
+
+
 async def rebuild_public_cache(ctx: dict[str, Any], now: datetime | None = None) -> str:
     """Rebuild every snapshot from the view; return the log line.
 
@@ -87,6 +94,7 @@ async def rebuild_public_cache(ctx: dict[str, Any], now: datetime | None = None)
         rows = await service.all_rows(session, settings.public_snapshot_max_rows + 1)
         categories = await service.categories(session)
         parents = await service.parent_slugs(session)
+        categories_active = await service.active_category_slugs(session)
     if len(rows) > settings.public_snapshot_max_rows:
         logger.warning("snapshot_too_large rows>%s", settings.public_snapshot_max_rows)
         return "public_cache: skipped (snapshot_too_large)"
@@ -95,6 +103,9 @@ async def rebuild_public_cache(ctx: dict[str, Any], now: datetime | None = None)
     snapshots = {
         cache.FEED: _snapshot(version, _ITEMS.dump_json(items, by_alias=True), JSON_TYPE, moment)
     }
+    snapshots[sitemap.SNAPSHOT] = _snapshot(
+        version, _sitemap(rows, categories_active, base, moment), sitemap.SITEMAP_TYPE, moment
+    )
     in_window = windowed([ics_row(r) for r in rows], moment)
     for name, body in calendars(in_window, categories, parents, settings).items():
         snapshots[name] = _snapshot(version, body, ICS_TYPE, moment)

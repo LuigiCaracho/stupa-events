@@ -1,0 +1,14 @@
+<app-list-item [title]="card().title" [link]="card().path" [sub]="sub()">
+  <app-date-block lead [date]="day()" [muted]="muted()" />
+  @if (status(); as s) {
+    <app-status-text status [kind]="s.kind">{{ s.key | t }}</app-status-text>
+  }
+  <span trail class="row__trail">
+    @if (!phone() && tag(); as name) {
+      <app-badge class="row__tag">{{ name }}</app-badge>
+    }
+    @if (thumb()) {
+      <app-event-poster class="row__thumb" [image]="card().image" [alt]="card().image?.alt ?? ''" />
+    }
+  </span>
+</app-list-item>

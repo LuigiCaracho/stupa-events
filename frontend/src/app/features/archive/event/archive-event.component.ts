@@ -17,7 +17,7 @@ import { PageHeaderComponent } from '@shared/ui/page-header/page-header.componen
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
 import { StatusTextComponent } from '@shared/ui/status-text/status-text.component';
 import { ButtonComponent } from '@stupa-makers/ui-kit';
-import { formatEventTime } from '../../dossiers/api/event-time';
+import { formatEventTime } from '@shared/event-time';
 import { LibraryApi } from '../../library/api/library-api.service';
 import { ArchiveApi } from '../api/archive-api.service';
 import type { ArchiveEventOut } from '../model/archive.models';

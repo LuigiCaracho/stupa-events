@@ -11,7 +11,8 @@
     "!/e/**",
     "!/k/**",
     "!/tiles/**",
-    "!/sitemap.xml"
+    "!/sitemap.xml",
+    "!/robots.txt"
   ],
   "assetGroups": [
     {

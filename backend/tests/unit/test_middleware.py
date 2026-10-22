@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.testclient import TestClient
 
 from app.middleware import (
@@ -34,6 +34,19 @@ def _client(limiter: InMemoryRateLimiter | None = None, **settings: object) -> T
     def public() -> str:
         return "ok"
 
+    @app.get("/api/me")
+    def me() -> str:
+        return "ok"
+
+    @app.get("/api/login")
+    def login() -> Response:
+        response = Response("ok")
+        response.set_cookie("ev_session", "fresh")
+        return response
+
+    for shell in ("/", "/suche", "/e/x", "/k/x", "/sitemap.xml", "/robots.txt"):
+        app.get(shell)(lambda: "ok")
+
     return TestClient(app)
 
 
@@ -47,13 +60,36 @@ def test_cookie_authenticated_write_needs_the_csrf_header() -> None:
     assert client.post("/api/x", headers={"X-XSRF-TOKEN": "t1"}).status_code == 200
 
 
-def test_requests_without_session_cookie_or_with_bearer_skip_csrf_and_get_the_cookie() -> None:
+def test_requests_without_session_cookie_or_with_bearer_skip_csrf() -> None:
     client = _client()
-    response = client.post("/api/x")
-    assert response.status_code == 200
-    assert "XSRF-TOKEN" in response.cookies
+    assert client.post("/api/x").status_code == 200
     client.cookies.set("ev_session", "anything")
     assert client.post("/api/x", headers={"Authorization": "Bearer t"}).status_code == 200
+
+
+def test_an_anonymous_visitor_never_gets_the_xsrf_cookie() -> None:
+    client = _client()
+    for response in (client.get("/api/me"), client.post("/api/x"), client.get("/")):
+        assert "set-cookie" not in response.headers
+
+
+def test_a_request_with_a_session_gets_the_xsrf_cookie() -> None:
+    client = _client()
+    client.cookies.set("ev_session", "anything")
+    assert "XSRF-TOKEN" in client.get("/api/me").cookies
+
+
+def test_a_response_that_starts_a_session_sets_the_xsrf_cookie_too() -> None:
+    client = _client()
+    response = client.get("/api/login")
+    assert "XSRF-TOKEN" in response.cookies and "ev_session" in response.cookies
+
+
+def test_shell_paths_never_get_the_xsrf_cookie_even_with_a_session() -> None:
+    client = _client()
+    client.cookies.set("ev_session", "anything")
+    for path in ("/", "/suche", "/e/x", "/k/x", "/sitemap.xml", "/robots.txt"):
+        assert "XSRF-TOKEN" not in client.get(path).cookies, path
 
 
 def test_csrf_can_be_switched_off() -> None:

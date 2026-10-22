@@ -17,6 +17,7 @@ export const makeCategory = (o: Partial<AdminCategory> = {}): AdminCategory => (
   parentId: null,
   short: null,
   colorToken: null,
+  description: null,
   requiredProfile: 'generic',
   legacyWpId: null,
   sort: 0,

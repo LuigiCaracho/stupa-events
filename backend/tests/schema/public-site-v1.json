@@ -1,0 +1,1916 @@
+{
+  "archive": {
+    "$defs": {
+      "PublicCardImage": {
+        "additionalProperties": false,
+        "description": "The thumbnail of a list card.",
+        "properties": {
+          "alt": {
+            "title": "Alt",
+            "type": "string"
+          },
+          "height": {
+            "title": "Height",
+            "type": "integer"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "width": {
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "url",
+          "width",
+          "height",
+          "alt"
+        ],
+        "title": "PublicCardImage",
+        "type": "object"
+      },
+      "PublicCategory": {
+        "additionalProperties": false,
+        "description": "A category of the event: the main one first, then its parent.",
+        "properties": {
+          "kind": {
+            "enum": [
+              "format",
+              "fachschaft",
+              "partner"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "kind"
+        ],
+        "title": "PublicCategory",
+        "type": "object"
+      },
+      "PublicEventCard": {
+        "additionalProperties": false,
+        "description": "One event in a list.",
+        "properties": {
+          "allDay": {
+            "title": "Allday",
+            "type": "boolean"
+          },
+          "categories": {
+            "items": {
+              "$ref": "#/$defs/PublicCategory"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "endsAt": {
+            "format": "date-time",
+            "title": "Endsat",
+            "type": "string"
+          },
+          "endsOn": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endson"
+          },
+          "image": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/PublicCardImage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "organization": {
+            "$ref": "#/$defs/PublicOrganizationRef"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "startsAt": {
+            "format": "date-time",
+            "title": "Startsat",
+            "type": "string"
+          },
+          "startsOn": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startson"
+          },
+          "status": {
+            "enum": [
+              "scheduled",
+              "cancelled",
+              "postponed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "statusReason": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/PublicStatusReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "tzid": {
+            "title": "Tzid",
+            "type": "string"
+          },
+          "venueName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Venuename"
+          }
+        },
+        "required": [
+          "slug",
+          "title",
+          "summary",
+          "startsAt",
+          "endsAt",
+          "allDay",
+          "startsOn",
+          "endsOn",
+          "tzid",
+          "status",
+          "statusReason",
+          "organization",
+          "venueName",
+          "categories",
+          "path",
+          "image"
+        ],
+        "title": "PublicEventCard",
+        "type": "object"
+      },
+      "PublicOrganizationRef": {
+        "additionalProperties": false,
+        "description": "The organizer without its id.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "short": {
+            "title": "Short",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "short"
+        ],
+        "title": "PublicOrganizationRef",
+        "type": "object"
+      },
+      "PublicStatusReason": {
+        "additionalProperties": false,
+        "description": "Why an event is cancelled or postponed: a fixed code and a short public text.",
+        "properties": {
+          "code": {
+            "enum": [
+              "none",
+              "room",
+              "speaker",
+              "illness",
+              "registration",
+              "weather",
+              "other"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "required": [
+          "code",
+          "text"
+        ],
+        "title": "PublicStatusReason",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "description": "Past events with a poster, one year at a time.",
+    "properties": {
+      "items": {
+        "items": {
+          "$ref": "#/$defs/PublicEventCard"
+        },
+        "title": "Items",
+        "type": "array"
+      },
+      "nextCursor": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Nextcursor"
+      },
+      "year": {
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Year"
+      },
+      "years": {
+        "items": {
+          "type": "integer"
+        },
+        "title": "Years",
+        "type": "array"
+      }
+    },
+    "required": [
+      "years",
+      "year",
+      "items",
+      "nextCursor"
+    ],
+    "title": "PublicArchiveOut",
+    "type": "object"
+  },
+  "calendar": {
+    "$defs": {
+      "PublicCalendarDay": {
+        "additionalProperties": false,
+        "description": "One Berlin day of the month with its events.",
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/$defs/PublicCalendarEntry"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "date",
+          "count",
+          "items"
+        ],
+        "title": "PublicCalendarDay",
+        "type": "object"
+      },
+      "PublicCalendarEntry": {
+        "additionalProperties": false,
+        "description": "An event as the calendar grid needs it.",
+        "properties": {
+          "allDay": {
+            "title": "Allday",
+            "type": "boolean"
+          },
+          "categorySlug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categoryslug"
+          },
+          "endsAt": {
+            "format": "date-time",
+            "title": "Endsat",
+            "type": "string"
+          },
+          "endsOn": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endson"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "startsAt": {
+            "format": "date-time",
+            "title": "Startsat",
+            "type": "string"
+          },
+          "startsOn": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startson"
+          },
+          "status": {
+            "enum": [
+              "scheduled",
+              "cancelled",
+              "postponed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "title",
+          "startsAt",
+          "endsAt",
+          "allDay",
+          "startsOn",
+          "endsOn",
+          "status",
+          "categorySlug"
+        ],
+        "title": "PublicCalendarEntry",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "description": "One month of events grouped by Berlin day.",
+    "properties": {
+      "days": {
+        "items": {
+          "$ref": "#/$defs/PublicCalendarDay"
+        },
+        "title": "Days",
+        "type": "array"
+      },
+      "month": {
+        "title": "Month",
+        "type": "string"
+      },
+      "truncated": {
+        "title": "Truncated",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "month",
+      "truncated",
+      "days"
+    ],
+    "title": "PublicCalendarOut",
+    "type": "object"
+  },
+  "categories": {
+    "$defs": {
+      "PublicCategoryOut": {
+        "additionalProperties": false,
+        "description": "A category with its description and the number of upcoming events.",
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "kind": {
+            "enum": [
+              "format",
+              "fachschaft",
+              "partner"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "parentSlug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parentslug"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "upcomingCount": {
+            "title": "Upcomingcount",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "kind",
+          "parentSlug",
+          "description",
+          "upcomingCount"
+        ],
+        "title": "PublicCategoryOut",
+        "type": "object"
+      }
+    },
+    "items": {
+      "$ref": "#/$defs/PublicCategoryOut"
+    },
+    "type": "array"
+  },
+  "detail": {
+    "$defs": {
+      "PublicCardImage": {
+        "additionalProperties": false,
+        "description": "The thumbnail of a list card.",
+        "properties": {
+          "alt": {
+            "title": "Alt",
+            "type": "string"
+          },
+          "height": {
+            "title": "Height",
+            "type": "integer"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "width": {
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "url",
+          "width",
+          "height",
+          "alt"
+        ],
+        "title": "PublicCardImage",
+        "type": "object"
+      },
+      "PublicCategory": {
+        "additionalProperties": false,
+        "description": "A category of the event: the main one first, then its parent.",
+        "properties": {
+          "kind": {
+            "enum": [
+              "format",
+              "fachschaft",
+              "partner"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "kind"
+        ],
+        "title": "PublicCategory",
+        "type": "object"
+      },
+      "PublicEventCard": {
+        "additionalProperties": false,
+        "description": "One event in a list.",
+        "properties": {
+          "allDay": {
+            "title": "Allday",
+            "type": "boolean"
+          },
+          "categories": {
+            "items": {
+              "$ref": "#/$defs/PublicCategory"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "endsAt": {
+            "format": "date-time",
+            "title": "Endsat",
+            "type": "string"
+          },
+          "endsOn": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endson"
+          },
+          "image": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/PublicCardImage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "organization": {
+            "$ref": "#/$defs/PublicOrganizationRef"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "startsAt": {
+            "format": "date-time",
+            "title": "Startsat",
+            "type": "string"
+          },
+          "startsOn": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startson"
+          },
+          "status": {
+            "enum": [
+              "scheduled",
+              "cancelled",
+              "postponed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "statusReason": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/PublicStatusReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "tzid": {
+            "title": "Tzid",
+            "type": "string"
+          },
+          "venueName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Venuename"
+          }
+        },
+        "required": [
+          "slug",
+          "title",
+          "summary",
+          "startsAt",
+          "endsAt",
+          "allDay",
+          "startsOn",
+          "endsOn",
+          "tzid",
+          "status",
+          "statusReason",
+          "organization",
+          "venueName",
+          "categories",
+          "path",
+          "image"
+        ],
+        "title": "PublicEventCard",
+        "type": "object"
+      },
+      "PublicFormat": {
+        "additionalProperties": false,
+        "description": "The format an event belongs to (Movienight, Campusfest).",
+        "properties": {
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "title"
+        ],
+        "title": "PublicFormat",
+        "type": "object"
+      },
+      "PublicImageSet": {
+        "additionalProperties": false,
+        "description": "The poster in the sizes of a detail page: thumbnail, card and Open Graph image.",
+        "properties": {
+          "alt": {
+            "title": "Alt",
+            "type": "string"
+          },
+          "card": {
+            "$ref": "#/$defs/PublicImageVariant"
+          },
+          "credit": {
+            "title": "Credit",
+            "type": "string"
+          },
+          "og": {
+            "$ref": "#/$defs/PublicImageVariant"
+          },
+          "thumb": {
+            "$ref": "#/$defs/PublicImageVariant"
+          }
+        },
+        "required": [
+          "thumb",
+          "card",
+          "og",
+          "alt",
+          "credit"
+        ],
+        "title": "PublicImageSet",
+        "type": "object"
+      },
+      "PublicImageVariant": {
+        "additionalProperties": false,
+        "description": "One size of the poster.",
+        "properties": {
+          "height": {
+            "title": "Height",
+            "type": "integer"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "width": {
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "url",
+          "width",
+          "height"
+        ],
+        "title": "PublicImageVariant",
+        "type": "object"
+      },
+      "PublicOrganizationRef": {
+        "additionalProperties": false,
+        "description": "The organizer without its id.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "short": {
+            "title": "Short",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "short"
+        ],
+        "title": "PublicOrganizationRef",
+        "type": "object"
+      },
+      "PublicStatusReason": {
+        "additionalProperties": false,
+        "description": "Why an event is cancelled or postponed: a fixed code and a short public text.",
+        "properties": {
+          "code": {
+            "enum": [
+              "none",
+              "room",
+              "speaker",
+              "illness",
+              "registration",
+              "weather",
+              "other"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "required": [
+          "code",
+          "text"
+        ],
+        "title": "PublicStatusReason",
+        "type": "object"
+      },
+      "PublicVenue": {
+        "additionalProperties": false,
+        "description": "The public place: a name, an address for exact venues, a city for exact and building.",
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "address",
+          "city"
+        ],
+        "title": "PublicVenue",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "description": "One event with everything the public may read.",
+    "properties": {
+      "allDay": {
+        "title": "Allday",
+        "type": "boolean"
+      },
+      "categories": {
+        "items": {
+          "$ref": "#/$defs/PublicCategory"
+        },
+        "title": "Categories",
+        "type": "array"
+      },
+      "costText": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Costtext"
+      },
+      "descriptionHtml": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Descriptionhtml"
+      },
+      "endsAt": {
+        "format": "date-time",
+        "title": "Endsat",
+        "type": "string"
+      },
+      "endsOn": {
+        "anyOf": [
+          {
+            "format": "date",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Endson"
+      },
+      "format": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/PublicFormat"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "icsUrl": {
+        "title": "Icsurl",
+        "type": "string"
+      },
+      "image": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/PublicImageSet"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "isPast": {
+        "title": "Ispast",
+        "type": "boolean"
+      },
+      "more": {
+        "items": {
+          "$ref": "#/$defs/PublicEventCard"
+        },
+        "title": "More",
+        "type": "array"
+      },
+      "organization": {
+        "$ref": "#/$defs/PublicOrganizationRef"
+      },
+      "path": {
+        "title": "Path",
+        "type": "string"
+      },
+      "sequence": {
+        "title": "Sequence",
+        "type": "integer"
+      },
+      "slug": {
+        "title": "Slug",
+        "type": "string"
+      },
+      "startsAt": {
+        "format": "date-time",
+        "title": "Startsat",
+        "type": "string"
+      },
+      "startsOn": {
+        "anyOf": [
+          {
+            "format": "date",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Startson"
+      },
+      "status": {
+        "enum": [
+          "scheduled",
+          "cancelled",
+          "postponed"
+        ],
+        "title": "Status",
+        "type": "string"
+      },
+      "statusReason": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/PublicStatusReason"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "summary": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Summary"
+      },
+      "ticketUrl": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Ticketurl"
+      },
+      "title": {
+        "title": "Title",
+        "type": "string"
+      },
+      "tzid": {
+        "title": "Tzid",
+        "type": "string"
+      },
+      "updatedAt": {
+        "format": "date-time",
+        "title": "Updatedat",
+        "type": "string"
+      },
+      "venue": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/PublicVenue"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "venueName": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Venuename"
+      },
+      "venueText": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Venuetext"
+      },
+      "websiteUrl": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Websiteurl"
+      }
+    },
+    "required": [
+      "slug",
+      "title",
+      "summary",
+      "startsAt",
+      "endsAt",
+      "allDay",
+      "startsOn",
+      "endsOn",
+      "tzid",
+      "status",
+      "statusReason",
+      "organization",
+      "venueName",
+      "categories",
+      "path",
+      "image",
+      "descriptionHtml",
+      "venue",
+      "venueText",
+      "ticketUrl",
+      "websiteUrl",
+      "costText",
+      "format",
+      "icsUrl",
+      "isPast",
+      "updatedAt",
+      "sequence",
+      "more"
+    ],
+    "title": "PublicEventDetail",
+    "type": "object"
+  },
+  "search": {
+    "$defs": {
+      "PublicCardImage": {
+        "additionalProperties": false,
+        "description": "The thumbnail of a list card.",
+        "properties": {
+          "alt": {
+            "title": "Alt",
+            "type": "string"
+          },
+          "height": {
+            "title": "Height",
+            "type": "integer"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "width": {
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "url",
+          "width",
+          "height",
+          "alt"
+        ],
+        "title": "PublicCardImage",
+        "type": "object"
+      },
+      "PublicCategory": {
+        "additionalProperties": false,
+        "description": "A category of the event: the main one first, then its parent.",
+        "properties": {
+          "kind": {
+            "enum": [
+              "format",
+              "fachschaft",
+              "partner"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "kind"
+        ],
+        "title": "PublicCategory",
+        "type": "object"
+      },
+      "PublicEventCard": {
+        "additionalProperties": false,
+        "description": "One event in a list.",
+        "properties": {
+          "allDay": {
+            "title": "Allday",
+            "type": "boolean"
+          },
+          "categories": {
+            "items": {
+              "$ref": "#/$defs/PublicCategory"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "endsAt": {
+            "format": "date-time",
+            "title": "Endsat",
+            "type": "string"
+          },
+          "endsOn": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endson"
+          },
+          "image": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/PublicCardImage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "organization": {
+            "$ref": "#/$defs/PublicOrganizationRef"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "startsAt": {
+            "format": "date-time",
+            "title": "Startsat",
+            "type": "string"
+          },
+          "startsOn": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startson"
+          },
+          "status": {
+            "enum": [
+              "scheduled",
+              "cancelled",
+              "postponed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "statusReason": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/PublicStatusReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "tzid": {
+            "title": "Tzid",
+            "type": "string"
+          },
+          "venueName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Venuename"
+          }
+        },
+        "required": [
+          "slug",
+          "title",
+          "summary",
+          "startsAt",
+          "endsAt",
+          "allDay",
+          "startsOn",
+          "endsOn",
+          "tzid",
+          "status",
+          "statusReason",
+          "organization",
+          "venueName",
+          "categories",
+          "path",
+          "image"
+        ],
+        "title": "PublicEventCard",
+        "type": "object"
+      },
+      "PublicFacetCategory": {
+        "additionalProperties": false,
+        "description": "A category with the number of matching events.",
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "count"
+        ],
+        "title": "PublicFacetCategory",
+        "type": "object"
+      },
+      "PublicFacetMonth": {
+        "additionalProperties": false,
+        "description": "A Berlin month (`YYYY-MM`) with the number of matching events.",
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "month": {
+            "title": "Month",
+            "type": "string"
+          }
+        },
+        "required": [
+          "month",
+          "count"
+        ],
+        "title": "PublicFacetMonth",
+        "type": "object"
+      },
+      "PublicFacetOrganization": {
+        "additionalProperties": false,
+        "description": "An organization with the number of matching events.",
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "short": {
+            "title": "Short",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "short",
+          "count"
+        ],
+        "title": "PublicFacetOrganization",
+        "type": "object"
+      },
+      "PublicFacets": {
+        "additionalProperties": false,
+        "description": "The disjunctive facets of a search.",
+        "properties": {
+          "categories": {
+            "items": {
+              "$ref": "#/$defs/PublicFacetCategory"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "months": {
+            "items": {
+              "$ref": "#/$defs/PublicFacetMonth"
+            },
+            "title": "Months",
+            "type": "array"
+          },
+          "organizations": {
+            "items": {
+              "$ref": "#/$defs/PublicFacetOrganization"
+            },
+            "title": "Organizations",
+            "type": "array"
+          }
+        },
+        "required": [
+          "categories",
+          "organizations",
+          "months"
+        ],
+        "title": "PublicFacets",
+        "type": "object"
+      },
+      "PublicOrganizationRef": {
+        "additionalProperties": false,
+        "description": "The organizer without its id.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "short": {
+            "title": "Short",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "short"
+        ],
+        "title": "PublicOrganizationRef",
+        "type": "object"
+      },
+      "PublicStatusReason": {
+        "additionalProperties": false,
+        "description": "Why an event is cancelled or postponed: a fixed code and a short public text.",
+        "properties": {
+          "code": {
+            "enum": [
+              "none",
+              "room",
+              "speaker",
+              "illness",
+              "registration",
+              "weather",
+              "other"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "required": [
+          "code",
+          "text"
+        ],
+        "title": "PublicStatusReason",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "description": "A page of events; `total` and `facets` only on the first page.",
+    "properties": {
+      "facets": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/PublicFacets"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "items": {
+        "items": {
+          "$ref": "#/$defs/PublicEventCard"
+        },
+        "title": "Items",
+        "type": "array"
+      },
+      "nextCursor": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Nextcursor"
+      },
+      "total": {
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Total"
+      }
+    },
+    "required": [
+      "items",
+      "nextCursor",
+      "total",
+      "facets"
+    ],
+    "title": "PublicSearchOut",
+    "type": "object"
+  },
+  "today": {
+    "$defs": {
+      "PublicCardImage": {
+        "additionalProperties": false,
+        "description": "The thumbnail of a list card.",
+        "properties": {
+          "alt": {
+            "title": "Alt",
+            "type": "string"
+          },
+          "height": {
+            "title": "Height",
+            "type": "integer"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "width": {
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "url",
+          "width",
+          "height",
+          "alt"
+        ],
+        "title": "PublicCardImage",
+        "type": "object"
+      },
+      "PublicCategory": {
+        "additionalProperties": false,
+        "description": "A category of the event: the main one first, then its parent.",
+        "properties": {
+          "kind": {
+            "enum": [
+              "format",
+              "fachschaft",
+              "partner"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "kind"
+        ],
+        "title": "PublicCategory",
+        "type": "object"
+      },
+      "PublicEventCard": {
+        "additionalProperties": false,
+        "description": "One event in a list.",
+        "properties": {
+          "allDay": {
+            "title": "Allday",
+            "type": "boolean"
+          },
+          "categories": {
+            "items": {
+              "$ref": "#/$defs/PublicCategory"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "endsAt": {
+            "format": "date-time",
+            "title": "Endsat",
+            "type": "string"
+          },
+          "endsOn": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endson"
+          },
+          "image": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/PublicCardImage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "organization": {
+            "$ref": "#/$defs/PublicOrganizationRef"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "startsAt": {
+            "format": "date-time",
+            "title": "Startsat",
+            "type": "string"
+          },
+          "startsOn": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startson"
+          },
+          "status": {
+            "enum": [
+              "scheduled",
+              "cancelled",
+              "postponed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "statusReason": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/PublicStatusReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "tzid": {
+            "title": "Tzid",
+            "type": "string"
+          },
+          "venueName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Venuename"
+          }
+        },
+        "required": [
+          "slug",
+          "title",
+          "summary",
+          "startsAt",
+          "endsAt",
+          "allDay",
+          "startsOn",
+          "endsOn",
+          "tzid",
+          "status",
+          "statusReason",
+          "organization",
+          "venueName",
+          "categories",
+          "path",
+          "image"
+        ],
+        "title": "PublicEventCard",
+        "type": "object"
+      },
+      "PublicOrganizationRef": {
+        "additionalProperties": false,
+        "description": "The organizer without its id.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "short": {
+            "title": "Short",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "short"
+        ],
+        "title": "PublicOrganizationRef",
+        "type": "object"
+      },
+      "PublicStatusReason": {
+        "additionalProperties": false,
+        "description": "Why an event is cancelled or postponed: a fixed code and a short public text.",
+        "properties": {
+          "code": {
+            "enum": [
+              "none",
+              "room",
+              "speaker",
+              "illness",
+              "registration",
+              "weather",
+              "other"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "required": [
+          "code",
+          "text"
+        ],
+        "title": "PublicStatusReason",
+        "type": "object"
+      },
+      "PublicTodayDay": {
+        "additionalProperties": false,
+        "description": "The events that start on one later day.",
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/$defs/PublicEventCard"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "date",
+          "items"
+        ],
+        "title": "PublicTodayDay",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "description": "Today at the campus and the week ahead.",
+    "properties": {
+      "date": {
+        "format": "date",
+        "title": "Date",
+        "type": "string"
+      },
+      "days": {
+        "items": {
+          "$ref": "#/$defs/PublicTodayDay"
+        },
+        "title": "Days",
+        "type": "array"
+      },
+      "generatedAt": {
+        "format": "date-time",
+        "title": "Generatedat",
+        "type": "string"
+      },
+      "today": {
+        "items": {
+          "$ref": "#/$defs/PublicEventCard"
+        },
+        "title": "Today",
+        "type": "array"
+      },
+      "truncated": {
+        "title": "Truncated",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "generatedAt",
+      "date",
+      "today",
+      "days",
+      "truncated"
+    ],
+    "title": "PublicTodayOut",
+    "type": "object"
+  }
+}

@@ -92,6 +92,17 @@
         {{ labelKey(colorKeys, row.colorToken) | t }}
       }
     </ng-template>
+    <ng-template appCell="description" let-row>
+      @if (editing(row)) {
+        <app-input
+          [formControl]="form.controls.description"
+          [ariaLabel]="'admin.col.description' | t"
+          [error]="err('description')"
+        />
+      } @else {
+        {{ row.description }}
+      }
+    </ng-template>
     <ng-template appCell="requiredProfile" let-row>
       @if (editing(row)) {
         <app-select

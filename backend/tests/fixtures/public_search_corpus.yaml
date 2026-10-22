@@ -1,0 +1,22 @@
+# 20 sample searches against the fixed stock of tests/integration/publicapi/test_search_corpus.py.
+# Keys are the short names of the stock events; `status` is the expected HTTP status.
+- {q: "Kino", contains: [movie]}
+- {q: "Movie", contains: [movie]}
+- {q: "Movienigth", contains: [movie]}
+- {q: "Karaokke", contains: [karaoke]}
+- {q: "Cafe", contains: [repair]}
+- {q: "Praesidium", contains: [presidium]}
+- {q: "Skifahren Alpen", contains: [ski], excludes: [skydive, movie]}
+- {q: "Sitzung -STUPA", contains: [fsi], excludes: [stupa]}
+- {q: "\"Culture Chill\"", contains: [culture], excludes: [karaoke]}
+- {q: "Party", contains: [caipi]}
+- {q: "Rappen", contains: [karaoke]}
+- {q: "Gebäude", contains: [stupa]}
+- {q: "FSI", contains: [fsi]}
+- {q: "movie night", contains: [movie], excludes: [caipi]}
+- {q: "2026", contains: [campus]}
+- {q: "a", contains: [movie, ski, campus]}
+- {q: "Xyzzyqwerty", contains: [], excludes: [movie, ski, campus]}
+- {q: "% _ ' \\", contains: [], excludes: [movie]}
+- {q: "Ausfahrt", contains: [ski]}
+- {q: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", status: 422}

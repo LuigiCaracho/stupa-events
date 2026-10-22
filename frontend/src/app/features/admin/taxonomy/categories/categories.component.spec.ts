@@ -57,6 +57,7 @@ describe('CategoriesComponent', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Hinzufügen' }));
     await userEvent.type(screen.getByRole('textbox', { name: /Name/ }), ' Party ');
     await userEvent.type(screen.getByRole('textbox', { name: /Slug/ }), 'party');
+    await userEvent.type(screen.getByRole('textbox', { name: /Beschreibung/ }), ' Feiern auf dem Campus. ');
     await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     expect(api.createCategory).toHaveBeenCalledWith({
       slug: 'party',
@@ -65,6 +66,7 @@ describe('CategoriesComponent', () => {
       parentId: null,
       short: null,
       colorToken: null,
+      description: 'Feiern auf dem Campus.',
       requiredProfile: 'generic',
       active: true,
     });
@@ -113,6 +115,7 @@ describe('CategoriesComponent', () => {
       parentId: 'fs',
       short: null,
       colorToken: 'petrol',
+      description: null,
       requiredProfile: 'generic',
       active: true,
     });

@@ -28,7 +28,7 @@ from starlette.responses import JSONResponse, Response
 from app.modules.auth.sessions import SESSION_COOKIE_MAX_AGE, principal_sid
 from app.settings import Settings, get_settings
 from app.shared.antiabuse import client_ip, get_rate_limiter
-from app.shared.errors import is_public_path
+from app.shared.errors import is_cookie_free_path, is_public_path
 from app.shared.ratelimit import RateLimiter
 
 TRACE_HEADER = "X-Trace-Id"
@@ -87,13 +87,20 @@ def _has_auth_cookie(request: Request, settings: Settings) -> bool:
     return bool(request.cookies.get(settings.session_cookie_name))
 
 
+def _starts_session(response: Response, settings: Settings) -> bool:
+    """Return True when the response sets the session cookie (the OIDC callback does)."""
+    prefix = f"{settings.session_cookie_name}="
+    return any(value.startswith(prefix) for value in response.headers.getlist("set-cookie"))
+
+
 class CsrfMiddleware(BaseHTTPMiddleware):
     """Double-submit CSRF protection.
 
     For an unsafe method with an auth cookie and no bearer header, the
     `X-XSRF-TOKEN` header must match the CSRF cookie. The compare runs in constant
     time. The middleware sets the CSRF cookie on any response that lacks it, so the
-    frontend can mirror it; public routes (`/api/public/`, `/ics/`) never get a cookie.
+    frontend can mirror it; only a request with a session cookie, or a response that starts
+    a session, gets it, and the public and shell paths never do.
     """
 
     def __init__(self, app: object, settings: Settings | None = None) -> None:
@@ -131,14 +138,16 @@ class CsrfMiddleware(BaseHTTPMiddleware):
 
         response = await call_next(request)
 
-        # Issue the CSRF cookie when it is missing. It is non-HttpOnly because the
+        # Issue the CSRF cookie when it is missing and a session exists or starts with this
+        # response: an anonymous visitor never gets a cookie. It is non-HttpOnly because the
         # frontend must read it. SameSite=Lax gives base protection. Secure follows
         # the auth cookies. It lives as long as the longest session, so a tab that
         # stays open does not lose it before its session ends.
         if (
             settings.csrf_enabled
             and not request.cookies.get(settings.csrf_cookie_name)
-            and not is_public_path(request.url.path)
+            and not is_cookie_free_path(request.url.path)
+            and (_has_auth_cookie(request, settings) or _starts_session(response, settings))
         ):
             response.set_cookie(
                 settings.csrf_cookie_name,

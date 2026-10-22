@@ -5,6 +5,7 @@
   class="frame"
   [class.frame--rail]="frame() === 'rail' && !phone()"
   [class.frame--phone]="frame() === 'rail' && phone()"
+  [class.frame--pbar]="frame() === 'public' && phone()"
   [class.frame--public]="frame() === 'public'"
   [class.frame--bare]="frame() === 'bare'"
 >
@@ -35,6 +36,9 @@
 
   @if (frame() === 'rail' && phone()) {
     <app-bottom-bar />
+  }
+  @if (frame() === 'public' && phone()) {
+    <app-public-bottom-bar />
   }
 </div>
 

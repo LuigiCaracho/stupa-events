@@ -23,10 +23,7 @@ export const shellDe = {
   'forbidden.heading': 'Kein Zugriff',
   'forbidden.body': 'Dein Konto hat keinen Zugang zu dieser Seite. Wende dich an die Redaktion.',
   'notFound.heading': 'Seite nicht gefunden',
-  'notFound.body': 'Diese Seite gibt es nicht oder du hast keinen Zugriff.',
-  'home.heading': 'Veranstaltungen der Hochschule Reutlingen',
-  'home.body':
-    'Melde dich an, um Events zu dokumentieren und zu veröffentlichen.',
+  'notFound.body': 'Diese Seite gibt es nicht.',
   'account.title': 'Konto',
   'account.name': 'Name',
   'account.email': 'E-Mail',

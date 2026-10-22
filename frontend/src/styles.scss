@@ -360,3 +360,8 @@ td:first-child > .skel--bar {
     opacity: 0.5;
   }
 }
+
+// The public phone frame has no pull-to-refresh: the page scrolls as the document, so the rule sits on the root.
+html:has(.frame--pbar) {
+  overscroll-behavior-y: contain;
+}

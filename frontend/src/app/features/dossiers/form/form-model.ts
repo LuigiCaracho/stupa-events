@@ -2,7 +2,7 @@
  * The model behind the dossier form (pure functions): the form values of an event and a draft, the diff
  * against the event (what `PATCH` and `PUT .../draft` carry), and which fields the person may edit now.
  */
-import { isoToZoned, zonedToIso } from '../api/event-time';
+import { isoToZoned, zonedToIso } from '@shared/event-time';
 import type { EventDto, EventFields } from '../api/event.models';
 
 export interface FormValue {

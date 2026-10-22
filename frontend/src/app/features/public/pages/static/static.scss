@@ -1,0 +1,34 @@
+@use 'breakpoints' as bp;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: 44rem;
+  margin: 0 auto;
+  padding-inline: var(--space-4);
+  box-sizing: border-box;
+}
+@include bp.not-phone {
+  :host {
+    padding-inline: var(--space-5);
+  }
+}
+@include bp.phone {
+  :host {
+    --control-height: 2.75rem;
+  }
+}
+.legal__title {
+  margin: 0;
+  font-size: var(--fs-d2);
+  line-height: var(--lh-d2);
+  font-weight: var(--fw-semibold);
+}
+.legal__body {
+  margin: 0;
+  max-width: 60ch;
+  line-height: var(--lh-relaxed);
+  color: var(--color-text-muted);
+}

@@ -31,6 +31,7 @@ export const adminDe = {
   'admin.col.kind': 'Art',
   'admin.col.parent': 'Eltern',
   'admin.col.short': 'Kurz',
+  'admin.col.description': 'Beschreibung (öffentlich)',
   'admin.col.color': 'Farbe',
   'admin.col.profile': 'Pflichtfeld-Profil',
   'admin.col.active': 'Aktiv',

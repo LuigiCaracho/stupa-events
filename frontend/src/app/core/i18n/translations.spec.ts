@@ -69,7 +69,7 @@ describe('translations', () => {
   });
 
   it('keeps no key of the removed pipeline', () => {
-    const dead = /^(guards|fix|transition|board|tasks|exception|assign|followup)\./;
+    const dead = /^(guards|fix|transition|board|tasks|exception|assign|followup|home)\./;
     expect(Object.keys(de).filter((k) => dead.test(k))).toEqual([]);
   });
 

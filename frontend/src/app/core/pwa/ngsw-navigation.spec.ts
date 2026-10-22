@@ -27,6 +27,7 @@ const SERVER_RENDERED = [
   '/k/**',
   '/tiles/**',
   '/sitemap.xml',
+  '/robots.txt',
 ];
 
 function config(): NgswConfig {

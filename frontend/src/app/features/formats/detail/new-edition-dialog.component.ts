@@ -19,7 +19,7 @@ import {
   ToastService,
 } from '@stupa-makers/ui-kit';
 import { catchError, of } from 'rxjs';
-import { zonedToIso } from '../../dossiers/api/event-time';
+import { zonedToIso } from '@shared/event-time';
 import type { OrgRef } from '../../dossiers/api/event.models';
 import { EventsApi } from '../../dossiers/api/events-api.service';
 import { problemMessage } from '../../dossiers/api/problem-message';

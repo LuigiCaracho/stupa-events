@@ -61,7 +61,7 @@ import { CarryOverListComponent } from '../../archive/preview/carry-over-list.co
 import { FormatsApi } from '../../formats/api/formats-api.service';
 import type { FormatPage } from '../../formats/model/format.models';
 import { AttachmentsApi } from '../api/attachments-api.service';
-import { zonedToIso } from '../api/event-time';
+import { zonedToIso } from '@shared/event-time';
 import type { CategoryRef, OrgRef } from '../api/event.models';
 import type { QuoteGroup } from '../model/attachment.models';
 import { EventsApi } from '../api/events-api.service';

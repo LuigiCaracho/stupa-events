@@ -1,0 +1,92 @@
+<header class="sub__head">
+  <h1 class="sub__title">{{ 'public.subscribe.title' | t }}</h1>
+  <p class="sub__lede">{{ 'public.subscribe.lede' | t }}</p>
+</header>
+
+<app-note icon="clock">{{ 'public.subscribe.delay' | t }}</app-note>
+@if (copyFailed()) {
+  <app-note kind="warn" role="alert">{{ 'public.subscribe.copyFailed' | t }}</app-note>
+}
+
+<section class="sub__card" aria-labelledby="sub-all">
+  <h2 id="sub-all" class="sub__h2">{{ 'public.subscribe.all' | t }}</h2>
+  <p class="sub__text">{{ 'public.subscribe.allBody' | t }}</p>
+  <div class="sub__actions">
+    <a appLinkButton="fill" [href]="all.webcal">{{ 'public.subscribe.open' | t }}</a>
+    <app-button variant="outlined" (click)="copy(all)">{{
+      'public.subscribe.copy' | t
+    }}</app-button>
+  </div>
+  <code class="sub__url" tabindex="0">{{ all.https }}</code>
+</section>
+
+<section class="sub__section" aria-labelledby="sub-cats">
+  <h2 id="sub-cats" class="sub__h2">{{ 'public.subscribe.categories' | t }}</h2>
+  @if (error(); as kind) {
+    <app-load-error [kind]="kind" (retry)="reload()" />
+  } @else if (!loaded()) {
+    <app-skeleton variant="items" [grouped]="true" [count]="4" [label]="'common.loading' | t" />
+  } @else if (rows().length === 0) {
+    <app-empty-state plain icon="cal" [heading]="'public.subscribe.noCategories' | t" />
+  } @else {
+    <ul class="sub__rows">
+      @for (row of rows(); track row.slug) {
+        <li
+          class="sub__row"
+          [id]="'k-' + row.slug"
+          [class.sub__row--marked]="marked() === row.slug"
+          [class.sub__row--child]="row.parentSlug"
+        >
+          <div class="sub__rowtext">
+            <h3 class="sub__h3">{{ row.name }}</h3>
+            @if (row.description) {
+              <p class="sub__text">{{ row.description }}</p>
+            }
+            <code class="sub__url" tabindex="0">{{ row.links.https }}</code>
+          </div>
+          <div class="sub__actions">
+            <a appLinkButton="tonal" [href]="row.links.webcal">{{
+              'public.subscribe.openCalendar' | t
+            }}</a>
+            <app-button
+              variant="outlined"
+              [ariaLabel]="'public.subscribe.copyFor' | t: { name: row.name }"
+              (click)="copy(row.links)"
+              >{{ 'public.subscribe.copy' | t }}</app-button
+            >
+          </div>
+        </li>
+      }
+    </ul>
+  }
+</section>
+
+<section class="sub__section" aria-labelledby="sub-how">
+  <h2 id="sub-how" class="sub__h2">{{ 'public.subscribe.how' | t }}</h2>
+  <details class="sub__how">
+    <summary>{{ 'public.subscribe.google' | t }}</summary>
+    <p>{{ 'public.subscribe.googleBody' | t }}</p>
+  </details>
+  <details class="sub__how">
+    <summary>{{ 'public.subscribe.apple' | t }}</summary>
+    <p>{{ 'public.subscribe.appleBody' | t }}</p>
+  </details>
+  <details class="sub__how">
+    <summary>{{ 'public.subscribe.thunderbird' | t }}</summary>
+    <p>{{ 'public.subscribe.thunderbirdBody' | t }}</p>
+  </details>
+</section>
+
+<section class="sub__section" aria-labelledby="sub-more">
+  <h2 id="sub-more" class="sub__h2">{{ 'public.subscribe.more' | t }}</h2>
+  <ul class="sub__rows">
+    <li class="sub__row">
+      <span class="sub__h3">{{ 'public.subscribe.mail' | t }}</span>
+      <app-button variant="tonal" [disabled]="true">{{ 'public.subscribe.soon' | t }}</app-button>
+    </li>
+    <li class="sub__row">
+      <span class="sub__h3">{{ 'public.subscribe.profile' | t }}</span>
+      <app-button variant="tonal" [disabled]="true">{{ 'public.subscribe.soon' | t }}</app-button>
+    </li>
+  </ul>
+</section>

@@ -1,0 +1,32 @@
+/* A filter or category chip: 44 px high (touch target), the selected state in the selection colours with a check mark. */
+@mixin chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.75rem;
+  padding: 0 var(--space-4);
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--fs-body);
+  font-weight: var(--fw-medium);
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--color-surface-3);
+  }
+  &[aria-pressed='true'],
+  &[aria-current='true'] {
+    border-color: var(--color-primary);
+    background: var(--color-selected);
+    color: var(--color-on-selected);
+    font-weight: var(--fw-semibold);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 2px;
+  }
+}

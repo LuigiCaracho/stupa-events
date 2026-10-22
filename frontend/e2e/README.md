@@ -20,6 +20,12 @@ calendar by keyboard inside the event list, "So lief es" written in the archive,
 an archived event as the template of a new draft with the copied howto; cancel stays in the feed as `cancelled`, unpublish removes the event, the editor restores;
 the dossier page, the list and the calendar through axe at 1280 px and 360 px. It needs the M5b backend (migration `0007`).
 
+`public.spec.ts` is the B1 acceptance for the public site (anonymous): Heute to detail to the ICS download, search with facets and the back button,
+the calendar by keyboard, the category subscription, the phone viewport (390 x 844: no horizontal scroll, bottom bar, 44 px targets, filter sheet), axe in light and
+dark at 1280 px and 390 px, the network allowlist (own origin, no `Set-Cookie`), a signed-in person on `/`, the 429 and offline states. It finds its events in
+the public API and creates what is missing as organizer-fsi (`support/public-fixtures.ts`). Run it against the compose `web` for the production build
+(`E2E_BASE_URL=http://127.0.0.1:8081 npx playwright test e2e/public.spec.ts`).
+
 Needs the compose stack with the Keycloak overlay and `127.0.0.1 host.docker.internal` in `/etc/hosts`
 (see `docs/M1-KONTRAKT.md` sections 1 and 8). The tests open `http://localhost:8081` (the registered
 redirect URI); override with `E2E_BASE_URL`. Run `npx playwright test` in `frontend/`.

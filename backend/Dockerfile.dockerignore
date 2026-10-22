@@ -1,0 +1,23 @@
+# Ignore list of backend/Dockerfile (context: repository root). Docker uses it instead of the root
+# .dockerignore, which hides backend/ for the web image.
+**/node_modules
+**/dist
+frontend/.angular
+frontend/e2e
+**/coverage
+.git
+**/__pycache__
+**/.venv
+**/.pytest_cache
+**/.ruff_cache
+**/.hypothesis
+**/.coverage
+backend/tests
+backend/scripts
+docs
+deploy
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.dev.example
+**/secrets

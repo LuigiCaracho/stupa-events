@@ -286,3 +286,36 @@ async def test_config_changes_audit_field_names_only(api: Api) -> None:
     assert [r.target_type for r in rows] == ["venue", "venue"]
     assert rows[1].data == {"fields": ["notes"]}
     assert "Geheimweg" not in str(rows) and "Privat" not in str(rows)
+
+
+async def test_category_description_is_set_cleared_and_validated(api: Api) -> None:
+    made = await api.request(
+        "editor",
+        "POST",
+        CATS,
+        json={
+            "slug": "e2e-beschreibung",
+            "name": "Beschreibung",
+            "kind": "format",
+            "description": "Kurz",
+        },
+    )
+    assert made.status_code == 201 and made.json()["description"] == "Kurz"
+    url = f"{CATS}/{made.json()['id']}"
+    patched = await api.request("editor", "PATCH", url, json={"description": "  Neu und kurz  "})
+    assert patched.status_code == 200 and patched.json()["description"] == "Neu und kurz"
+    cleared = await api.request("editor", "PATCH", url, json={"description": None})
+    assert cleared.status_code == 200 and cleared.json()["description"] is None
+    for bad in ("x" * 301, "a\x07b"):
+        refused = await api.request("editor", "PATCH", url, json={"description": bad})
+        assert refused.status_code == 422, bad
+    rows = await api.sql(
+        "SELECT description FROM public_category_v WHERE slug = 'e2e-beschreibung'"
+    )
+    assert rows == [(None,)]
+    await api.request("editor", "PATCH", url, json={"description": "Öffentlich"})
+    rows = await api.sql(
+        "SELECT description FROM public_category_v WHERE slug = 'e2e-beschreibung'"
+    )
+    assert rows == [("Öffentlich",)]
+    await api.sql("DELETE FROM category WHERE slug = 'e2e-beschreibung'")

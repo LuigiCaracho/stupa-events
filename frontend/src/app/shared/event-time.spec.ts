@@ -46,3 +46,17 @@ describe('event-time', () => {
     expect(formatShortDate('2026-11-01T10:00:00Z', 'Europe/Berlin')).toBe('01.11.');
   });
 });
+
+describe('event-time public helpers', () => {
+  it('formats date and clock in the zone of the event, not the browser zone', async () => {
+    const { formatClock, formatEventDate } = await import('./event-time');
+    expect(formatClock('2026-10-22T18:00:00Z', 'Europe/Berlin')).toBe('20:00');
+    expect(formatEventDate('2026-10-22T18:00:00Z', 'Europe/Berlin')).toBe('Do., 22. Okt. 2026');
+    expect(formatEventDate('2026-10-22T23:30:00Z', 'Europe/Berlin')).toBe('Fr., 23. Okt. 2026');
+  });
+
+  it('turns a day key into a local date of that day', async () => {
+    const { dayKeyToDate } = await import('./event-time');
+    expect(dayKeyToDate('2026-10-22').getDate()).toBe(22);
+  });
+});

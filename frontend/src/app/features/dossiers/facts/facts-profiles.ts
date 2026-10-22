@@ -5,7 +5,7 @@
  * and `budgetCents` on the wire.
  */
 import type { TranslationKey } from '@core/i18n/translations';
-import { isoToZoned, zonedToIso } from '../api/event-time';
+import { isoToZoned, zonedToIso } from '@shared/event-time';
 import type { RequiredProfile } from '../api/event.models';
 
 const TZID = 'Europe/Berlin';

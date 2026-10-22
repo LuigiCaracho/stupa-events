@@ -41,11 +41,17 @@ class Category(UUIDPkMixin, TimestampMixin, Base):
     legacy_wp_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     sort: Mapped[int] = mapped_column(Integer, server_default="0")
     active: Mapped[bool] = mapped_column(Boolean, server_default="true")
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     __table_args__ = (
         CheckConstraint("kind IN ('format', 'fachschaft', 'partner')", name="kind"),
         CheckConstraint(
             "required_profile IN ('generic', 'party', 'meeting', 'trip')", name="required_profile"
+        ),
+        CheckConstraint(
+            f"description IS NULL OR (char_length(description) <= 300 "
+            f"AND description !~ '{CONTROL_CHARS}')",
+            name="description_ok",
         ),
     )
 

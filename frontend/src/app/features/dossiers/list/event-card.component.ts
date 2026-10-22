@@ -10,7 +10,7 @@ import { eventStateStatus } from '@shared/status-kind.util';
 import { StatusTextComponent } from '@shared/ui/status-text/status-text.component';
 import { IconComponent } from '@stupa-makers/ui-kit';
 import type { EventCard } from '../api/card.models';
-import { formatEventDay } from '../api/event-time';
+import { formatEventDay } from '@shared/event-time';
 import { EventsApi } from '../api/events-api.service';
 
 @Component({

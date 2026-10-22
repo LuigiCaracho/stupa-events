@@ -1,6 +1,6 @@
 /** Builds and checks the request of the small dialog "Absagen, Verschieben, Wieder ansetzen" (M5b contract 7.1). */
 import type { CancelBody, PostponeBody, ReinstateBody } from '../api/action.models';
-import { zonedToIso } from '../api/event-time';
+import { zonedToIso } from '@shared/event-time';
 import type { PublicReasonCode } from '../api/event.models';
 
 export const REASON_MAX = 500;

@@ -1,0 +1,21 @@
+:host {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: var(--poster-ratio, 1200 / 630);
+  border-radius: var(--poster-radius, var(--radius-xl));
+  background: var(--color-surface-3);
+}
+.poster__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.poster__ph {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: var(--color-text-subtle);
+}

@@ -21,7 +21,7 @@ import { PageHeaderComponent } from '@shared/ui/page-header/page-header.componen
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
 import { StatusTextComponent } from '@shared/ui/status-text/status-text.component';
 import { ButtonComponent, TabsComponent, ToastService, type TabItem } from '@stupa-makers/ui-kit';
-import { formatEventDay } from '../../dossiers/api/event-time';
+import { formatEventDay } from '@shared/event-time';
 import { problemMessage } from '../../dossiers/api/problem-message';
 import { DocumentEditorComponent } from '../../dossiers/editor/document-editor.component';
 import { FormatsApi } from '../api/formats-api.service';

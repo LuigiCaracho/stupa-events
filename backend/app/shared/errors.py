@@ -293,9 +293,28 @@ async def _http_exception_handler(request: Request, exc: StarletteHTTPException)
 PUBLIC_PREFIXES: tuple[str, ...] = ("/api/public/", "/ics/")
 
 
+SHELL_PATHS: tuple[str, ...] = (
+    "/",
+    "/suche",
+    "/kalender",
+    "/rueckblick",
+    "/sitemap.xml",
+    "/robots.txt",
+)
+SHELL_PREFIXES: tuple[str, ...] = ("/e/", "/k/")
+
+
 def is_public_path(path: str) -> bool:
-    """Tell if a request path belongs to the public routes: no cookie, noindex."""
+    """Tell if a request path belongs to the public JSON and ICS routes: no cookie, noindex."""
     return path.startswith(PUBLIC_PREFIXES)
+
+
+def is_cookie_free_path(path: str) -> bool:
+    """Tell if a path never gets a cookie: the public routes and the HTML shell pages.
+
+    The shell pages stay indexable, so they are not in `PUBLIC_PREFIXES` (which adds noindex).
+    """
+    return is_public_path(path) or path in SHELL_PATHS or path.startswith(SHELL_PREFIXES)
 
 
 async def _unhandled_handler(request: Request, exc: Exception) -> JSONResponse:
@@ -364,6 +383,7 @@ def use_problem_json_contract(app: FastAPI) -> None:
                 # Opt-out: an endpoint with its own error contract documents its own
                 # responses. An example is the RFC 6749 OAuth token error, which uses
                 # OAuth JSON instead of problem+json. This function does NOT rewrite it.
+                # The marker `html` keeps the documented 404 of an HTML page.
                 if operation.get("x-error-contract") == "oauth":
                     continue
                 responses = operation.setdefault("responses", {})
@@ -374,7 +394,10 @@ def use_problem_json_contract(app: FastAPI) -> None:
                 # does not fail on an undocumented status.
                 if "requestBody" in operation and isinstance(responses, dict):
                     responses.setdefault("422", {"description": "Validation Error"})
+                own_404 = operation.get("x-error-contract") == "html"
                 for code, response in responses.items():
+                    if own_404 and str(code) == "404":
+                        continue
                     if str(code)[0] in {"4", "5"} and isinstance(response, dict):
                         response["content"] = problem_content
         app.openapi_schema = schema

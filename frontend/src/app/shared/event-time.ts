@@ -89,3 +89,30 @@ export function formatShortDate(iso: string, tz: string): string {
     month: '2-digit',
   }).format(Date.parse(iso));
 }
+
+/** "Do., 22. Okt. 2026" in the zone of the event, for the detail page. */
+export function formatEventDate(iso: string, tz: string): string {
+  return new Intl.DateTimeFormat('de-DE', {
+    timeZone: tz,
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(Date.parse(iso));
+}
+
+/** "20:00" in the zone of the event. */
+export function formatClock(iso: string, tz: string): string {
+  return new Intl.DateTimeFormat('de-DE', {
+    timeZone: tz,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(Date.parse(iso));
+}
+
+/** A day key as a local-midnight `Date`, so a date block shows exactly that day in any browser zone. */
+export function dayKeyToDate(key: string): Date {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}

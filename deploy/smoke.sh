@@ -16,6 +16,9 @@ paths=(
   /e/probe
   /k/probe
   /suche
+  /kalender
+  /rueckblick
+  /ics/e/probe.ics
   /sitemap.xml
   /robots.txt
   /manifest.webmanifest

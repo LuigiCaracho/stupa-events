@@ -262,9 +262,11 @@ class Api:
             files={"file": (name, data or png_bytes(), "image/png")},
         )
 
-    async def process_poster(self, attachment_id: str, *, signature: str | None = None) -> str:
+    async def process_poster(
+        self, attachment_id: str, *, signature: str | None = None, redis: Any = None
+    ) -> str:
         """Run the scan job and, after a clean scan, the derive job."""
-        pool = FakePool()
+        pool = redis or FakePool()
         ctx: dict[str, Any] = {
             "settings": make_settings(),
             "scanner": CleanScanner(signature),
@@ -282,11 +284,13 @@ class Api:
             await build_preview(ctx, attachment_id)
         return verdict
 
-    async def with_poster(self, event_id: str, user: str = "organizer-fsi") -> dict:
+    async def with_poster(
+        self, event_id: str, user: str = "organizer-fsi", *, redis: Any = None
+    ) -> dict:
         """Upload a poster to the dossier and run the scan and derive jobs; return the row."""
         poster = await self.upload_poster(user, event_id)
         assert poster.status_code == 201, poster.text
-        assert await self.process_poster(poster.json()["id"]) == "clean"
+        assert await self.process_poster(poster.json()["id"], redis=redis) == "clean"
         return poster.json()
 
 

@@ -1,0 +1,141 @@
+@if (error() === 'notFound') {
+  <app-empty-state plain level="1" icon="cal" [heading]="'public.event.notFound' | t">
+    <a appLinkButton="tonal" routerLink="/suche">{{ 'public.event.toSearch' | t }}</a>
+  </app-empty-state>
+} @else if (error(); as kind) {
+  <app-load-error [kind]="kind" (retry)="reload()" />
+} @else if (event(); as e) {
+  <article class="ev">
+    <div class="ev__main">
+      @if (bannerText(); as text) {
+        <app-note [kind]="canceled() ? 'error' : 'warn'" icon="alert" role="status">{{
+          text
+        }}</app-note>
+      }
+      @if (e.isPast) {
+        <app-note>
+          {{ 'public.event.past' | t }}
+          <a routerLink="/rueckblick">{{ 'public.event.toReview' | t }}</a>
+        </app-note>
+      }
+      <figure class="ev__poster">
+        <app-event-poster
+          [image]="e.image?.card ?? null"
+          [alt]="e.image?.alt ?? ''"
+          [eager]="true"
+        />
+        @if (e.image?.credit; as credit) {
+          <figcaption class="ev__credit">{{ credit }}</figcaption>
+        }
+      </figure>
+      <h1 class="ev__title">{{ e.title }}</h1>
+      @if (e.summary) {
+        <p class="ev__summary">{{ e.summary }}</p>
+      }
+      @if (e.descriptionHtml) {
+        <div class="ev__desc" [innerHTML]="e.descriptionHtml"></div>
+      }
+    </div>
+
+    <aside class="ev__side" [attr.aria-label]="'public.event.facts' | t">
+      <dl class="ev__facts">
+        <div class="ev__fact">
+          <dt>{{ 'public.event.when' | t }}</dt>
+          <dd>{{ when() }}</dd>
+        </div>
+        <div class="ev__fact">
+          <dt>{{ 'public.event.where' | t }}</dt>
+          <dd>
+            @if (e.venue || e.venueText) {
+              @if (e.venue; as v) {
+                <span class="ev__line">{{ v.name }}</span>
+                @if (venueLine()) {
+                  <span class="ev__line ev__line--muted">{{ venueLine() }}</span>
+                }
+              }
+              @if (e.venueText) {
+                <span class="ev__line">{{ e.venueText }}</span>
+              }
+            } @else {
+              {{ 'public.event.venueOpen' | t }}
+            }
+          </dd>
+        </div>
+        <div class="ev__fact">
+          <dt>{{ 'public.event.organizer' | t }}</dt>
+          <dd>{{ e.organization.name }}</dd>
+        </div>
+        @if (e.categories.length > 0) {
+          <div class="ev__fact">
+            <dt>{{ 'public.event.categories' | t }}</dt>
+            <dd class="ev__cats">
+              @for (c of e.categories; track c.slug) {
+                <a class="ev__cat" [routerLink]="['/k', c.slug]">{{ c.name }}</a>
+              }
+            </dd>
+          </div>
+        }
+        @if (e.costText) {
+          <div class="ev__fact">
+            <dt>{{ 'public.event.cost' | t }}</dt>
+            <dd>{{ e.costText }}</dd>
+          </div>
+        }
+        @if (website(); as url) {
+          <div class="ev__fact">
+            <dt>{{ 'public.event.website' | t }}</dt>
+            <dd>
+              <a [href]="url" target="_blank" rel="noopener noreferrer nofollow">{{
+                'public.event.websiteOpen' | t
+              }}</a>
+            </dd>
+          </div>
+        }
+      </dl>
+
+      <div class="ev__actions">
+        <a appLinkButton="fill" [href]="e.icsUrl" [attr.download]="e.slug + '.ics'">
+          <app-icon name="cal" [size]="18" />{{ 'public.event.addToCalendar' | t }}
+        </a>
+        @if (ticket(); as url) {
+          <a appLinkButton="tonal" [href]="url" target="_blank" rel="noopener noreferrer">
+            <app-icon name="ticket" [size]="18" />{{ 'public.event.ticket' | t }}
+          </a>
+        }
+        <app-button variant="outlined" (click)="onShare()">{{
+          'public.event.share' | t
+        }}</app-button>
+      </div>
+      @if (shareUrl(); as url) {
+        <app-note kind="warn" role="status">
+          <span>{{ 'public.event.copyFailed' | t }}</span>
+          <input
+            class="ev__url"
+            readonly
+            [value]="url"
+            [attr.aria-label]="'public.event.link' | t"
+            (focus)="$any($event.target).select()"
+          />
+        </app-note>
+      }
+      @if (mainCategory(); as c) {
+        <a class="ev__more-like" [routerLink]="['/abos']" [fragment]="'k=' + c.slug">{{
+          'public.event.subscribeSimilar' | t
+        }}</a>
+      }
+    </aside>
+
+    @if (e.more.length > 0) {
+      <section class="ev__more" aria-labelledby="ev-more">
+        <h2 id="ev-more" class="ev__h2">{{ 'public.event.more' | t }}</h2>
+        <div class="rowgroup">
+          @for (c of e.more; track c.slug) {
+            <app-public-event-row [card]="c" />
+          }
+        </div>
+      </section>
+    }
+  </article>
+} @else {
+  <app-skeleton variant="panel" [label]="'common.loading' | t" />
+}

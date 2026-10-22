@@ -1,0 +1,113 @@
+@use 'breakpoints' as bp;
+@use '../../ui/chip';
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: 52rem;
+  margin: 0 auto;
+  padding-inline: var(--space-4);
+  box-sizing: border-box;
+}
+@include bp.not-phone {
+  :host {
+    padding-inline: var(--space-5);
+  }
+}
+@include bp.phone {
+  :host {
+    --control-height: 2.75rem;
+  }
+  :host ::ng-deep .sp__clear {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+}
+
+.search__top {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.search__suggest,
+.search__bar,
+.sheet__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.chip {
+  @include chip.chip;
+}
+.search__count {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--fs-small);
+}
+.search__more {
+  display: flex;
+  justify-content: center;
+}
+.search__empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+.sheet__h {
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-small);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-cap);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.sheet__list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 2.75rem;
+  cursor: pointer;
+}
+.check input {
+  width: 1.375rem;
+  height: 1.375rem;
+  margin: 0;
+  accent-color: var(--color-accent);
+}
+.check__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.check__count {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.sheet__foot {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+  background: var(--color-surface);
+}

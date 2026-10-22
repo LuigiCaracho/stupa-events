@@ -1,4 +1,23 @@
-<!-- Copied from STUPA-Workflow@93c33d6 frontend/src/app/layout/site-footer/site-footer.component.html -->
 <footer class="ft" [attr.aria-label]="'nav.footer' | t">
   <p class="ft__copy">{{ 'footer.coBranding' | t }}</p>
+  <ul class="ft__links">
+    <li>
+      <a routerLink="/impressum">{{ 'public.footer.imprint' | t }}</a>
+    </li>
+    <li>
+      <a routerLink="/datenschutz">{{ 'public.footer.privacy' | t }}</a>
+    </li>
+    <li>
+      <a routerLink="/abos">{{ 'public.footer.subscribe' | t }}</a>
+    </li>
+    <li>
+      @if (auth.isAuthenticated()) {
+        <a routerLink="/dossiers">{{ 'public.nav.toDossier' | t }}</a>
+      } @else {
+        <button type="button" class="ft__link" (click)="login()">
+          {{ 'public.footer.login' | t }}
+        </button>
+      }
+    </li>
+  </ul>
 </footer>

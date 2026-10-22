@@ -14,11 +14,24 @@ import hashlib
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 from pydantic import TypeAdapter
-from sqlalchemy import Boolean, Date, DateTime, Integer, Row, String, Text, Uuid, and_, or_, select
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    Integer,
+    Row,
+    Select,
+    String,
+    Text,
+    Uuid,
+    and_,
+    or_,
+    select,
+)
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import column, func, table
 
@@ -80,8 +93,15 @@ PUBLIC_EVENT_V = table(
     column("website_url", Text),
     column("cost_text", Text),
     column("description_md", Text),
+    column("search_tsv", TSVECTOR),
 )
 V = PUBLIC_EVENT_V.c
+ROW_COLUMNS = tuple(c for c in PUBLIC_EVENT_V.c if c.key != "search_tsv")
+
+
+def row_select() -> Select[Any]:
+    """Select every row column of the view except the search vector."""
+    return cast("Select[Any]", select(*ROW_COLUMNS))
 
 
 @dataclass(frozen=True, slots=True)
@@ -110,7 +130,7 @@ def _image(row: Row[Any], base_url: str) -> PublicImage | None:
     )
 
 
-def _categories(row: Row[Any]) -> list[PublicCategory]:
+def row_categories(row: Row[Any]) -> list[PublicCategory]:
     found = []
     if row.category_slug:
         found.append(
@@ -127,7 +147,7 @@ def _categories(row: Row[Any]) -> list[PublicCategory]:
     return found
 
 
-def _venue(row: Row[Any]) -> PublicVenue | None:
+def row_venue(row: Row[Any]) -> PublicVenue | None:
     if row.venue_name is None:
         return None
     return PublicVenue(name=row.venue_name, address=row.venue_address, city=row.venue_city)
@@ -154,13 +174,13 @@ def to_public_event(row: Row[Any], base_url: str) -> PublicEventOut:
             short=row.organization_short,
         ),
         venue_text=row.venue_text,
-        venue=_venue(row),
+        venue=row_venue(row),
         status_reason=(
             None
             if row.public_status == "scheduled"
             else PublicStatusReason(code=row.public_reason_code, text=row.public_reason_text)
         ),
-        categories=_categories(row),
+        categories=row_categories(row),
         format=(
             PublicFormat(slug=row.format_slug, title=row.format_title) if row.format_slug else None
         ),
@@ -199,7 +219,7 @@ async def feed_items(
     session: AsyncSession, query: FeedQuery, base_url: str
 ) -> tuple[list[PublicEventOut], str | None]:
     """Read one page live from the view; the second value is the cursor of the next page."""
-    statement = select(PUBLIC_EVENT_V).where(*_conditions(query))
+    statement = row_select().where(*_conditions(query))
     rows = (
         await session.execute(statement.order_by(V.starts_at, V.id).limit(query.limit + 1))
     ).all()
@@ -210,7 +230,7 @@ async def feed_items(
 
 async def all_rows(session: AsyncSession, limit: int) -> list[Row[Any]]:
     """Read every public row (at most `limit`) for the snapshot builder, ordered like the feed."""
-    statement = select(PUBLIC_EVENT_V).order_by(V.starts_at, V.id).limit(limit)
+    statement = row_select().order_by(V.starts_at, V.id).limit(limit)
     return list((await session.execute(statement)).all())
 
 
@@ -252,6 +272,9 @@ PUBLIC_CATEGORY_V = table(
     column("name", Text),
     column("kind", Text),
     column("parent_slug", Text),
+    column("description", Text),
+    column("sort", Integer),
+    column("active", Boolean),
 )
 
 
@@ -276,12 +299,18 @@ async def ics_rows(
 ) -> list[Row[Any]]:
     """Read the rows of one calendar live: those ending after `window[0]`, starting before
     `window[1]`, of all categories or of one category and its children."""
-    statement = select(PUBLIC_EVENT_V).where(V.ends_at >= window[0], V.starts_at <= window[1])
+    statement = row_select().where(V.ends_at >= window[0], V.starts_at <= window[1])
     if category is not None:
         statement = statement.where(
             or_(V.category_slug == category, V.category_parent_slug == category)
         )
     return list((await session.execute(statement.order_by(V.starts_at, V.id))).all())
+
+
+async def active_category_slugs(session: AsyncSession) -> list[str]:
+    """Return the slugs of the active categories (for the sitemap)."""
+    stmt = select(PUBLIC_CATEGORY_V.c.slug).where(PUBLIC_CATEGORY_V.c.active)
+    return [slug for (slug,) in (await session.execute(stmt)).all()]
 
 
 async def parent_slugs(session: AsyncSession) -> set[str]:

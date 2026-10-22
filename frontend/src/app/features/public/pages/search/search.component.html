@@ -1,0 +1,206 @@
+<h1 class="sr-only">{{ 'public.search.title' | t }}</h1>
+
+<div class="search__top" (focusin)="focused.set(true)" (focusout)="focused.set(false)">
+  <app-search-pill
+    [placeholder]="'public.search.placeholder' | t"
+    [label]="'public.search.label' | t"
+    [value]="text()"
+    [maxlength]="maxLength"
+    [busy]="list.loading()"
+    [clearable]="true"
+    (valueChange)="onText($event)"
+    (commit)="apply({}, true)"
+  />
+  @if (suggestions().length > 0) {
+    <ul class="search__suggest" [attr.aria-label]="'public.search.suggestions' | t">
+      @for (c of suggestions(); track c.slug) {
+        <li>
+          <button
+            type="button"
+            class="chip"
+            aria-pressed="false"
+            (pointerdown)="$event.preventDefault()"
+            (click)="toggleIn('category', c.slug)"
+          >
+            {{ c.name }}
+          </button>
+        </li>
+      }
+    </ul>
+  }
+</div>
+
+@if (phone()) {
+  <div class="search__bar">
+    <button type="button" class="chip" aria-haspopup="dialog" (click)="sheetOpen.set(true)">
+      <app-icon name="funnel" [size]="16" />
+      {{ 'public.filter.button' | t: { count: count() } }}
+    </button>
+  </div>
+} @else {
+  <div class="search__bar" role="group" [attr.aria-label]="'public.filter.title' | t">
+    @for (chip of chips; track chip) {
+      <button
+        type="button"
+        class="chip"
+        [attr.aria-pressed]="activeChip() === chip"
+        (click)="toggleChip(chip)"
+      >
+        {{ chipKeys[chip] | t }}
+      </button>
+    }
+    <app-filter-select
+      [label]="'public.filter.category' | t"
+      [multiple]="true"
+      [options]="categoryOptions()"
+      [values]="filters().category"
+      [active]="filters().category.length > 0"
+      [resetLabel]="'public.filter.clear' | t"
+      (valuesChange)="setList('category', $event)"
+    />
+    <app-filter-select
+      [label]="'public.filter.organization' | t"
+      [multiple]="true"
+      [options]="organizationOptions()"
+      [values]="filters().organization"
+      [active]="filters().organization.length > 0"
+      [resetLabel]="'public.filter.clear' | t"
+      (valuesChange)="setList('organization', $event)"
+    />
+    <button
+      type="button"
+      class="chip"
+      [attr.aria-pressed]="filters().past"
+      (click)="apply({ past: !filters().past })"
+    >
+      {{ 'public.filter.past' | t }}
+    </button>
+  </div>
+}
+
+<p class="sr-only" role="status">{{ summary() }}</p>
+
+@if (list.error(); as kind) {
+  <app-load-error [kind]="kind" (retry)="list.reload()" />
+} @else if (showSkeleton()) {
+  <app-skeleton
+    variant="items"
+    [lead]="true"
+    [grouped]="true"
+    [count]="5"
+    [label]="'common.loading' | t"
+  />
+} @else if (showEmpty()) {
+  <app-empty-state plain icon="search" [heading]="emptyHeading()">
+    <span class="search__empty-actions">
+      @if (hasRange()) {
+        <app-button variant="tonal" (click)="widenRange()">{{
+          'public.search.widen' | t
+        }}</app-button>
+      }
+      @if (hasAny()) {
+        <app-button variant="text" (click)="reset()">{{ 'public.filter.reset' | t }}</app-button>
+      }
+    </span>
+  </app-empty-state>
+} @else {
+  @if (total() !== null) {
+    <p class="search__count" aria-hidden="true">{{ summary() }}</p>
+  }
+  <div class="rowgroup">
+    @for (card of list.items(); track card.slug) {
+      <app-public-event-row [card]="card" thumb [muted]="filters().past" />
+    }
+  </div>
+  @if (list.moreError(); as kind) {
+    <app-load-error [kind]="kind" (retry)="list.loadMore()" />
+  }
+  @if (list.hasMore()) {
+    <div class="search__more">
+      <app-button variant="tonal" [loading]="list.loadingMore()" (click)="list.loadMore()">{{
+        'public.search.more' | t
+      }}</app-button>
+    </div>
+  }
+}
+
+<app-side-sheet
+  side="bottom"
+  [open]="sheetOpen()"
+  [heading]="'public.filter.title' | t"
+  (closed)="sheetOpen.set(false)"
+>
+  <div class="sheet">
+    <section class="sheet__sec">
+      <h3 class="sheet__h">{{ 'public.filter.time' | t }}</h3>
+      <div class="sheet__chips">
+        @for (chip of chips; track chip) {
+          <button
+            type="button"
+            class="chip"
+            [attr.aria-pressed]="activeChip() === chip"
+            (click)="toggleChip(chip)"
+          >
+            {{ chipKeys[chip] | t }}
+          </button>
+        }
+        <button
+          type="button"
+          class="chip"
+          [attr.aria-pressed]="filters().past"
+          (click)="apply({ past: !filters().past })"
+        >
+          {{ 'public.filter.past' | t }}
+        </button>
+      </div>
+    </section>
+    @if (facets(); as f) {
+      @if (f.categories.length > 0) {
+        <section class="sheet__sec">
+          <h3 class="sheet__h">{{ 'public.filter.category' | t }}</h3>
+          <ul class="sheet__list">
+            @for (c of f.categories; track c.slug) {
+              <li>
+                <label class="check">
+                  <input
+                    type="checkbox"
+                    [checked]="has('category', c.slug)"
+                    (change)="toggleIn('category', c.slug)"
+                  />
+                  <span class="check__name">{{ c.name }}</span>
+                  <span class="check__count">{{ c.count }}</span>
+                </label>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+      @if (f.organizations.length > 0) {
+        <section class="sheet__sec">
+          <h3 class="sheet__h">{{ 'public.filter.organization' | t }}</h3>
+          <ul class="sheet__list">
+            @for (o of f.organizations; track o.slug) {
+              <li>
+                <label class="check">
+                  <input
+                    type="checkbox"
+                    [checked]="has('organization', o.slug)"
+                    (change)="toggleIn('organization', o.slug)"
+                  />
+                  <span class="check__name">{{ o.name }}</span>
+                  <span class="check__count">{{ o.count }}</span>
+                </label>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+    }
+    <div class="sheet__foot">
+      <app-button variant="text" (click)="reset()">{{ 'public.filter.reset' | t }}</app-button>
+      <app-button variant="fill" (click)="sheetOpen.set(false)">{{
+        'public.filter.show' | t: { count: total() ?? 0 }
+      }}</app-button>
+    </div>
+  </div>
+</app-side-sheet>

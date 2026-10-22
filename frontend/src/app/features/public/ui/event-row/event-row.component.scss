@@ -1,0 +1,20 @@
+@use 'breakpoints' as bp;
+
+:host {
+  display: block;
+}
+.row__trail {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.row__thumb {
+  width: 6rem;
+  --poster-ratio: 16 / 9;
+  --poster-radius: var(--radius-md);
+}
+@include bp.phone {
+  .row__thumb {
+    width: 4.5rem;
+  }
+}

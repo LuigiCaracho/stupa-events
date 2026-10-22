@@ -58,6 +58,7 @@ class Settings(BaseSettings):
     public_snapshot_max_age_seconds: int = 7200
     public_snapshot_max_rows: int = 5000
     local_timezone: str = "Europe/Berlin"
+    spa_index_path: str = "/app/spa/index.html"
 
     strict_security: bool = True
 
@@ -162,6 +163,8 @@ class Settings(BaseSettings):
     rl_attachments_per_hour: int = 30
     rl_media_images_per_hour: int = 120
     rl_search_per_minute: int = 240
+    rl_public_per_minute: int = 120
+    rl_public_search_per_minute: int = 30
     rl_default_write_per_hour: int = 100
     rl_default_write_session_per_hour: int = 3000
 

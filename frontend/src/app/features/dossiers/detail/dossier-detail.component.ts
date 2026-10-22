@@ -39,7 +39,7 @@ import { ActivityTabComponent } from '../activity/activity-tab.component';
 import { AttachmentsApi } from '../api/attachments-api.service';
 import { CommentsApi } from '../api/comments-api.service';
 import { DossierCommands } from '../api/dossier-commands';
-import { formatEventTime } from '../api/event-time';
+import { formatEventTime } from '@shared/event-time';
 import type { EventDto, EventFields, Hint } from '../api/event.models';
 import { EventsApi } from '../api/events-api.service';
 import { OutcomeApi } from '../api/outcome-api.service';

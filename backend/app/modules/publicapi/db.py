@@ -31,7 +31,7 @@ def get_public_engine() -> AsyncEngine:
     url = get_settings().public_database_url
     if not url:
         raise ServiceUnavailableError("The public database is not configured.")
-    return create_async_engine(url, pool_pre_ping=True, pool_size=5, max_overflow=5)
+    return create_async_engine(url, pool_pre_ping=True, pool_size=4, max_overflow=2)
 
 
 async def get_public_session() -> AsyncGenerator[AsyncSession]:

@@ -10,7 +10,7 @@ import { formatMoney } from '@shared/format.util';
 import { eventStateStatus } from '@shared/status-kind.util';
 import { StatusTextComponent } from '@shared/ui/status-text/status-text.component';
 import { CellDirective, DataTableComponent, type ColumnDef } from '@stupa-makers/ui-kit';
-import { formatEventDay } from '../../dossiers/api/event-time';
+import { formatEventDay } from '@shared/event-time';
 import type { FormatEdition } from '../model/format.models';
 
 @Component({

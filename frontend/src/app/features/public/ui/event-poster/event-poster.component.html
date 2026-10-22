@@ -1,0 +1,16 @@
+@let img = image();
+@if (img && !failed()) {
+  <img
+    class="poster__img"
+    [src]="img.url"
+    [attr.width]="img.width"
+    [attr.height]="img.height"
+    [alt]="alt()"
+    [attr.loading]="eager() ? null : 'lazy'"
+    [attr.fetchpriority]="eager() ? 'high' : null"
+    decoding="async"
+    (error)="failed.set(true)"
+  />
+} @else {
+  <span class="poster__ph" aria-hidden="true"><app-icon name="cal" [size]="28" /></span>
+}

@@ -3,7 +3,7 @@
  * person's own value and the value in the current version. Pure functions; the dialog renders the rows.
  */
 import type { ConfigDiffData } from '@stupa-makers/ui-kit';
-import { formatEventTime } from '../api/event-time';
+import { formatEventTime } from '@shared/event-time';
 import type { EventDto, EventFields } from '../api/event.models';
 
 export type Choice = 'mine' | 'theirs';

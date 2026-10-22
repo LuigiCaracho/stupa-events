@@ -16,7 +16,7 @@ import {
 } from '@shared/ui/row-menu/row-menu.component';
 import { StatusTextComponent } from '@shared/ui/status-text/status-text.component';
 import { ButtonComponent } from '@stupa-makers/ui-kit';
-import { formatEventTime } from '../api/event-time';
+import { formatEventTime } from '@shared/event-time';
 import type { EventAction, EventDto } from '../api/event.models';
 
 export type HeadCommand = Exclude<EventAction, 'revert-revision' | 'verify-howto'>;
