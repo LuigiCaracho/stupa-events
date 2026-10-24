@@ -19,7 +19,7 @@ import { ListItemComponent } from '@shared/ui/list-item/list-item.component';
 import { StatusTextComponent } from '@shared/ui/status-text/status-text.component';
 import { BadgeComponent, MEDIA } from '@stupa-makers/ui-kit';
 import { mediaQuerySignal } from '../../../../layout/media-query';
-import { clockOf, statusView } from '../../model/event-format';
+import { clockOf, startDay, statusView } from '../../model/event-format';
 import type { PublicEventCard } from '../../model/public.models';
 import { EventPosterComponent } from '../event-poster/event-poster.component';
 
@@ -42,7 +42,7 @@ export class EventRowComponent {
   readonly card = input.required<PublicEventCard>();
   readonly thumb = input(false, { transform: booleanAttribute });
   readonly muted = input(false, { transform: booleanAttribute });
-  protected readonly day = computed(() => dayKeyToDate(this.card().startsOn));
+  protected readonly day = computed(() => dayKeyToDate(startDay(this.card())));
   protected readonly status = computed(() => statusView(this.card().status));
   private readonly i18n = inject(I18nService);
   protected readonly phone = mediaQuerySignal(MEDIA.phone);

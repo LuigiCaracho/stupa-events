@@ -3,7 +3,7 @@
  * Times are always shown in the zone of the event (`tzid`, Europe/Berlin), never in the browser zone.
  */
 import type { StatusKind } from '@shared/status-kind.util';
-import { formatClock, formatEventDate } from '@shared/event-time';
+import { formatClock, formatEventDate, isoToZoned } from '@shared/event-time';
 import type { TranslationKey } from '@core/i18n/translations';
 import type { PublicEventCard, PublicStatus } from './public.models';
 
@@ -11,20 +11,32 @@ type Timed = Pick<
   PublicEventCard,
   'startsAt' | 'endsAt' | 'allDay' | 'startsOn' | 'endsOn' | 'tzid'
 >;
+type Starting = Pick<Timed, 'startsAt' | 'startsOn'> & { tzid?: string };
+type Ending = Pick<Timed, 'endsAt' | 'endsOn'> & { tzid?: string };
+
+const BERLIN = 'Europe/Berlin';
+
+/** The calendar day an event starts on in its own zone (`YYYY-MM-DD`). */
+export const startDay = (e: Starting): string =>
+  e.startsOn ?? isoToZoned(e.startsAt, e.tzid ?? BERLIN).date;
+
+/** The calendar day an event ends on in its own zone (`YYYY-MM-DD`). */
+export const endDay = (e: Ending): string =>
+  e.endsOn ?? isoToZoned(e.endsAt, e.tzid ?? BERLIN).date;
 
 /** "Do., 22. Okt. 2026, 20:00 bis 22:30 Uhr", a two-day span, or "… (ganztägig)". */
 export function whenText(e: Timed): string {
   const tz = e.tzid;
   if (e.allDay) {
     const start = formatEventDate(e.startsAt, tz);
-    return e.endsOn !== e.startsOn
+    return endDay(e) !== startDay(e)
       ? `${start} bis ${formatEventDate(e.endsAt, tz)}`
       : `${start} (ganztägig)`;
   }
   const day = formatEventDate(e.startsAt, tz);
   const from = formatClock(e.startsAt, tz);
   if (e.endsAt === e.startsAt) return `${day}, ${from} Uhr`;
-  if (e.endsOn === e.startsOn) return `${day}, ${from} bis ${formatClock(e.endsAt, tz)} Uhr`;
+  if (endDay(e) === startDay(e)) return `${day}, ${from} bis ${formatClock(e.endsAt, tz)} Uhr`;
   return `${day}, ${from} Uhr bis ${formatEventDate(e.endsAt, tz)}, ${formatClock(e.endsAt, tz)} Uhr`;
 }
 
@@ -69,12 +81,12 @@ export function semesterLabel(group: SemesterGroup): string {
 }
 
 /** Groups items in the order they come: one group per run of the same semester. */
-export function groupBySemester<T extends { startsOn: string }>(
+export function groupBySemester<T extends Starting>(
   items: readonly T[],
 ): { group: SemesterGroup; label: string; items: T[] }[] {
   const out: { group: SemesterGroup; label: string; items: T[] }[] = [];
   for (const item of items) {
-    const group = semesterOf(item.startsOn);
+    const group = semesterOf(startDay(item));
     const last = out[out.length - 1];
     if (last?.group.key === group.key) last.items.push(item);
     else out.push({ group, label: semesterLabel(group), items: [item] });
@@ -83,14 +95,15 @@ export function groupBySemester<T extends { startsOn: string }>(
 }
 
 /** Groups items by Berlin start day, in the order they come. */
-export function groupByDay<T extends { startsOn: string }>(
+export function groupByDay<T extends Starting>(
   items: readonly T[],
 ): { date: string; items: T[] }[] {
   const out: { date: string; items: T[] }[] = [];
   for (const item of items) {
     const last = out[out.length - 1];
-    if (last?.date === item.startsOn) last.items.push(item);
-    else out.push({ date: item.startsOn, items: [item] });
+    const date = startDay(item);
+    if (last?.date === date) last.items.push(item);
+    else out.push({ date, items: [item] });
   }
   return out;
 }

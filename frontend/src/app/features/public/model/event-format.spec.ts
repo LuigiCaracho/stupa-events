@@ -5,6 +5,8 @@ import {
   groupBySemester,
   semesterLabel,
   semesterOf,
+  endDay,
+  startDay,
   statusView,
   whenText,
 } from './event-format';
@@ -67,10 +69,10 @@ describe('semesters', () => {
 
   it('groups a descending list into runs of one semester', () => {
     const groups = groupBySemester([
-      { startsOn: '2026-05-01' },
-      { startsOn: '2026-03-01' },
-      { startsOn: '2025-11-01' },
-      { startsOn: '2025-05-01' },
+      { startsAt: BASE.startsAt, startsOn: '2026-05-01' },
+      { startsAt: BASE.startsAt, startsOn: '2026-03-01' },
+      { startsAt: BASE.startsAt, startsOn: '2025-11-01' },
+      { startsAt: BASE.startsAt, startsOn: '2025-05-01' },
     ]);
     expect(groups.map((g) => [g.label, g.items.length])).toEqual([
       ['Sommersemester 2026', 1],
@@ -82,7 +84,30 @@ describe('semesters', () => {
 
 describe('groupByDay', () => {
   it('starts a group per start day', () => {
-    const groups = groupByDay([{ startsOn: 'a' }, { startsOn: 'a' }, { startsOn: 'b' }]);
+    const groups = groupByDay([
+      { startsAt: BASE.startsAt, startsOn: 'a' },
+      { startsAt: BASE.startsAt, startsOn: 'a' },
+      { startsAt: BASE.startsAt, startsOn: 'b' },
+    ]);
     expect(groups.map((g) => g.items.length)).toEqual([2, 1]);
+  });
+});
+
+describe('startDay and endDay', () => {
+  const timed = { ...BASE, startsOn: null, endsOn: null };
+
+  it('derive the Berlin days of a timed event, which carries no startsOn', () => {
+    expect(startDay({ ...timed, startsAt: '2026-10-22T22:30:00Z' })).toBe('2026-10-23');
+    expect(endDay({ ...timed, endsAt: '2026-10-22T22:30:00Z' })).toBe('2026-10-23');
+  });
+
+  it('prefer the given days of an all-day event', () => {
+    expect(startDay(BASE)).toBe('2026-10-22');
+  });
+
+  it('keep whenText and the grouping working without startsOn', () => {
+    expect(whenText(timed)).toBe('Do., 22. Okt. 2026, 20:00 bis 22:30 Uhr');
+    expect(groupByDay([timed, timed]).map((g) => g.date)).toEqual(['2026-10-22']);
+    expect(groupBySemester([timed])[0].label).toBe('Wintersemester 2026/27');
   });
 });

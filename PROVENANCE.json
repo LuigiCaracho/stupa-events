@@ -580,16 +580,6 @@
       "mode": "U"
     },
     {
-      "path": "frontend/src/app/core/auth/home-redirect.guard.spec.ts",
-      "source": "frontend/src/app/core/auth/home-redirect.guard.spec.ts",
-      "mode": "U"
-    },
-    {
-      "path": "frontend/src/app/core/auth/home-redirect.guard.ts",
-      "source": "frontend/src/app/core/auth/home-redirect.guard.ts",
-      "mode": "U"
-    },
-    {
       "path": "frontend/src/app/core/browser/installed-app.token.spec.ts",
       "source": "frontend/src/app/core/browser/installed-app.token.spec.ts",
       "mode": "K"
@@ -840,26 +830,6 @@
       "mode": "K"
     },
     {
-      "path": "frontend/src/app/layout/public-header/public-header.component.html",
-      "source": "frontend/src/app/layout/public-header/public-header.component.html",
-      "mode": "U"
-    },
-    {
-      "path": "frontend/src/app/layout/public-header/public-header.component.scss",
-      "source": "frontend/src/app/layout/public-header/public-header.component.scss",
-      "mode": "U"
-    },
-    {
-      "path": "frontend/src/app/layout/public-header/public-header.component.spec.ts",
-      "source": "frontend/src/app/layout/public-header/public-header.component.spec.ts",
-      "mode": "U"
-    },
-    {
-      "path": "frontend/src/app/layout/public-header/public-header.component.ts",
-      "source": "frontend/src/app/layout/public-header/public-header.component.ts",
-      "mode": "U"
-    },
-    {
       "path": "frontend/src/app/layout/shell.component.html",
       "source": "frontend/src/app/layout/shell.component.html",
       "mode": "U"
@@ -877,26 +847,6 @@
     {
       "path": "frontend/src/app/layout/shell.component.ts",
       "source": "frontend/src/app/layout/shell.component.ts",
-      "mode": "U"
-    },
-    {
-      "path": "frontend/src/app/layout/site-footer/site-footer.component.html",
-      "source": "frontend/src/app/layout/site-footer/site-footer.component.html",
-      "mode": "U"
-    },
-    {
-      "path": "frontend/src/app/layout/site-footer/site-footer.component.scss",
-      "source": "frontend/src/app/layout/site-footer/site-footer.component.scss",
-      "mode": "U"
-    },
-    {
-      "path": "frontend/src/app/layout/site-footer/site-footer.component.spec.ts",
-      "source": "frontend/src/app/layout/site-footer/site-footer.component.spec.ts",
-      "mode": "U"
-    },
-    {
-      "path": "frontend/src/app/layout/site-footer/site-footer.component.ts",
-      "source": "frontend/src/app/layout/site-footer/site-footer.component.ts",
       "mode": "U"
     },
     {

@@ -54,6 +54,8 @@ test('Heute to detail to "In Kalender": the ICS download carries the event', asy
   await page.setViewportSize(DESKTOP);
   await visit(page, '/');
   await expect(page.getByRole('heading', { name: 'Heute am Campus' })).toBeVisible();
+  await page.getByRole('link', { name: 'Suche' }).first().click();
+  await page.getByRole('searchbox').fill(fx.posterTitle);
   await page.locator(`a[href="/e/${fx.poster}"]`).first().click();
   await expect(page).toHaveURL(new RegExp(`/e/${fx.poster}$`));
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();

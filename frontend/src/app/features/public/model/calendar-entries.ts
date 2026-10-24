@@ -1,5 +1,6 @@
 /** Adapters between the public calendar answer and the shared calendar grid. */
 import type { GridEntry } from '@shared/ui/calendar-grid/calendar-grid.util';
+import { endDay, startDay } from './event-format';
 import type { PublicCalendarEntry, PublicCalendarOut } from './public.models';
 
 /** The grid entry of a public entry: the slug is the id, the public state is always "published". */
@@ -8,8 +9,8 @@ export function toGridEntry(entry: PublicCalendarEntry): GridEntry {
     id: entry.slug,
     title: entry.title,
     startsAt: entry.startsAt,
-    startsOn: entry.startsOn,
-    endsOn: entry.endsOn,
+    startsOn: startDay(entry),
+    endsOn: endDay(entry),
     allDay: entry.allDay,
     state: 'published',
     publicStatus: entry.status,

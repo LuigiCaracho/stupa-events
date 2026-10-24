@@ -33,8 +33,15 @@ async function list(api: APIRequestContext, query: string): Promise<Card[]> {
 
 export async function findFixtures(): Promise<Partial<PublicFixtures>> {
   const api = await request.newContext({ baseURL: BASE_URL });
-  const upcoming = await list(api, 'limit=50');
-  const past = await list(api, 'past=1&limit=50');
+  const mine = encodeURIComponent(PREFIX);
+  const upcoming = [
+    ...(await list(api, `q=${mine}&limit=50`)),
+    ...(await list(api, 'limit=50')),
+  ];
+  const past = [
+    ...(await list(api, `q=${mine}&past=1&limit=50`)),
+    ...(await list(api, 'past=1&limit=50')),
+  ];
   let poster: Card | undefined;
   for (const card of upcoming.filter((c) => c.image && c.status === 'scheduled')) {
     const detail = await (await api.get(`/api/public/events/${card.slug}`)).json();

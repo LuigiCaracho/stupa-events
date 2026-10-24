@@ -50,8 +50,9 @@ export interface PublicEventCard {
   startsAt: string;
   endsAt: string;
   allDay: boolean;
-  startsOn: string;
-  endsOn: string;
+  /** Set for all-day events only; a timed event derives its Berlin days from `startsAt`/`endsAt`. */
+  startsOn: string | null;
+  endsOn: string | null;
   tzid: string;
   status: PublicStatus;
   statusReason: PublicStatusReason | null;
@@ -145,8 +146,9 @@ export interface PublicCalendarEntry {
   startsAt: string;
   endsAt: string;
   allDay: boolean;
-  startsOn: string;
-  endsOn: string;
+  /** Set for all-day events only; a timed event derives its Berlin days from `startsAt`/`endsAt`. */
+  startsOn: string | null;
+  endsOn: string | null;
   status: PublicStatus;
   categorySlug: string | null;
 }
