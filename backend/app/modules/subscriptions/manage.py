@@ -5,7 +5,8 @@ a `confirmed` subscriber and must not be expired; every other case is the same
 `InvalidTokenError`. The link does not extend itself. Changing the interests rewrites the
 consent proof only when mail would reach a category the person never agreed to; then the page
 shows the sentence and the request carries its version and the tick (`consent_required`). A
-narrower choice leaves the proof as it is. Changes reach Listmonk through the outbox. Deleting calls the `privacy_*` function and nothing else.
+narrower choice leaves the proof as it is. Changes reach Listmonk through the outbox.
+Deleting calls the `privacy_*` function and nothing else.
 """
 
 from __future__ import annotations
