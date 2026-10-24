@@ -56,6 +56,16 @@ FIXED = {
         "Rückblick · STUPA Events",
         "Fotos und Rückblicke auf vergangene Veranstaltungen der Studierendenschaft.",
     ),
+    "/start": (
+        "Get started · STUPA Events",
+        "In wenigen Fragen zum eigenen Kalender der Hochschule Reutlingen: "
+        "Interessen wählen, abonnieren, auf Wunsch auch per Mail.",
+    ),
+    "/abos": (
+        "Kalender abonnieren · STUPA Events",
+        "Alle Veranstaltungen oder eine Kategorie als Kalender abonnieren "
+        "und die wöchentliche Mail verwalten.",
+    ),
 }
 CATEGORY_FALLBACK = "Veranstaltungen dieser Kategorie an der Hochschule Reutlingen."
 NOT_FOUND = ("Nicht gefunden · STUPA Events", "Diese Seite gibt es nicht oder nicht mehr.")

@@ -298,10 +298,12 @@ SHELL_PATHS: tuple[str, ...] = (
     "/suche",
     "/kalender",
     "/rueckblick",
+    "/start",
+    "/abos",
     "/sitemap.xml",
     "/robots.txt",
 )
-SHELL_PREFIXES: tuple[str, ...] = ("/e/", "/k/")
+SHELL_PREFIXES: tuple[str, ...] = ("/e/", "/k/", "/bestaetigen/", "/abo/")
 
 
 def is_public_path(path: str) -> bool:

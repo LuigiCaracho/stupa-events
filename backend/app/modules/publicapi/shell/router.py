@@ -130,6 +130,46 @@ async def archive_page(
     return await _fixed(request, session, settings, limiter, "/rueckblick")
 
 
+@router.api_route("/start", methods=["GET", "HEAD"], response_class=Response, responses=_HTML)
+async def start_page(
+    request: Request, session: PublicSession, settings: SettingsDep, limiter: Limiter
+) -> Response:
+    """Return the Get started page."""
+    return await _fixed(request, session, settings, limiter, "/start")
+
+
+@router.api_route("/abos", methods=["GET", "HEAD"], response_class=Response, responses=_HTML)
+async def subscribe_page(
+    request: Request, session: PublicSession, settings: SettingsDep, limiter: Limiter
+) -> Response:
+    """Return the subscriptions page."""
+    return await _fixed(request, session, settings, limiter, "/abos")
+
+
+def _bare(settings: Settings) -> Response:
+    headers = {
+        **HTML_HEADERS,
+        "Referrer-Policy": "no-referrer",
+        "Cache-Control": "no-store",
+        "X-Robots-Tag": "noindex",
+    }
+    return Response(load_index(settings.spa_index_path), media_type=HTML, headers=headers)
+
+
+@router.api_route(
+    "/bestaetigen/{token}", methods=["GET", "HEAD"], response_class=Response, responses=_HTML
+)
+async def confirm_page(token: str, session: PublicSession, settings: SettingsDep) -> Response:
+    """Return the bare SPA for the confirmation page; a GET changes and reveals nothing."""
+    return _bare(settings)
+
+
+@router.api_route("/abo/{token}", methods=["GET", "HEAD"], response_class=Response, responses=_HTML)
+async def manage_page(token: str, session: PublicSession, settings: SettingsDep) -> Response:
+    """Return the bare SPA for the management page (the token stays in the URL only)."""
+    return _bare(settings)
+
+
 @router.api_route(
     "/e/{slug}",
     methods=["GET", "HEAD"],
