@@ -255,6 +255,7 @@ async def test_there_is_no_delete_route_for_the_taxonomy() -> None:
         "/api/documents/{document_id}/draft",
         "/api/events/{event_id}/actions/verify-howto",
         "/api/events/{event_id}/draft",
+        "/api/public/subscriptions/me",
         "/api/quotes/{quote_id}",
     ]
 
