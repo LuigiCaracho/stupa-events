@@ -26,6 +26,12 @@ dark at 1280 px and 390 px, the network allowlist (own origin, no `Set-Cookie`),
 the public API and creates what is missing as organizer-fsi (`support/public-fixtures.ts`). Run it against the compose `web` for the production build
 (`E2E_BASE_URL=http://127.0.0.1:8081 npx playwright test e2e/public.spec.ts`).
 
+`getstarted.spec.ts` is the B3 acceptance for Get started and the subscriptions: questionnaire to a profile calendar with only the chosen categories (no meetings,
+no cookie), the mail path with the double opt-in (the link in the Mailpit mail shows the page and confirms nothing, the button does), manage, a new calendar address
+(the old one answers 404), delete, the same result page for a known and an unknown address, axe on the new pages and the network allowlist. It needs the dev stack
+with Mailpit (`:8025`, `MAILPIT_URL` overrides) and, for the Listmonk checks, `LISTMONK_API_USER` and `LISTMONK_API_TOKEN` (skipped without). The public signup limit is
+10 per hour and IP: flush the dev Redis before a second run within the hour.
+
 Needs the compose stack with the Keycloak overlay and `127.0.0.1 host.docker.internal` in `/etc/hosts`
 (see `docs/M1-KONTRAKT.md` sections 1 and 8). The tests open `http://localhost:8081` (the registered
 redirect URI); override with `E2E_BASE_URL`. Run `npx playwright test` in `frontend/`.
