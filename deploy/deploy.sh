@@ -18,6 +18,11 @@ if grep -q 'CHANGE_ME' .env; then
   exit 1
 fi
 
+if ! grep -Eq '^TRUSTED_PROXY_IP=[0-9a-f.:]+$' .env || grep -q '^TRUSTED_PROXY_IP=192\.0\.2\.1$' .env; then
+  echo "deploy/.env needs TRUSTED_PROXY_IP set to the real TLS proxy address (not 192.0.2.1)" >&2
+  exit 1
+fi
+
 git -C "${ROOT}" fetch --tags --force
 [[ "$(git -C "${ROOT}" cat-file -t "refs/tags/${TAG}")" == tag ]] || { echo "${TAG} is not an annotated tag" >&2; exit 1; }
 git -C "${ROOT}" checkout --detach "refs/tags/${TAG}"

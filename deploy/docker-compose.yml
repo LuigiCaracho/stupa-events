@@ -38,8 +38,11 @@ services:
         condition: service_healthy
     ports:
       - "127.0.0.1:${WEB_PORT:-8081}:80"
+    environment:
+      TRUSTED_PROXY_IP: ${TRUSTED_PROXY_IP:?set TRUSTED_PROXY_IP to the address nginx sees the TLS proxy from}
     volumes:
       - ./web/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./web/real-ip.conf.template:/etc/nginx/templates/real-ip.conf.template:ro
       - ./web/security-headers.conf:/etc/nginx/snippets/security-headers.conf:ro
       - ./web/api-proxy.conf:/etc/nginx/snippets/api-proxy.conf:ro
       - ./web/proxy-cache.conf:/etc/nginx/snippets/proxy-cache.conf:ro

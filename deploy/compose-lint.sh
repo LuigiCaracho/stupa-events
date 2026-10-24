@@ -30,6 +30,10 @@ forbidden="$(jq -r '[.services[].ports[]? | select(.published == "8080" or .publ
 grep -Eq '^FORWARDED_ALLOW_IPS=\*' .env.example .env.dev.example && fail "FORWARDED_ALLOW_IPS=* in an env example"
 
 [[ "$(jq -r '.services.web.networks.internal.ipv4_address' <<<"${cfg}")" == 172.29.10.10 ]] || fail "web needs 172.29.10.10"
+grep -Eq '^TRUSTED_PROXY_IP=192\.0\.2\.1' .env.example && fail ".env.example must not ship the TRUSTED_PROXY_IP placeholder"
+grep -q 'set_real_ip_from 192.0.2.1' web/nginx.conf web/real-ip.conf.template && fail "set_real_ip_from placeholder hard-coded in nginx"
+grep -Eq '^TRUSTED_PROXY_IP=[0-9.]+$' .env.dev.example || fail ".env.dev.example needs TRUSTED_PROXY_IP"
+
 [[ "$(jq -r '.networks.internal.ipam.config[0].subnet' <<<"${cfg}")" == 172.29.10.0/24 ]] || fail "subnet must be 172.29.10.0/24"
 
 missing="$(jq -r '[.services | to_entries[] | select(.key != "keycloak" and (.value.mem_limit // null) == null) | .key] | join(",")' <<<"${cfg}")"
