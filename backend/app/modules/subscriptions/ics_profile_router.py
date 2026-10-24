@@ -22,7 +22,7 @@ from app.modules.subscriptions import limits
 from app.modules.subscriptions.db import get_subs_session
 from app.modules.subscriptions.ics_merge import merge
 from app.modules.subscriptions.problems import calendar_not_found_response
-from app.modules.subscriptions.tokens import hash_token
+from app.modules.subscriptions.tokens import hash_token, is_well_formed, new_token
 from app.shared.antiabuse import RateLimiterDep, SettingsDep, client_ip
 from app.shared.errors import ProblemDetail
 
@@ -72,7 +72,8 @@ async def profile_calendar(
     """Return the calendar of one profile (404 for every token that is not a live one)."""
     ip = client_ip(request)
     await ratelimit.public_limit(limiter, settings, ip)
-    row = (await session.execute(_FIND, {"h": hash_token(token)})).first()
+    probe = token if is_well_formed(token) else new_token()
+    row = (await session.execute(_FIND, {"h": hash_token(probe)})).first()
     if row is None:
         await limits.hit_ip(limiter, "ics-p-miss", ip, limit=MISS_LIMIT_PER_HOUR)
         return calendar_not_found_response()
