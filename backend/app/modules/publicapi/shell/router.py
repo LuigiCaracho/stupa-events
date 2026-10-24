@@ -26,7 +26,7 @@ from app.modules.publicapi.query import cards, pages, search
 from app.modules.publicapi.query.filters import SiteFilters
 from app.modules.publicapi.respcache import SWR, Built
 from app.modules.publicapi.shell import meta, sitemap
-from app.modules.publicapi.shell.page import HTML_HEADERS, load_index, render
+from app.modules.publicapi.shell.page import HTML_HEADERS, index_version, load_index, render
 from app.settings import Settings, get_settings
 from app.shared.antiabuse import client_ip, get_rate_limiter
 from app.shared.errors import ProblemDetail
@@ -72,7 +72,7 @@ async def _answer(
 
     return await respcache.serve(
         request,
-        key=respcache.cache_key(path, {}),
+        key=respcache.cache_key(path, {"spa": index_version(settings.spa_index_path)}),
         ttl=60,
         cache_control=SWR,
         build=build,

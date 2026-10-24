@@ -19,6 +19,9 @@ from tests.unit.publicapi.test_public_unit import row
 GOLDEN = Path(__file__).resolve().parents[2] / "golden" / "shell"
 INDEX = (Path(__file__).resolve().parents[2] / "fixtures" / "spa-index.html").read_text()
 BASE = "https://events.example"
+DESCRIPTION_TAG = (
+    '<meta name="description" content="Veranstaltungen planen, freigeben und veröffentlichen.">'
+)
 SHA = "3fa9c1d2e4b5a678" + "0" * 48
 STARTS = datetime(2026, 10, 22, 18, 0, tzinfo=UTC)
 ENDS = datetime(2026, 10, 22, 20, 30, tzinfo=UTC)
@@ -163,3 +166,34 @@ def test_robots_lists_the_sitemap_and_forbids_the_api() -> None:
     body = sitemap.robots("https://x.example/").decode()
     assert body.index("Allow: /api/public/media/") < body.index("Disallow: /api/")
     assert "Disallow: /api/" in body and body.endswith("Sitemap: https://x.example/sitemap.xml\n")
+
+
+@pytest.mark.parametrize(
+    "tag",
+    [
+        '<meta content="ORIGINALTEXT > x" name="description">',
+        "<meta name='description' content='ORIGINALTEXT'/>",
+        '<meta name="description" content="ORIGINALTEXT" data-x="1" />',
+    ],
+)
+def test_the_description_is_replaced_whatever_the_attribute_order(tag: str) -> None:
+    html = page.render(INDEX.replace(DESCRIPTION_TAG, tag), meta.home_page(BASE, []), BASE)
+    assert html.count('name="description"') + html.count("name='description'") == 1
+    assert "Alt" not in html.split("</head>")[0].replace("Alt­", "")
+
+
+def test_the_built_index_keeps_exactly_one_description() -> None:
+    built = sorted(Path(__file__).parents[3].glob("../frontend/dist/*/browser/index.html"))
+    if not built:
+        pytest.skip("frontend not built")
+    html = page.render(built[0].read_text(encoding="utf-8"), meta.home_page(BASE, []), BASE)
+    assert html.count('name="description"') == 1
+
+
+def test_the_shell_cache_key_follows_the_index(tmp_path: Path) -> None:
+    index = tmp_path / "index.html"
+    index.write_text("a")
+    first = page.index_version(str(index))
+    os.utime(index, ns=(1, 1))
+    assert page.index_version(str(index)) not in ("", first)
+    assert page.index_version(str(tmp_path / "missing.html")) == ""

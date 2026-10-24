@@ -19,7 +19,7 @@ logger = logging.getLogger("app.public")
 
 MAX_URLS = 45_000
 WINDOW = timedelta(days=366)
-FIXED_PATHS = ("/", "/suche", "/kalender", "/abos", "/rueckblick")
+FIXED_PATHS = ("/", "/suche", "/kalender", "/rueckblick")
 NAMESPACE = "http://www.sitemaps.org/schemas/sitemap/0.9"
 SNAPSHOT = "sitemap"
 SITEMAP_TYPE = "application/xml; charset=utf-8"
@@ -63,7 +63,7 @@ async def read(
 
 
 def robots(base_url: str) -> bytes:
-    """Return `robots.txt`: pages and preview images stay open, the API and the app paths stay out."""
+    """Return `robots.txt`: pages and preview images stay open, API and app paths stay out."""
     lines = (
         "User-agent: *",
         "Allow: /e/",

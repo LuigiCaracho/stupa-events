@@ -32,6 +32,7 @@ _NOT_READ_BY_THE_API = {
     "EVENTS_PUBLIC_PASSWORD": "compose, role setup",
     "MINIO_ROOT_USER": "minio image",
     "MINIO_ROOT_PASSWORD": "minio image",
+    "TRUSTED_PROXY_IP": "compose interpolation (nginx real-ip template)",
     "WEB_PORT": "compose interpolation",
     "WEB_HOST": "compose interpolation",
     "ENV_FILE": "compose interpolation",

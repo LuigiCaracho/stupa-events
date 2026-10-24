@@ -238,7 +238,7 @@ async def list_categories(
     return await respcache.serve(
         request,
         key=respcache.cache_key("/categories", {}),
-        ttl=300,
+        ttl=60,
         cache_control=LONG,
         build=build,
         on_miss=_miss(request, limiter, settings),

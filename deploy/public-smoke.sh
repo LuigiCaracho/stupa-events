@@ -42,7 +42,9 @@ code="$(curl -sS -o /dev/null -w '%{http_code}' -H "If-None-Match: ${etag}" "${b
 [[ "${code}" == 304 ]] || fail "If-None-Match answered ${code}, not 304"
 
 for path in / /suche /kalender /rueckblick /sitemap.xml /robots.txt /api/public/events /api/public/today "/ics/e/${slug}.ics" /api/auth/me; do
-  ! curl -s -o /dev/null -D - "${base}${path}" | grep -qi '^set-cookie:' || fail "Set-Cookie on ${path}"
+  curl -fsS -o /dev/null -D "${tmp}/ck" "${base}${path}" || fail "${path} did not answer 2xx (rate limit?)"
+  ! grep -qi '^set-cookie:' "${tmp}/ck" || fail "Set-Cookie on ${path}"
+  sleep 0.3
 done
 
 bundles() { grep -Eo '(main|styles)-[A-Za-z0-9]+\.(js|css)' | sort -u; }

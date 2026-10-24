@@ -29,7 +29,10 @@ HTML_HEADERS = {
     "X-Content-Type-Options": "nosniff",
 }
 _TITLE = re.compile(r"<title>.*?</title>", re.DOTALL | re.IGNORECASE)
-_DESCRIPTION = re.compile(r'<meta\s+name="description"\s+content="[^"]*"\s*/?>', re.IGNORECASE)
+_ATTRIBUTES = r"""(?:[^>"']|"[^"]*"|'[^']*')*"""
+_DESCRIPTION = re.compile(
+    rf"""<meta\b(?={_ATTRIBUTES}\bname\s*=\s*["']description["']){_ATTRIBUTES}>""", re.IGNORECASE
+)
 _env = Environment(autoescape=True)
 _HEAD = _env.from_string(
     """<meta name="description" content="{{ p.description }}">
@@ -85,6 +88,14 @@ def load_index(path: str) -> str:
         raise ServiceUnavailableError(
             "Die Oberfläche ist nicht gebaut.", code="spa_not_built"
         ) from exc
+
+
+def index_version(path: str) -> str:
+    """Return the mtime of the built `index.html` ("" when missing) for keying cached shells."""
+    try:
+        return str(Path(path).stat().st_mtime_ns)
+    except OSError:
+        return ""
 
 
 def render(index_html: str, page: Page, base_url: str) -> str:
