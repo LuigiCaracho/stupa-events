@@ -36,6 +36,7 @@ MAX_ATTEMPTS = 10
 MAX_ATTEMPTS_PERMANENT = 3
 BREAKER_FAILURES = 5
 ORPHAN_AFTER = timedelta(minutes=5)
+CIPHERTEXT_OPS = ("delete", "unsubscribe")
 
 Maker = async_sessionmaker[AsyncSession]
 
@@ -132,14 +133,14 @@ async def claim(maker: Maker, now: datetime, limit: int = BATCH) -> list[Job]:
 
 
 async def finish(maker: Maker, job: Job, now: datetime) -> None:
-    """Mark the job done; a `delete` job drops its ciphertext now."""
+    """Mark the job done; an erasure job drops its ciphertext now."""
     values: dict[str, Any] = {
         "state": "done",
         "done_at": now,
         "locked_at": None,
         "last_error": None,
     }
-    if job.op == "delete":
+    if job.op in CIPHERTEXT_OPS:
         values["payload"] = Outbox.payload.op("-")(text("'emailEnc'"))
     async with maker.begin() as session:
         await session.execute(update(Outbox).where(Outbox.id == job.id).values(**values))
@@ -208,15 +209,18 @@ async def handle_upsert(maker: Maker, port: ListmonkPort, email_key: str, job: J
 
 
 async def handle_unsubscribe(maker: Maker, port: ListmonkPort, email_key: str, job: Job) -> None:
-    """Blocklist the subscriber on Listmonk so nothing delivers again."""
-    if job.subscriber_id is None:
-        return
-    target = await sync.load_target(maker, job.subscriber_id, email_key)
-    if target is None:
-        return
-    existing = await port.find_subscriber(target.email)
-    if existing is not None:
-        await port.blocklist(existing.id)
+    """Blocklist the subscriber on Listmonk so nothing delivers again.
+
+    An erasure job carries the ciphertext because the subscriber row is already wiped.
+    """
+    email = await _decrypt_payload_email(maker, job.payload, email_key)
+    if email is None and job.subscriber_id is not None:
+        target = await sync.load_target(maker, job.subscriber_id, email_key)
+        email = target.email if target else None
+    existing = await port.find_subscriber(email) if email else None
+    listmonk_id = existing.id if existing else job.payload.get("listmonkSubscriberId")
+    if listmonk_id is not None:
+        await port.blocklist(int(listmonk_id))
 
 
 async def _decrypt_payload_email(

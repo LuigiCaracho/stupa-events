@@ -203,6 +203,27 @@ async def test_delete_job_removes_the_record_and_drops_the_ciphertext(maker, fak
     assert row.payload["listmonkSubscriberId"] is not None
 
 
+async def test_erasure_blocklists_before_it_deletes_and_drops_both_ciphertexts(maker, fake) -> None:  # noqa: ANN001
+    sid = await add_subscriber(maker, "a@example.test")
+    await enqueue(maker, "upsert", sid)
+    await run(maker, fake)
+    from sqlalchemy import text
+
+    async with maker.begin() as session:
+        await session.execute(text("SELECT privacy_erase_subscriber(:i)"), {"i": sid})
+        await session.execute(text("UPDATE outbox SET state = 'dead' WHERE op = 'delete'"))
+    assert (
+        await scalar(
+            maker, "SELECT count(*) FROM outbox WHERE op = 'unsubscribe' AND state = 'pending'"
+        )
+        == 1
+    )
+    await run(maker, fake, now=NOW + timedelta(days=1))
+    assert fake.by_email("a@example.test").status == "blocklisted"  # type: ignore[union-attr]
+    row = await one(maker, "SELECT state, payload FROM outbox WHERE op = 'unsubscribe'")
+    assert row.state == "done" and "emailEnc" not in row.payload
+
+
 async def test_delete_finds_the_record_by_address_when_the_id_was_never_stored(maker, fake) -> None:  # noqa: ANN001
     sid = await add_subscriber(maker, "a@example.test")
     fake.add_foreign("a@example.test", 99)

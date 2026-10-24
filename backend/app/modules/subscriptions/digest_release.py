@@ -53,8 +53,10 @@ async def own_count(maker: Maker, key: str) -> int:
 
 async def dead_erasures(maker: Maker) -> int:
     """Count `delete` and `unsubscribe` jobs that gave up: an erased person may still be listed."""
-    stmt = select(func.count()).select_from(Outbox).where(
-        Outbox.state == "dead", Outbox.op.in_(("delete", "unsubscribe"))
+    stmt = (
+        select(func.count())
+        .select_from(Outbox)
+        .where(Outbox.state == "dead", Outbox.op.in_(("delete", "unsubscribe")))
     )
     async with maker() as session:
         return int(await session.scalar(stmt) or 0)
