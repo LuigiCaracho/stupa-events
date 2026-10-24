@@ -14,13 +14,15 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime
 
-from sqlalchemy import func, select, update
+from sqlalchemy import Boolean, Text, column, func, select, table, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.modules.subscriptions.listmonk_port import ListmonkPort, ListmonkSubscriber
 from app.modules.subscriptions.models import ListmonkList, Subscriber, SubscriptionProfile
 from app.shared.timeutil import utcnow
+
+_CATEGORY = table("public_category_v", column("slug", Text), column("active", Boolean))
 
 ALL_KEY = "_all"
 SOURCE = "get-started"
@@ -181,3 +183,31 @@ async def store_listmonk_id(maker: Maker, subscriber_id: uuid.UUID, listmonk_id:
             .where(Subscriber.id == subscriber_id, Subscriber.status != "erased")
             .values(listmonk_subscriber_id=listmonk_id)
         )
+
+
+async def sync_category_lists(maker: Maker, port: ListmonkPort) -> dict[str, int]:
+    """Create the missing lists of the active categories and archive those of inactive ones.
+
+    Returns:
+        Counters `created` and `archived`.
+    """
+    async with maker() as session:
+        categories = {r.slug: r.active for r in (await session.execute(select(_CATEGORY))).all()}
+        known = {r[0].key: r[0] for r in (await session.execute(select(ListmonkList))).all()}
+    wanted = {ALL_KEY} | {slug for slug, active in categories.items() if active}
+    created = 0
+    for key in sorted(wanted):
+        row = known.get(key)
+        if row is None or row.archived_at is not None:
+            await register_list(maker, port, key)
+            created += 1
+    archived = 0
+    for key, row in known.items():
+        if key not in wanted and row.archived_at is None:
+            await port.archive_list(row.listmonk_id)
+            async with maker.begin() as session:
+                await session.execute(
+                    update(ListmonkList).where(ListmonkList.key == key).values(archived_at=utcnow())
+                )
+            archived += 1
+    return {"created": created, "archived": archived}

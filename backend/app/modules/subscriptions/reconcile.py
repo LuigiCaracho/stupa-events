@@ -27,6 +27,7 @@ from app.modules.subscriptions.listmonk_sync import (
     desired_keys,
     mark_unsubscribed,
     plan,
+    sync_category_lists,
 )
 from app.modules.subscriptions.models import ListmonkList, Subscriber, SubscriptionProfile
 from app.modules.subscriptions.outbox import requeue_upsert
@@ -88,6 +89,7 @@ async def reconcile(
     """Run the reconcile once and return the counters."""
     moment = now or utcnow()
     report = Report()
+    await sync_category_lists(maker, port)
     async with maker() as session:
         lists = [r[0] for r in (await session.execute(select(ListmonkList))).all()]
     key_of = {row.listmonk_id: row.key for row in lists if row.archived_at is None}

@@ -9,6 +9,8 @@ response body or a request payload, so no address reaches a log.
 Listmonk v5.1 has no `PATCH /api/subscribers/{id}`. Attributes change through `PUT
 /api/subscribers/{id}` with the full list of current lists, which keeps their statuses
 (an `unsubscribed` list stays `unsubscribed`); removals go through `PUT /api/subscribers/lists`.
+Lookups use `search`: the SQL `query` parameter needs `subscribers:sql_query`, which the API user
+must not have.
 """
 
 from __future__ import annotations
@@ -123,12 +125,17 @@ class ListmonkClient:
         return int((await self._call("POST", "/api/lists", json=body))["id"])
 
     async def find_subscriber(self, email: str) -> ListmonkSubscriber | None:
-        """Return the subscriber with this address or None."""
+        """Return the subscriber with this address or None.
+
+        The lookup uses the plain `search` parameter, not the SQL `query` one: the latter needs the
+        permission `subscribers:sql_query`, which the API user must never have. Search matches
+        substrings, so the exact (case-insensitive) address is picked from the page.
+        """
         if _UNSAFE.search(email):
             raise ListmonkError("unsafe_address", retryable=False)
-        query = "subscribers.email='" + email.replace("'", "''") + "'"
-        rows = await self._results("/api/subscribers", {"query": query, "per_page": 1})
-        return _subscriber(rows[0]) if rows else None
+        rows = await self._results("/api/subscribers", {"search": email, "per_page": 100})
+        wanted = email.lower()
+        return next((_subscriber(r) for r in rows if str(r["email"]).lower() == wanted), None)
 
     async def upsert_subscriber(
         self, email: str, list_ids: set[int], attribs: dict[str, object]

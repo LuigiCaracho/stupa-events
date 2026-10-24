@@ -59,16 +59,18 @@ def test_host_outside_the_allowlist_is_refused() -> None:
         checked_base_url("https://lm.example.test", [], development=False)
 
 
-async def test_auth_header_and_apostrophe_in_the_query() -> None:
+async def test_lookup_uses_search_not_the_sql_query_and_matches_the_exact_address() -> None:
     seen: list[httpx.Request] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
         seen.append(request)
-        return ok({"results": []})
+        return ok({"results": [row(1, "xo'brien@example.test"), row(2, "O'Brien@example.test")]})
 
-    assert await client(handler).find_subscriber("o'brien@example.test") is None
+    found = await client(handler).find_subscriber("o'brien@example.test")
+    assert found is not None and found.id == 2
     assert seen[0].headers["authorization"] == "token events-api:" + "t" * 32
-    assert seen[0].url.params["query"] == "subscribers.email='o''brien@example.test'"
+    assert "query" not in seen[0].url.params
+    assert seen[0].url.params["search"] == "o'brien@example.test"
 
 
 async def test_control_characters_never_reach_the_query() -> None:
