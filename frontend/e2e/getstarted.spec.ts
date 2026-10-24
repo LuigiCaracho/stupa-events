@@ -134,8 +134,9 @@ test('mail path: DOI mail, GET confirms nothing, the button does, manage, new ad
   await deleteAll();
   await page.goto('/abos');
   await page.getByRole('button', { name: 'Verwaltungslink anfordern' }).click();
-  await page.getByLabel('Mailadresse').fill(email);
-  await page.getByRole('button', { name: 'Link anfordern' }).click();
+  const ask = page.getByRole('dialog');
+  await ask.getByLabel('Mailadresse').fill(email);
+  await ask.getByRole('button', { name: 'Link anfordern', exact: true }).click();
   await expect(
     page.getByText('Wenn die Adresse bei uns angemeldet ist, ist der Link unterwegs.'),
   ).toBeVisible();
