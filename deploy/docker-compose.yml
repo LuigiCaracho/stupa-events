@@ -134,6 +134,7 @@ services:
       EVENTS_APP_PASSWORD: ${EVENTS_APP_PASSWORD:?set EVENTS_APP_PASSWORD}
       EVENTS_MIGRATOR_PASSWORD: ${EVENTS_MIGRATOR_PASSWORD:?set EVENTS_MIGRATOR_PASSWORD}
       EVENTS_PUBLIC_PASSWORD: ${EVENTS_PUBLIC_PASSWORD:?set EVENTS_PUBLIC_PASSWORD}
+      EVENTS_SUBS_PASSWORD: ${EVENTS_SUBS_PASSWORD:?set EVENTS_SUBS_PASSWORD}
     volumes:
       - pg_data:/var/lib/postgresql/data
       - ./db/init-roles.sh:/docker-entrypoint-initdb.d/10-roles.sh:ro
@@ -204,11 +205,31 @@ services:
       retries: 6
       start_period: 300s
 
+  altcha:
+    # ALTCHA Sentinel (Upstream deploy/docker-compose.yml): internal only, no host port. The API verifies
+    # challenges itself with ALTCHA_HMAC_SECRET; this service shares the secret and gives the operator
+    # the dashboard. It is not on the verification path.
+    image: ghcr.io/altcha-org/sentinel:1.31.1
+    pull_policy: missing
+    <<: [*restart, *logging]
+    mem_limit: 128m
+    cpus: 0.5
+    environment:
+      DEFAULT_ROOT_PASSWORD: ${ALTCHA_ROOT_PASSWORD:?set ALTCHA_ROOT_PASSWORD}
+      ALTCHA_HMAC_SECRET: ${ALTCHA_HMAC_SECRET:?set ALTCHA_HMAC_SECRET}
+    volumes:
+      - altcha_data:/data
+    networks:
+      - internal
+    security_opt:
+      - no-new-privileges:true
+
 volumes:
   pg_data:
   minio_data:
   redis_data:
   clamav_data:
+  altcha_data:
 
 networks:
   internal:

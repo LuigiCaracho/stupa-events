@@ -30,6 +30,8 @@ _NOT_READ_BY_THE_API = {
     "EVENTS_APP_PASSWORD": "compose, role setup",
     "EVENTS_MIGRATOR_PASSWORD": "compose, role setup",
     "EVENTS_PUBLIC_PASSWORD": "compose, role setup",
+    "EVENTS_SUBS_PASSWORD": "compose, role setup",
+    "ALTCHA_ROOT_PASSWORD": "compose (altcha service)",
     "MINIO_ROOT_USER": "minio image",
     "MINIO_ROOT_PASSWORD": "minio image",
     "TRUSTED_PROXY_IP": "compose interpolation (nginx real-ip template)",
