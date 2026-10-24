@@ -17,6 +17,9 @@ DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'events_public') THEN
     CREATE ROLE events_public LOGIN;
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'events_subs') THEN
+    CREATE ROLE events_subs LOGIN;
+  END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'events_audit_writer') THEN
     CREATE ROLE events_audit_writer NOLOGIN;
   END IF;
@@ -26,11 +29,18 @@ ALTER ROLE events_public CONNECTION LIMIT 8;
 ALTER ROLE events_public SET statement_timeout = '2s';
 ALTER ROLE events_public SET idle_in_transaction_session_timeout = '5s';
 
+-- events_subs holds the address key as a bind parameter: no statement or parameter text in the logs.
+ALTER ROLE events_subs CONNECTION LIMIT 6;
+ALTER ROLE events_subs SET statement_timeout = '3s';
+ALTER ROLE events_subs SET idle_in_transaction_session_timeout = '5s';
+ALTER ROLE events_subs SET log_parameter_max_length = 0;
+ALTER ROLE events_subs SET log_parameter_max_length_on_error = 0;
+
 REVOKE ALL ON SCHEMA public FROM PUBLIC;
-GRANT CONNECT ON DATABASE events TO events_app, events_migrator, events_public;
+GRANT CONNECT ON DATABASE events TO events_app, events_migrator, events_public, events_subs;
 GRANT CREATE ON DATABASE events TO events_migrator;
 GRANT USAGE, CREATE ON SCHEMA public TO events_migrator;
-GRANT USAGE ON SCHEMA public TO events_app, events_public;
+GRANT USAGE ON SCHEMA public TO events_app, events_public, events_subs;
 
 -- events_app never gets DELETE by default; stage 2 grants it per table. events_public gets nothing.
 ALTER DEFAULT PRIVILEGES FOR ROLE events_migrator IN SCHEMA public
@@ -73,4 +83,29 @@ BEGIN
            WHERE n.nspname = 'public' AND c.relkind = 'v' AND c.relname LIKE 'public\_%\_v' LOOP
     EXECUTE format('GRANT SELECT ON TABLE %I TO events_public', r.relname);
   END LOOP;
+END $$;
+
+-- Stage 2. Subscriptions: only events_subs writes them, and it never deletes (the privacy_*
+-- functions do). events_app reads the interests and sees no other subscription table.
+DO $$
+DECLARE t text;
+BEGIN
+  FOREACH t IN ARRAY ARRAY['subscriber', 'subscription_profile', 'outbox', 'listmonk_list', 'digest_run'] LOOP
+    IF to_regclass('public.' || t) IS NOT NULL THEN
+      EXECUTE format('REVOKE ALL ON TABLE %I FROM events_app', t);
+      EXECUTE format('GRANT SELECT, INSERT, UPDATE ON TABLE %I TO events_subs', t);
+    END IF;
+  END LOOP;
+  IF to_regclass('public.interest') IS NOT NULL THEN
+    REVOKE ALL ON TABLE interest FROM events_app;
+    GRANT SELECT ON TABLE interest TO events_app, events_subs;
+  END IF;
+  IF to_regclass('public.public_event_v') IS NOT NULL THEN
+    GRANT SELECT ON TABLE public_event_v, public_category_v TO events_subs;
+  END IF;
+  IF to_regprocedure('public.privacy_erase_subscriber(uuid)') IS NOT NULL THEN
+    GRANT EXECUTE ON FUNCTION privacy_erase_subscriber(uuid), privacy_purge_pending(timestamptz),
+      privacy_anonymize_unsubscribed(timestamptz), privacy_purge_profiles(date),
+      privacy_purge_outbox(timestamptz) TO events_subs;
+  END IF;
 END $$;

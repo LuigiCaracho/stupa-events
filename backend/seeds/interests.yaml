@@ -1,0 +1,27 @@
+# Questionnaire interests (version 1) and the category slugs each one covers (B3-KONTRAKT 2.1).
+# Fachschaft interests are not listed here: they are built from the active fachschaft categories.
+interests:
+  - slug: party
+    label: Partys und Feiern
+    sort: 10
+    categories: [party, campusfest, festival, get-together]
+  - slug: kultur
+    label: Kino, Konzerte, Kultur
+    sort: 20
+    categories: [kino, konzert]
+  - slug: sport
+    label: Sport und Ausfahrten
+    sort: 30
+    categories: [ausfahrt, skiausfahrt, skydiving, kart-fahren]
+  - slug: gaming
+    label: Gaming und LAN
+    sort: 40
+    categories: [lan-party]
+  - slug: lernen
+    label: Workshops und Lernen
+    sort: 50
+    categories: [workshop, repair-cafe, cooking-class]
+  - slug: sitzung
+    label: Sitzungen und Gremien
+    sort: 60
+    categories: [sitzung]

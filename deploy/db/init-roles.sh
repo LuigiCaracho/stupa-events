@@ -8,8 +8,10 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" -f /
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" \
   -v app_pw="$EVENTS_APP_PASSWORD" \
   -v migrator_pw="$EVENTS_MIGRATOR_PASSWORD" \
-  -v public_pw="$EVENTS_PUBLIC_PASSWORD" <<'SQL'
+  -v public_pw="$EVENTS_PUBLIC_PASSWORD" \
+  -v subs_pw="$EVENTS_SUBS_PASSWORD" <<'SQL'
 ALTER ROLE events_app PASSWORD :'app_pw';
 ALTER ROLE events_migrator PASSWORD :'migrator_pw';
 ALTER ROLE events_public PASSWORD :'public_pw';
+ALTER ROLE events_subs PASSWORD :'subs_pw';
 SQL
