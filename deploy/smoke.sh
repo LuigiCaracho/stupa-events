@@ -18,6 +18,13 @@ paths=(
   /suche
   /kalender
   /rueckblick
+  /start
+  /abos
+  /abo
+  /abo/probe
+  /bestaetigen
+  /bestaetigen/probe
+  /api/public/getstarted/questions
   /ics/e/probe.ics
   /sitemap.xml
   /robots.txt
