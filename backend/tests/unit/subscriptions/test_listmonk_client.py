@@ -156,10 +156,10 @@ async def test_existing_subscriber_uses_put_with_all_current_lists_and_removes_t
     await client(handler).upsert_subscriber("a@example.test", {1, 4}, {"profile_version": 2})
     methods = [(m, p) for m, p, _ in calls]
     assert ("PATCH", "/api/subscribers/7") not in methods
-    put = next(b for m, p, b in calls if (m, p) == ("PUT", "/api/subscribers/7"))
+    put = next(b or {} for m, p, b in calls if (m, p) == ("PUT", "/api/subscribers/7"))
     assert put["lists"] == [1, 2, 3, 4]
     assert put["attribs"] == {"profile_version": 2}
-    remove = next(b for m, p, b in calls if (m, p) == ("PUT", "/api/subscribers/lists"))
+    remove = next(b or {} for m, p, b in calls if (m, p) == ("PUT", "/api/subscribers/lists"))
     assert remove == {"ids": [7], "action": "remove", "target_list_ids": [3]}
 
 

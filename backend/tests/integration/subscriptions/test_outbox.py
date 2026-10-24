@@ -96,10 +96,9 @@ async def test_failed_try_waits_longer_each_time_and_dies_after_ten(maker, fake)
     moment = NOW
     for attempt in range(1, 11):
         await run(maker, fake, now=moment)
-        row = await one(maker, "SELECT state, attempts FROM outbox")
-        assert row.attempts == attempt
+        assert await scalar(maker, "SELECT attempts FROM outbox") == attempt
         moment += timedelta(hours=2)
-    assert row.state == "dead"
+    assert await scalar(maker, "SELECT state FROM outbox") == "dead"
     assert (await run(maker, fake, now=moment)).failed == 0
 
 
