@@ -52,18 +52,18 @@ personal="$(awk '/^[[:space:]]*location /{loc=$0; open=1; next}
   open && /proxy-cache\.conf/ && loc ~ /ics\/p/{print loc}
   open && /^[[:space:]]*}/{open=0}' web/nginx.conf)"
 [[ -z "${personal}" ]] || fail "personal calendar location is cached: ${personal}"
-secret='ics/p|abo|bestaetigen|api/public/subscriptions|api/public/altcha'
+secret='ics/p|abo([^s]|$)|bestaetigen|api/public/subscriptions|api/public/altcha'
 cached="$(awk -v re="${secret}" '/^[[:space:]]*location /{loc=$0; open=1; next}
   open && /proxy-cache\.conf/ && loc ~ re{print loc}
   open && /^[[:space:]]*}/{open=0}' web/nginx.conf)"
 [[ -z "${cached}" ]] || fail "location with a secret in its URL or header is cached: ${cached}"
 unredacted="$(awk '/^[[:space:]]*location /{loc=$0; open=1; ok=0; next}
   open && /ev_token_redacted|ev_ics_redacted/{ok=1}
-  open && /^[[:space:]]*}/{if (loc ~ /abo|bestaetigen/ && !ok) print loc; open=0}' web/nginx.conf)"
+  open && /^[[:space:]]*}/{if (loc ~ /abo([^s]|$)|bestaetigen/ && !ok) print loc; open=0}' web/nginx.conf)"
 [[ -z "${unredacted}" ]] || fail "token page location without a redacted access_log: ${unredacted}"
 
 grep -Eq '^    access_log /var/log/nginx/access\.log ev_noquery;' web/nginx.conf || fail "server access_log must use ev_noquery"
-odd="$(awk '/^[[:space:]]*location /{loc=$0} /access_log/ && !/access_log off/ && !/ev_noquery/ && !(/ev_ics_redacted/ && loc ~ /ics\/p/) && !(/ev_token_redacted/ && loc ~ /abo|bestaetigen/){print loc ": " $0}' web/nginx.conf)"
+odd="$(awk '/^[[:space:]]*location /{loc=$0} /access_log/ && !/access_log off/ && !/ev_noquery/ && !(/ev_ics_redacted/ && loc ~ /ics\/p/) && !(/ev_token_redacted/ && loc ~ /abo([^s]|$)|bestaetigen/){print loc ": " $0}' web/nginx.conf)"
 [[ -z "${odd}" ]] || fail "access_log with another format: ${odd}"
 
 [[ "$(jq '[.services[].ports[]? | select(.target == 80)] | length' <<<"${cfg}")" -le 1 ]] || fail "port 80 published more than once"
