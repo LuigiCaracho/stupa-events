@@ -37,11 +37,11 @@ def test_the_meetings_answer_adds_the_meetings_interest() -> None:
 
 
 def test_the_faculty_answer_adds_the_faculty_category_but_not_its_parent() -> None:
-    result = resolve_categories(CATALOG, ["party"], False, "fachschaft:fsi")
-    assert "fachschaft-fsi" in result.categories
+    result = resolve_categories(CATALOG, ["party"], False, "fachschaft:informatik-fsi")
+    assert "fachschaft-informatik-fsi" in result.categories
     assert "fachschaft" not in result.categories
-    assert "fachschaft-tec" not in result.categories
-    assert result.interests[-1] == "fachschaft:fsi"
+    assert "fachschaft-technik-tec" not in result.categories
+    assert result.interests[-1] == "fachschaft:informatik-fsi"
 
 
 def test_esb_stuco_keeps_its_slug_as_the_faculty_value() -> None:
@@ -52,8 +52,8 @@ def test_esb_stuco_keeps_its_slug_as_the_faculty_value() -> None:
 
 
 def test_a_faculty_value_is_also_accepted_inside_the_interest_list() -> None:
-    result = resolve_categories(CATALOG, ["fachschaft:tec"], False, None)
-    assert result.categories == ("fachschaft-tec",)
+    result = resolve_categories(CATALOG, ["fachschaft:technik-tec"], False, None)
+    assert result.categories == ("fachschaft-technik-tec",)
 
 
 def test_the_parent_of_a_chosen_category_brings_its_children() -> None:
@@ -63,7 +63,9 @@ def test_the_parent_of_a_chosen_category_brings_its_children() -> None:
     )
     result = resolve_categories(parent_catalog, ["x"], False, None)
     assert result.categories[0] == "fachschaft"
-    assert {"fachschaft-fsi", "fachschaft-tec", "esb-stuco"} <= set(result.categories)
+    assert {"fachschaft-informatik-fsi", "fachschaft-technik-tec", "esb-stuco"} <= set(
+        result.categories
+    )
 
 
 def test_an_unknown_interest_is_refused() -> None:
@@ -96,7 +98,7 @@ def test_more_than_forty_categories_are_refused() -> None:
 
 
 def test_faculty_values_and_labels() -> None:
-    assert interests.faculty_value("fachschaft-fsi") == "fachschaft:fsi"
+    assert interests.faculty_value("fachschaft-informatik-fsi") == "fachschaft:informatik-fsi"
     assert interests.faculty_value("esb-stuco") == "fachschaft:esb-stuco"
     assert CATALOG.label("party") == "Partys und Feiern"
-    assert CATALOG.label("fachschaft:fsi") == "Fachschaft Informatik"
+    assert CATALOG.label("fachschaft:informatik-fsi") == "Fachschaft Informatik"

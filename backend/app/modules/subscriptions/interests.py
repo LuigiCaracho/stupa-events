@@ -12,11 +12,13 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Final
+from uuid import UUID
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.taxonomy.reference import reference_id
+from app.modules.taxonomy.reference_m2 import category_renames
 
 MAX_CATEGORIES: Final = 40
 FACULTY_PREFIX: Final = "fachschaft:"
@@ -141,6 +143,15 @@ def resolve_categories(
     return Resolution(tuple(chosen), categories)
 
 
+def category_ids_by_slug(categories: Mapping[str, CategoryInfo]) -> dict[UUID, str]:
+    """Map the stable reference ids to the slugs the categories carry today.
+
+    The ids are `uuid5` of the first slug; M2 renamed some slugs but kept the ids.
+    """
+    ids = {reference_id("category", slug): slug for slug in categories}
+    return ids | {cid: slug for cid, slug in category_renames() if slug in categories}
+
+
 async def load_catalog(session: AsyncSession) -> Catalog:
     """Read the active interests and the active public categories."""
     categories = {
@@ -152,7 +163,7 @@ async def load_catalog(session: AsyncSession) -> Catalog:
             )
         )
     }
-    by_id = {reference_id("category", slug): slug for slug in categories}
+    by_id = category_ids_by_slug(categories)
     interests = {
         row.slug: InterestInfo(
             row.slug, row.label, tuple(by_id[i] for i in row.category_ids if i in by_id)

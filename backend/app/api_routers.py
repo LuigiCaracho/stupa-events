@@ -31,6 +31,8 @@ from app.modules.orgs.router import router as orgs_router
 from app.modules.publicapi.router import router as public_router
 from app.modules.publicapi.site_router import router as public_site_router
 from app.modules.search.router import router as search_router
+from app.modules.subscriptions.altcha_router import router as altcha_router
+from app.modules.subscriptions.router import router as subscriptions_router
 from app.modules.taxonomy.router import router as taxonomy_router
 
 ROUTERS: tuple[APIRouter, ...] = (
@@ -57,4 +59,6 @@ ROUTERS: tuple[APIRouter, ...] = (
     *DOSSIER_ROUTERS,
     public_router,
     public_site_router,
+    altcha_router,
+    subscriptions_router,
 )

@@ -192,6 +192,7 @@ class Settings(BaseSettings):
     rl_subs_confirm_per_hour: int = 30
     rl_subs_me_per_hour: int = 60
     subs_mails_per_day: int = 3
+    subs_body_max_bytes: int = 4096
 
     @field_validator("cors_allow_origins", "listmonk_allowed_hosts", mode="before")
     @classmethod

@@ -28,6 +28,7 @@ from app.modules.files.storage import build_object_storage
 from app.modules.notifications.provider import close_mail_pool, create_mail_pool
 from app.modules.publicapi.ics_router import router as ics_router
 from app.modules.publicapi.shell.router import router as shell_router
+from app.modules.subscriptions.ics_profile_router import router as ics_profile_router
 from app.settings import Settings, get_settings
 from app.shared.errors import register_exception_handlers, use_problem_json_contract
 
@@ -99,6 +100,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     register_exception_handlers(app)
     app.include_router(api_router)
     app.include_router(ics_router)
+    app.include_router(ics_profile_router)
     app.include_router(shell_router)
     use_problem_json_contract(app)
     return app
