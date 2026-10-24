@@ -45,7 +45,6 @@ import type { QuestionOption, SubscribeOut } from '../../model/subscriptions.mod
 import { AltchaService } from '../../ui/altcha.service';
 import { ChipGroupComponent } from '../../ui/chip-group/chip-group.component';
 import { errorText } from '../../ui/error-text';
-import { LinkButtonComponent } from '../../ui/link-button/link-button.component';
 import { LoadErrorComponent } from '../../ui/load-error/load-error.component';
 import { usePageTitle } from '../../ui/page-title';
 import { ProfileLinksComponent } from '../../ui/profile-links/profile-links.component';
@@ -77,7 +76,6 @@ function sessionStore(): Storage | null {
     NoteComponent,
     SkeletonComponent,
     ChipGroupComponent,
-    LinkButtonComponent,
     LoadErrorComponent,
     ProfileLinksComponent,
   ],
