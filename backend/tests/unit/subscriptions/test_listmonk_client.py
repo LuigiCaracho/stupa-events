@@ -73,6 +73,16 @@ async def test_lookup_uses_search_not_the_sql_query_and_matches_the_exact_addres
     assert seen[0].url.params["search"] == "o'brien@example.test"
 
 
+async def test_lookup_pages_on_until_the_exact_address_turns_up() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if int(request.url.params["page"]) == 1:
+            return ok({"results": [row(i, f"x{i}a@example.test") for i in range(100)]})
+        return ok({"results": [row(500, "a@example.test")]})
+
+    found = await client(handler).find_subscriber("a@example.test")
+    assert found is not None and found.id == 500
+
+
 async def test_control_characters_never_reach_the_query() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         raise AssertionError("no request expected")

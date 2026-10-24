@@ -32,6 +32,8 @@ from app.settings import Settings
 from app.shared.ssrf import SsrfError, assert_allowed_url
 
 SUBSCRIBER_NAME = "STUPA Events Abo"
+SEARCH_PAGE_SIZE = 100
+SEARCH_MAX_PAGES = 50
 PAGE_SIZE = 500
 _UNSAFE = re.compile(r"[\x00-\x1f\x7f\\]")
 _TIMEOUT = httpx.Timeout(15.0, connect=3.0, read=10.0)
@@ -146,13 +148,21 @@ class ListmonkClient:
 
         The lookup uses the plain `search` parameter, not the SQL `query` one: the latter needs the
         permission `subscribers:sql_query`, which the API user must never have. Search matches
-        substrings, so the exact (case-insensitive) address is picked from the page.
+        substrings, so the exact (case-insensitive) address is picked from the pages.
         """
         if _UNSAFE.search(email):
             raise ListmonkError("unsafe_address", retryable=False)
-        rows = await self._results("/api/subscribers", {"search": email, "per_page": 100})
         wanted = email.lower()
-        return next((_subscriber(r) for r in rows if str(r["email"]).lower() == wanted), None)
+        for page in range(1, SEARCH_MAX_PAGES + 1):
+            rows = await self._results(
+                "/api/subscribers", {"search": email, "per_page": SEARCH_PAGE_SIZE, "page": page}
+            )
+            match = next((r for r in rows if str(r["email"]).lower() == wanted), None)
+            if match is not None:
+                return _subscriber(match)
+            if len(rows) < SEARCH_PAGE_SIZE:
+                break
+        return None
 
     async def upsert_subscriber(
         self, email: str, list_ids: set[int], attribs: dict[str, object]
