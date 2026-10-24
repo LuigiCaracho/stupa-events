@@ -26,7 +26,7 @@ from app.modules.subscriptions.admin_schemas import (
     SubscriberAddressIn,
     SubscriberExportOut,
 )
-from app.modules.subscriptions.db import get_subs_session
+from app.modules.subscriptions.db import get_subs_sessions
 from app.modules.subscriptions.listmonk_client import ListmonkClient, checked_base_url
 from app.modules.subscriptions.listmonk_port import ListmonkError, ListmonkSubscriber
 from app.modules.subscriptions.models import Outbox, Subscriber, SubscriptionProfile
@@ -34,7 +34,7 @@ from app.shared.antiabuse import SettingsDep
 from app.shared.errors import NotFoundError, ProblemDetail, ServiceUnavailableError
 
 router = APIRouter(prefix="/admin/subscribers", tags=["admin"])
-SubsSession = Annotated[AsyncSession, Depends(get_subs_session)]
+SubsSessions = Annotated[Callable[[], AsyncSession], Depends(get_subs_sessions)]
 Admin = Annotated[Principal, Depends(require_principal("privacy.erase"))]
 ListmonkFinder = Callable[[str], Awaitable[ListmonkSubscriber | None]]
 _PROBLEM: dict[str, Any] = {"model": ProblemDetail}
@@ -113,7 +113,7 @@ async def _export(subs: AsyncSession, row: Subscriber) -> SubscriberExportOut:
     )
 
 
-def _ready(settings: SettingsDep) -> None:
+def _require_keys(settings: SettingsDep) -> None:
     if not settings.subs_keys_enabled:
         raise ServiceUnavailableError("Mail subscriptions are not configured.")
 
@@ -133,24 +133,25 @@ async def _locate(
 @router.post(
     "/lookup",
     response_model=SubscriberExportOut,
-    dependencies=[Depends(_ready)],
-    responses={422: _PROBLEM},
+    responses={422: _PROBLEM, 503: _PROBLEM},
 )
 async def lookup(
     body: SubscriberAddressIn,
     principal: Admin,
     settings: SettingsDep,
-    subs: SubsSession,
+    sessions: SubsSessions,
     db: DbSession,
     find: Annotated[ListmonkFinder, Depends(listmonk_finder)],
 ) -> SubscriberExportOut:
     """Answer a data request for one address."""
-    canonical, row = await _locate(subs, settings, body.email)
+    _require_keys(settings)
     out = SubscriberExportOut(found=False)
-    if row is not None:
-        out = (await _export(subs, row)).model_copy(
-            update={"listmonk": await _listmonk(subs, find, canonical)}
-        )
+    async with sessions() as subs:
+        canonical, row = await _locate(subs, settings, body.email)
+        if row is not None:
+            out = (await _export(subs, row)).model_copy(
+                update={"listmonk": await _listmonk(subs, find, canonical)}
+            )
     await audit_record(
         db,
         actor=principal.sub,
@@ -165,22 +166,23 @@ async def lookup(
 @router.post(
     "/erase",
     status_code=204,
-    dependencies=[Depends(_ready)],
-    responses={404: _PROBLEM, 422: _PROBLEM},
+    responses={404: _PROBLEM, 422: _PROBLEM, 503: _PROBLEM},
 )
 async def erase(
     body: SubscriberAddressIn,
     principal: Admin,
     settings: SettingsDep,
-    subs: SubsSession,
+    sessions: SubsSessions,
     db: DbSession,
 ) -> Response:
     """Erase the subscriber, the profile and the tokens of one address."""
-    _, row = await _locate(subs, settings, body.email)
-    found = row is not None
-    if row is not None:
-        await subs.execute(text("SELECT privacy_erase_subscriber(:id)"), {"id": row.id})
-        await subs.commit()
+    _require_keys(settings)
+    async with sessions() as subs:
+        _, row = await _locate(subs, settings, body.email)
+        found = row is not None
+        if row is not None:
+            await subs.execute(text("SELECT privacy_erase_subscriber(:id)"), {"id": row.id})
+            await subs.commit()
     await audit_record(
         db,
         actor=principal.sub,

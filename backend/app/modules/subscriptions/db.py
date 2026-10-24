@@ -7,7 +7,7 @@ under the role's connection limit of 6, shared by API and worker.
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Callable
 from functools import lru_cache
 
 from sqlalchemy.ext.asyncio import (
@@ -43,3 +43,12 @@ async def get_subs_session() -> AsyncGenerator[AsyncSession]:
     """Yield a session on the subscription connection; roll back what was not committed."""
     async with get_subs_sessionmaker()() as session:
         yield session
+
+
+def get_subs_sessions() -> Callable[[], AsyncSession]:
+    """Return a factory of sessions; the engine is created only when the factory is called.
+
+    The admin routes use it so that a missing configuration surfaces after the permission
+    gate and the body validation, not before them.
+    """
+    return lambda: get_subs_sessionmaker()()

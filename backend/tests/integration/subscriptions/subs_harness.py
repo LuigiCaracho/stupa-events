@@ -21,7 +21,7 @@ from sqlalchemy import Engine, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.modules.notifications.mail import MailMessage
-from app.modules.subscriptions.db import get_subs_session
+from app.modules.subscriptions.db import get_subs_session, get_subs_sessions
 from app.modules.subscriptions.router import mail_queue
 from app.settings import Settings, get_settings
 from app.shared.altcha import (
@@ -198,6 +198,7 @@ async def subs(api: Api, engine: Engine, subs_url: str) -> AsyncIterator[SubsApi
     handle.configure()
     overrides = api.app.dependency_overrides
     overrides[get_subs_session] = session_override
+    overrides[get_subs_sessions] = lambda: maker
     overrides[mail_queue] = lambda: queue
     handle.use_limiter(NullRateLimiter())
     yield handle
