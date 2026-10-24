@@ -6,6 +6,7 @@ a token or a token hash.
 
 from __future__ import annotations
 
+import uuid
 from datetime import date, datetime
 from typing import Annotated
 
@@ -59,3 +60,26 @@ class SubscriberExportOut(CamelModel):
     profile: ExportProfile | None = None
     outbox: list[ExportOutbox] = []
     listmonk: ExportListmonk | None = None
+
+
+class DigestRunOut(CamelModel):
+    """One weekly digest run of a list."""
+
+    id: uuid.UUID
+    week_start: date
+    list_key: str
+    status: str
+    event_count: int
+    campaign_id: int | None
+    released_at: datetime | None
+
+
+class SubscriptionStatusOut(CamelModel):
+    """Counters of the status page: outbox backlog, breaker, last reconcile."""
+
+    outbox_pending: int
+    outbox_dead: int
+    outbox_dead_deletes: int
+    outbox_lag_seconds: int
+    breaker_open: bool
+    last_reconcile: dict[str, object] | None

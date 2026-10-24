@@ -52,3 +52,8 @@ def get_subs_sessions() -> Callable[[], AsyncSession]:
     gate and the body validation, not before them.
     """
     return lambda: get_subs_sessionmaker()()
+
+
+def get_subs_maker() -> async_sessionmaker[AsyncSession]:
+    """Return the session factory as a dependency (routes that open several transactions)."""
+    return get_subs_sessionmaker()

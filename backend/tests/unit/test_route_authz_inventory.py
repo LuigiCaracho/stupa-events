@@ -161,6 +161,9 @@ ROUTE_PERMS: dict[tuple[str, str], frozenset[str]] = {
     ("GET", "/api/media/images/{image_id}"): _READ,
     ("POST", "/api/admin/subscribers/lookup"): frozenset({"privacy.erase"}),
     ("POST", "/api/admin/subscribers/erase"): frozenset({"privacy.erase"}),
+    ("GET", "/api/admin/digests"): frozenset({"digest.release"}),
+    ("POST", "/api/admin/digests/{run_id}/release"): frozenset({"digest.release"}),
+    ("GET", "/api/admin/subscriptions/status"): frozenset({"subscriber.stats"}),
     ("GET", "/api/auth/me"): frozenset(),
     ("POST", "/api/auth/sessions/revoke"): frozenset(),
 }

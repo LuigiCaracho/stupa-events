@@ -27,7 +27,7 @@ from app.modules.subscriptions.admin_schemas import (
     SubscriberExportOut,
 )
 from app.modules.subscriptions.db import get_subs_sessions
-from app.modules.subscriptions.listmonk_client import ListmonkClient, checked_base_url
+from app.modules.subscriptions.listmonk_client import client_from_settings
 from app.modules.subscriptions.listmonk_port import ListmonkError, ListmonkSubscriber
 from app.modules.subscriptions.models import Outbox, Subscriber, SubscriptionProfile
 from app.shared.antiabuse import SettingsDep
@@ -44,15 +44,7 @@ def listmonk_finder(settings: SettingsDep) -> ListmonkFinder:
     """Return a lookup in Listmonk (a no-op that finds nothing while Listmonk is not set)."""
 
     async def find(canonical: str) -> ListmonkSubscriber | None:
-        if not settings.listmonk_enabled:
-            raise ListmonkError("not_configured", retryable=False)
-        assert settings.listmonk_url and settings.listmonk_api_user and settings.listmonk_api_token
-        url = checked_base_url(
-            settings.listmonk_url,
-            settings.listmonk_allowed_hosts,
-            development=settings.environment == "development",
-        )
-        client = ListmonkClient(url, settings.listmonk_api_user, settings.listmonk_api_token)
+        client = client_from_settings(settings)
         try:
             return await client.find_subscriber(canonical)
         finally:

@@ -28,6 +28,7 @@ from app.modules.subscriptions.listmonk_port import (
     ListmonkError,
     ListmonkSubscriber,
 )
+from app.settings import Settings
 from app.shared.ssrf import SsrfError, assert_allowed_url
 
 SUBSCRIBER_NAME = "STUPA Events Abo"
@@ -69,6 +70,22 @@ def _subscriber(row: dict[str, Any]) -> ListmonkSubscriber:
         lists={int(item["id"]): item["subscription_status"] for item in row.get("lists") or []},
         attribs=dict(row.get("attribs") or {}),
     )
+
+
+def client_from_settings(settings: Settings) -> ListmonkClient:
+    """Build the client from the settings of the API or the worker.
+
+    Raises:
+        ListmonkError: Listmonk is not configured, or the URL fails the checks.
+    """
+    if not (settings.listmonk_url and settings.listmonk_api_user and settings.listmonk_api_token):
+        raise ListmonkError("not_configured", retryable=False)
+    url = checked_base_url(
+        settings.listmonk_url,
+        settings.listmonk_allowed_hosts,
+        development=not settings.is_production,
+    )
+    return ListmonkClient(url, settings.listmonk_api_user, settings.listmonk_api_token)
 
 
 class ListmonkClient:
@@ -177,6 +194,32 @@ class ListmonkClient:
     async def blocklist(self, subscriber_id: int) -> None:
         """Blocklist the subscriber; Listmonk then unsubscribes it from every list."""
         await self._call("PUT", f"/api/subscribers/{int(subscriber_id)}/blocklist")
+
+    async def resubscribe(self, existing: ListmonkSubscriber, list_ids: set[int]) -> None:
+        """Re-enable a blocklisted subscriber and set `list_ids` back to confirmed.
+
+        `PUT /api/subscribers/{id}` with `status: enabled` lifts the block but keeps every list
+        `unsubscribed`; `PUT /api/subscribers/lists` with `action: add` and `status: confirmed`
+        then confirms them again (both observed on v5.1.0).
+        """
+        if existing.status == "blocklisted":
+            body = {
+                "email": existing.email,
+                "name": SUBSCRIBER_NAME,
+                "status": "enabled",
+                "lists": sorted(existing.lists.keys() | list_ids),
+                "attribs": existing.attribs,
+                "preconfirm_subscriptions": True,
+            }
+            await self._call("PUT", f"/api/subscribers/{int(existing.id)}", json=body)
+        if list_ids:
+            body = {
+                "ids": [int(existing.id)],
+                "action": "add",
+                "target_list_ids": sorted(list_ids),
+                "status": "confirmed",
+            }
+            await self._call("PUT", "/api/subscribers/lists", json=body)
 
     async def archive_list(self, list_id: int) -> None:
         """Archive the list."""
