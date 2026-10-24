@@ -63,12 +63,13 @@ async def read(
 
 
 def robots(base_url: str) -> bytes:
-    """Return `robots.txt`: pages stay open, the API and the app paths stay out."""
+    """Return `robots.txt`: pages and preview images stay open, the API and the app paths stay out."""
     lines = (
         "User-agent: *",
         "Allow: /e/",
         "Allow: /k/",
         "Allow: /suche",
+        "Allow: /api/public/media/",
         "Disallow: /api/",
         "Disallow: /ics/",
         "Disallow: /dossiers",

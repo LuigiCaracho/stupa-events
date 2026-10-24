@@ -159,7 +159,7 @@ async def test_sitemap_lists_public_events_and_categories_once(api: Api, site: S
 async def test_robots_txt_wording(api: Api, site: Site) -> None:
     body = (await page(api, "/robots.txt")).text
     assert body == (
-        "User-agent: *\nAllow: /e/\nAllow: /k/\nAllow: /suche\nDisallow: /api/\n"
+        "User-agent: *\nAllow: /e/\nAllow: /k/\nAllow: /suche\nAllow: /api/public/media/\nDisallow: /api/\n"
         "Disallow: /ics/\nDisallow: /dossiers\nDisallow: /verwaltung\nDisallow: /konto\n"
         f"Disallow: /login\nSitemap: {BASE}/sitemap.xml\n"
     )

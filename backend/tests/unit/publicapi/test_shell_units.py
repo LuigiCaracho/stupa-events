@@ -161,4 +161,5 @@ def test_sitemap_is_wellformed_and_capped(caplog: pytest.LogCaptureFixture) -> N
 
 def test_robots_lists_the_sitemap_and_forbids_the_api() -> None:
     body = sitemap.robots("https://x.example/").decode()
+    assert body.index("Allow: /api/public/media/") < body.index("Disallow: /api/")
     assert "Disallow: /api/" in body and body.endswith("Sitemap: https://x.example/sitemap.xml\n")
