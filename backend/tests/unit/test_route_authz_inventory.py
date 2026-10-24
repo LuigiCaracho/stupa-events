@@ -19,6 +19,7 @@ from app.deps import require_principal
 from app.main import api_router
 from app.modules.publicapi.ics_router import router as ics_router
 from app.modules.publicapi.shell.router import router as shell_router
+from app.modules.subscriptions.ics_profile_router import router as ics_profile_router
 from app.shared.errors import is_cookie_free_path
 
 Route = tuple[str, str, APIRoute]
@@ -158,6 +159,8 @@ ROUTE_PERMS: dict[tuple[str, str], frozenset[str]] = {
     ("DELETE", "/api/quotes/{quote_id}"): _ATTACH,
     ("POST", "/api/media/images"): frozenset({"comment.write", "event.edit"}),
     ("GET", "/api/media/images/{image_id}"): _READ,
+    ("POST", "/api/admin/subscribers/lookup"): frozenset({"privacy.erase"}),
+    ("POST", "/api/admin/subscribers/erase"): frozenset({"privacy.erase"}),
     ("GET", "/api/auth/me"): frozenset(),
     ("POST", "/api/auth/sessions/revoke"): frozenset(),
 }
@@ -194,6 +197,7 @@ def _routes() -> list[Route]:
         list(flatten(api_router))
         + [r for router in ROUTERS for r in flatten(router, "/api")]
         + list(flatten(ics_router))
+        + list(flatten(ics_profile_router))
         + list(flatten(shell_router))
     )
     return list({(method, path): (method, path, route) for method, path, route in found}.values())
