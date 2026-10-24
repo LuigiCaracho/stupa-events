@@ -72,10 +72,12 @@
           (ngModelChange)="state.consent.set($event)"
         >
           {{ consentText() }}
+        </app-checkbox>
+        <p class="st__hint">
           <a routerLink="/datenschutz" target="_blank" rel="noopener">{{
             'public.start.privacy' | t
           }}</a>
-        </app-checkbox>
+        </p>
         @if (consentError()) {
           <app-note kind="error" icon="alert" role="alert">{{
             'public.start.consentMissing' | t
