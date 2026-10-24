@@ -1,5 +1,8 @@
 """arq worker: entry points, function registry and the nightly audit check.
 
+The Listmonk jobs (`outbox_run` every minute, `reconcile_listmonk` 03:10 UTC, `purge_expired`
+03:20 UTC, `build_digest_drafts` Mondays 05:00 UTC) skip themselves while Listmonk is unconfigured.
+
 `ping` does nothing and serves the container healthcheck. Modules add their jobs through
 a `WORKER_FUNCTIONS` tuple; the dossier module lists `derive_poster` there. The queue
 name comes from `ARQ_QUEUE_NAME`.
@@ -18,10 +21,14 @@ from arq.connections import RedisSettings
 from app.modules.dossier.worker_jobs import WORKER_FUNCTIONS
 from worker.advance import archive_ended, purge_drafts
 from worker.audit_verify import process_audit_verification
+from worker.digest import build_digest_drafts
 from worker.gc import gc_media, gc_notifications
 from worker.mail import on_startup as mail_on_startup
 from worker.mail import send_due_reminders, send_mail
+from worker.outbox import outbox_run
+from worker.privacy import purge_expired
 from worker.public_cache import rebuild_public_cache
+from worker.reconcile import reconcile_listmonk
 from worker.scan import on_startup as scan_on_startup
 from worker.scan import requeue_stale_scans, scan_attachment
 
@@ -54,6 +61,10 @@ class WorkerSettings:
         func(process_audit_verification, timeout=AUDIT_VERIFY_JOB_TIMEOUT_SECONDS),
         archive_ended,
         purge_drafts,
+        outbox_run,
+        reconcile_listmonk,
+        build_digest_drafts,
+        purge_expired,
         *WORKER_FUNCTIONS,
     ]
     cron_jobs = [
@@ -70,6 +81,10 @@ class WorkerSettings:
         cron(send_due_reminders, minute=10, timeout=300, unique=True),
         cron(rebuild_public_cache, minute=5, timeout=300, unique=True, keep_result=0),
         cron(requeue_stale_scans, minute={3, 13, 23, 33, 43, 53}, timeout=120, unique=True),
+        cron(outbox_run, timeout=120, unique=True, keep_result=0),
+        cron(reconcile_listmonk, hour=3, minute=10, timeout=900, unique=True),
+        cron(build_digest_drafts, weekday=0, hour=5, minute=0, timeout=600, unique=True),
+        cron(purge_expired, hour=3, minute=20, timeout=300, unique=True),
     ]
     on_startup = _on_startup
     queue_name = os.environ.get("ARQ_QUEUE_NAME", "events")
