@@ -16,12 +16,11 @@ from tests.integration.subscriptions.listmonk_support import (
     MemoryBreaker,
     add_subscriber,
     enqueue,
-    fake,  # noqa: F401
-    maker,  # noqa: F401
     one,
     scalar,
 )
 
+pytest_plugins = ["tests.integration.subscriptions.listmonk_support"]
 pytestmark = pytest.mark.integration
 
 
@@ -29,7 +28,7 @@ async def run(maker: Maker, fake: FakeListmonk, **kw: object):  # noqa: ANN201, 
     return await run_outbox(maker, fake, KEY, now=kw.pop("now", NOW), **kw)  # type: ignore[arg-type]
 
 
-async def test_only_parties_gives_the_party_lists_and_no_meeting_list(maker, fake) -> None:  # noqa: ANN001, F811
+async def test_only_parties_gives_the_party_lists_and_no_meeting_list(maker, fake) -> None:  # noqa: ANN001
     sid = await add_subscriber(maker, "a@example.test", categories=["party"])
     await enqueue(maker, "upsert", sid)
     stats = await run(maker, fake)
@@ -44,7 +43,7 @@ async def test_only_parties_gives_the_party_lists_and_no_meeting_list(maker, fak
     assert await scalar(maker, "SELECT state FROM outbox") == "done"
 
 
-async def test_list_registry_is_reused(maker, fake) -> None:  # noqa: ANN001, F811
+async def test_list_registry_is_reused(maker, fake) -> None:  # noqa: ANN001
     for address in ("a@example.test", "b@example.test"):
         await enqueue(maker, "upsert", await add_subscriber(maker, address))
     await run(maker, fake)
@@ -52,7 +51,7 @@ async def test_list_registry_is_reused(maker, fake) -> None:  # noqa: ANN001, F8
     assert await scalar(maker, "SELECT count(*) FROM listmonk_list") == 2
 
 
-async def test_mail_switched_off_leaves_all_lists(maker, fake) -> None:  # noqa: ANN001, F811
+async def test_mail_switched_off_leaves_all_lists(maker, fake) -> None:  # noqa: ANN001
     sid = await add_subscriber(maker, "a@example.test")
     await enqueue(maker, "upsert", sid)
     await run(maker, fake)
@@ -65,7 +64,7 @@ async def test_mail_switched_off_leaves_all_lists(maker, fake) -> None:  # noqa:
     assert fake.by_email("a@example.test").lists == {}  # type: ignore[union-attr]
 
 
-async def test_job_for_an_unconfirmed_or_missing_subscriber_does_nothing(maker, fake) -> None:  # noqa: ANN001, F811
+async def test_job_for_an_unconfirmed_or_missing_subscriber_does_nothing(maker, fake) -> None:  # noqa: ANN001
     pending = await add_subscriber(maker, "p@example.test", status="pending")
     await enqueue(maker, "upsert", pending)
     await enqueue(maker, "upsert", None)
@@ -74,7 +73,7 @@ async def test_job_for_an_unconfirmed_or_missing_subscriber_does_nothing(maker, 
     assert fake.subscribers == {}
 
 
-async def test_listmonk_down_loses_nothing_and_catches_up(maker, fake) -> None:  # noqa: ANN001, F811
+async def test_listmonk_down_loses_nothing_and_catches_up(maker, fake) -> None:  # noqa: ANN001
     sid = await add_subscriber(maker, "a@example.test")
     await enqueue(maker, "upsert", sid)
     fake.down = True
@@ -91,7 +90,7 @@ async def test_listmonk_down_loses_nothing_and_catches_up(maker, fake) -> None: 
     assert fake.by_email("a@example.test") is not None
 
 
-async def test_failed_try_waits_longer_each_time_and_dies_after_ten(maker, fake) -> None:  # noqa: ANN001, F811
+async def test_failed_try_waits_longer_each_time_and_dies_after_ten(maker, fake) -> None:  # noqa: ANN001
     await enqueue(maker, "upsert", await add_subscriber(maker, "a@example.test"))
     fake.down = True
     moment = NOW
@@ -104,7 +103,7 @@ async def test_failed_try_waits_longer_each_time_and_dies_after_ten(maker, fake)
     assert (await run(maker, fake, now=moment)).failed == 0
 
 
-async def test_error_that_cannot_improve_dies_after_three_tries(maker, fake) -> None:  # noqa: ANN001, F811
+async def test_error_that_cannot_improve_dies_after_three_tries(maker, fake) -> None:  # noqa: ANN001
     await enqueue(maker, "upsert", await add_subscriber(maker, "a@example.test"))
     fake.fail_next(9, ListmonkError("http_error", status=400, retryable=False))
     moment = NOW
@@ -115,7 +114,7 @@ async def test_error_that_cannot_improve_dies_after_three_tries(maker, fake) -> 
     assert (row.state, row.attempts, row.last_error) == ("dead", 3, "http_error:400")
 
 
-async def test_breaker_opens_after_five_failures_and_keeps_the_rest(maker, fake) -> None:  # noqa: ANN001, F811
+async def test_breaker_opens_after_five_failures_and_keeps_the_rest(maker, fake) -> None:  # noqa: ANN001
     for i in range(8):
         await enqueue(maker, "upsert", await add_subscriber(maker, f"u{i}@example.test"))
     fake.down = True
@@ -130,7 +129,7 @@ async def test_breaker_opens_after_five_failures_and_keeps_the_rest(maker, fake)
     assert again.breaker_open and len(fake.calls) == calls
 
 
-async def test_same_state_twice_changes_nothing_the_second_time(maker, fake) -> None:  # noqa: ANN001, F811
+async def test_same_state_twice_changes_nothing_the_second_time(maker, fake) -> None:  # noqa: ANN001
     sid = await add_subscriber(maker, "a@example.test")
     await enqueue(maker, "upsert", sid)
     await enqueue(maker, "upsert", sid)
@@ -139,7 +138,7 @@ async def test_same_state_twice_changes_nothing_the_second_time(maker, fake) -> 
     assert len(fake.subscribers) == 1
 
 
-async def test_an_opt_out_inside_listmonk_wins_over_the_outbox(maker, fake) -> None:  # noqa: ANN001, F811
+async def test_an_opt_out_inside_listmonk_wins_over_the_outbox(maker, fake) -> None:  # noqa: ANN001
     sid = await add_subscriber(maker, "a@example.test")
     await enqueue(maker, "upsert", sid)
     await run(maker, fake)
@@ -151,7 +150,7 @@ async def test_an_opt_out_inside_listmonk_wins_over_the_outbox(maker, fake) -> N
     assert fake.by_email("a@example.test").status == "blocklisted"  # type: ignore[union-attr]
 
 
-async def test_a_list_the_person_left_is_not_added_again(maker, fake) -> None:  # noqa: ANN001, F811
+async def test_a_list_the_person_left_is_not_added_again(maker, fake) -> None:  # noqa: ANN001
     sid = await add_subscriber(maker, "a@example.test", categories=["party", "kino"])
     await enqueue(maker, "upsert", sid)
     await run(maker, fake)
@@ -163,7 +162,7 @@ async def test_a_list_the_person_left_is_not_added_again(maker, fake) -> None:  
     assert await scalar(maker, "SELECT status FROM subscriber") == "confirmed"
 
 
-async def test_unsubscribe_job_blocklists_the_subscriber(maker, fake) -> None:  # noqa: ANN001, F811
+async def test_unsubscribe_job_blocklists_the_subscriber(maker, fake) -> None:  # noqa: ANN001
     sid = await add_subscriber(maker, "a@example.test")
     await enqueue(maker, "upsert", sid)
     await run(maker, fake)
@@ -176,7 +175,7 @@ async def test_unsubscribe_job_blocklists_the_subscriber(maker, fake) -> None:  
     assert fake.by_email("a@example.test").status == "blocklisted"  # type: ignore[union-attr]
 
 
-async def test_delete_job_removes_the_record_and_drops_the_ciphertext(maker, fake) -> None:  # noqa: ANN001, F811
+async def test_delete_job_removes_the_record_and_drops_the_ciphertext(maker, fake) -> None:  # noqa: ANN001
     sid = await add_subscriber(maker, "a@example.test")
     await enqueue(maker, "upsert", sid)
     await run(maker, fake)
@@ -192,7 +191,7 @@ async def test_delete_job_removes_the_record_and_drops_the_ciphertext(maker, fak
     assert row.payload["listmonkSubscriberId"] is not None
 
 
-async def test_delete_finds_the_record_by_address_when_the_id_was_never_stored(maker, fake) -> None:  # noqa: ANN001, F811
+async def test_delete_finds_the_record_by_address_when_the_id_was_never_stored(maker, fake) -> None:  # noqa: ANN001
     sid = await add_subscriber(maker, "a@example.test")
     fake.add_foreign("a@example.test", 99)
     async with maker.begin() as session:
@@ -203,7 +202,7 @@ async def test_delete_finds_the_record_by_address_when_the_id_was_never_stored(m
     assert fake.subscribers == {}
 
 
-async def test_orphaned_running_job_is_picked_up_again(maker, fake) -> None:  # noqa: ANN001, F811
+async def test_orphaned_running_job_is_picked_up_again(maker, fake) -> None:  # noqa: ANN001
     sid = await add_subscriber(maker, "a@example.test")
     job = await enqueue(maker, "upsert", sid)
     async with maker.begin() as session:

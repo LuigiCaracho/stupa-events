@@ -12,10 +12,10 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import Boolean, Date, DateTime, Text, column, select, table
+from sqlalchemy import Boolean, DateTime, Text, column, select, table
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -40,8 +40,7 @@ _EVENT = table(
     column("category_name", Text),
     column("category_parent_slug", Text),
     column("public_status", Text),
-    column("starts_on", Date),
-    column("ends_on", Date),
+    column("ends_at", DateTime(timezone=True)),
 )
 
 
@@ -61,13 +60,15 @@ def week_start_of(now: datetime) -> date:
 
 async def week_events(maker: Maker, week_start: date) -> list[WeekEvent]:
     """Read the scheduled public events that touch the week, sorted by start."""
-    last = week_start + timedelta(days=6)
+    berlin = ZoneInfo(DEFAULT_TZID)
+    first = datetime.combine(week_start, time.min, tzinfo=berlin)
+    after = datetime.combine(week_start + timedelta(days=7), time.min, tzinfo=berlin)
     stmt = (
         select(_EVENT)
         .where(
             _EVENT.c.public_status == "scheduled",
-            _EVENT.c.starts_on <= last,
-            _EVENT.c.ends_on >= week_start,
+            _EVENT.c.starts_at < after,
+            _EVENT.c.ends_at >= first,
         )
         .order_by(_EVENT.c.starts_at, _EVENT.c.slug)
     )
