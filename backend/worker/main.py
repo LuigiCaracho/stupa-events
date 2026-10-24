@@ -3,7 +3,8 @@
 The Listmonk jobs (`outbox_run` every minute, `reconcile_listmonk` 03:10 UTC, `purge_expired`
 03:20 UTC, `build_digest_drafts` Mondays 05:00 UTC) skip themselves while Listmonk is unconfigured.
 
-`ping` does nothing and serves the container healthcheck. Modules add their jobs through
+`ping` does nothing and serves the container healthcheck. Job arguments never reach the log
+(`log_redaction`): a mail job carries the recipient and the links. Modules add their jobs through
 a `WORKER_FUNCTIONS` tuple; the dossier module lists `derive_poster` there. The queue
 name comes from `ARQ_QUEUE_NAME`.
 
@@ -19,6 +20,7 @@ from arq import cron, func
 from arq.connections import RedisSettings
 
 from app.modules.dossier.worker_jobs import WORKER_FUNCTIONS
+from worker import log_redaction
 from worker.advance import archive_ended, purge_drafts
 from worker.audit_verify import process_audit_verification
 from worker.digest import build_digest_drafts
@@ -33,6 +35,7 @@ from worker.scan import on_startup as scan_on_startup
 from worker.scan import requeue_stale_scans, scan_attachment
 
 AUDIT_VERIFY_JOB_TIMEOUT_SECONDS = 7200.0
+log_redaction.install()
 
 
 async def ping(ctx: dict[str, object]) -> str:
