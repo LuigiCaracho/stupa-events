@@ -8,11 +8,17 @@ whose gate fails answers exactly 403, and without a session every route answers 
 from __future__ import annotations
 
 import re
+from collections.abc import AsyncIterator
 
 import pytest
+import pytest_asyncio
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from app.modules.subscriptions.db import get_subs_maker
+from app.modules.subscriptions.digest_admin_router import listmonk_port
 from app.shared.errors import is_cookie_free_path
 from app.shared.permissions import permissions_of
+from tests._support.fake_listmonk import FakeListmonk
 from tests.integration.events.harness import Api
 from tests.unit.test_route_authz_inventory import (
     PUBLIC_ALLOWLIST,
@@ -37,6 +43,17 @@ ROLES: dict[str, tuple[set[str], set[str]]] = {
     "member": (set(), set()),
     "nobody": (set(), set()),
 }
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def _subscription_backends(api: Api, migrated: tuple[str, str]) -> AsyncIterator[None]:
+    """Give the digest and status routes a database and a fake Listmonk, so a passing gate
+    answers 2xx/4xx and not the 503 of an unconfigured subscription store."""
+    engine = create_async_engine(migrated[1])
+    api.app.dependency_overrides[get_subs_maker] = lambda: async_sessionmaker(engine)
+    api.app.dependency_overrides[listmonk_port] = FakeListmonk
+    yield
+    await engine.dispose()
 
 
 def _gate_kind(route: object) -> str:
