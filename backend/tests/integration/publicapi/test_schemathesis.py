@@ -129,6 +129,8 @@ async def test_schemathesis(subs: SubsApi) -> None:
         "/abos",
         "/bestaetigen/{token}",
         "/abo/{token}",
+        "/bestaetigen",
+        "/abo",
         "/ics/p/{token}.ics",
         "/api/public/altcha/challenge",
         "/api/public/getstarted/questions",

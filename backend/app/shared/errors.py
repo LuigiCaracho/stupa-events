@@ -300,6 +300,8 @@ SHELL_PATHS: tuple[str, ...] = (
     "/rueckblick",
     "/start",
     "/abos",
+    "/bestaetigen",
+    "/abo",
     "/sitemap.xml",
     "/robots.txt",
 )

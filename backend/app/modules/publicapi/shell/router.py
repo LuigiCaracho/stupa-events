@@ -156,6 +156,13 @@ def _bare(settings: Settings) -> Response:
     return Response(load_index(settings.spa_index_path), media_type=HTML, headers=headers)
 
 
+@router.api_route("/bestaetigen", methods=["GET", "HEAD"], response_class=Response, responses=_HTML)
+@router.api_route("/abo", methods=["GET", "HEAD"], response_class=Response, responses=_HTML)
+async def token_page_after_reload(settings: SettingsDep) -> Response:
+    """Return the bare SPA for a token page whose token the SPA already removed from the URL."""
+    return _bare(settings)
+
+
 @router.api_route(
     "/bestaetigen/{token}", methods=["GET", "HEAD"], response_class=Response, responses=_HTML
 )

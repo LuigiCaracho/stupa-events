@@ -109,6 +109,17 @@ async def test_fixed_pages_category_and_headers(api: Api, site: Site) -> None:
         assert "x-robots-tag" not in h
 
 
+async def test_token_pages_are_the_bare_spa_with_and_without_token(api: Api, site: Site) -> None:
+    token = "A" * 43
+    for path in (f"/bestaetigen/{token}", f"/abo/{token}", "/bestaetigen", "/abo"):
+        response = await page(api, path)
+        h = response.headers
+        assert response.status_code == 200, path
+        assert h["cache-control"] == "no-store" and h["x-robots-tag"] == "noindex"
+        assert h["referrer-policy"] == "no-referrer" and "set-cookie" not in h
+        assert token not in response.text and "og:title" not in response.text
+
+
 async def test_same_bytes_for_every_user_agent_and_304(api: Api, site: Site) -> None:
     url = f"/e/{site.slugs['movie']}"
     bodies = set()
