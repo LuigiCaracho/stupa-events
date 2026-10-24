@@ -156,3 +156,20 @@ async def test_dead_erasure_job_loses_its_ciphertext_after_the_outbox_cutoff(mak
     await purge_expired(maker, maker, now=NOW)
     row = await one(maker, "SELECT state, payload FROM outbox WHERE op = 'delete'")
     assert row.state == "dead" and "emailEnc" not in row.payload
+
+
+async def test_expired_rearm_token_of_an_unsubscribed_address_is_cleared(maker) -> None:  # noqa: ANN001
+    sid = await add_subscriber(
+        maker, "back@example.test", status="unsubscribed", unsubscribed_at=NOW - timedelta(days=5)
+    )
+    async with maker.begin() as session:
+        await session.execute(
+            text(
+                "UPDATE subscriber SET confirm_token_hash = 'h',"
+                " confirm_expires_at = now() - interval '1 hour' WHERE id = :i"
+            ),
+            {"i": sid},
+        )
+    await purge_expired(maker, maker, now=NOW)
+    row = await one(maker, "SELECT status, confirm_token_hash FROM subscriber WHERE id = :i", i=sid)
+    assert (row.status, row.confirm_token_hash) == ("unsubscribed", None)
