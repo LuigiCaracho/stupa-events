@@ -51,6 +51,7 @@ curl -fsS "${base}/index.html" | bundles >"${tmp}/static"
 [[ -s "${tmp}/shell" ]] || fail "the shell names no bundles"
 cmp -s "${tmp}/shell" "${tmp}/static" || fail "shell and /index.html name different bundles (api and web images differ)"
 
+sleep 3  # the probes above use up the ev_page burst (10); let it drain so the next requests are not 429
 secret="GEHEIM$RANDOM$RANDOM"
 curl -fsS -o /dev/null "${base}/suche?q=${secret}"
 curl -fsS -o /dev/null "${base}/api/public/events?q=${secret}"
