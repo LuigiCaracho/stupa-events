@@ -99,6 +99,8 @@ class Settings(BaseSettings):
         "listmonk_api_token",
         "subs_database_url",
         "pgcrypto_email_key",
+        "altcha_hmac_secret",
+        "email_hash_key",
         mode="before",
     )
     @classmethod
@@ -180,7 +182,6 @@ class Settings(BaseSettings):
     listmonk_api_user: str | None = None
     listmonk_api_token: str | None = Field(default=None, min_length=_MIN_SECRET_LEN)
     listmonk_allowed_hosts: CsvList = []
-    pgcrypto_email_key: str | None = Field(default=None, min_length=32)
     subs_database_url: str | None = None
     altcha_hmac_secret: str | None = Field(default=None, min_length=_MIN_SECRET_LEN)
     altcha_max_number: int = 100_000

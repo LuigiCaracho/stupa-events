@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import logging
 import re
+from typing import Any
 
 import pytest
 import pytest_asyncio
@@ -43,7 +44,7 @@ async def redis(redis_url: str):  # noqa: ANN201
     await client.aclose()
 
 
-async def everything_in(redis: Redis) -> str:
+async def everything_in(redis: Any) -> str:
     seen: list[str] = []
     async for key in redis.scan_iter("*"):
         seen.append(key.decode())

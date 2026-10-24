@@ -115,11 +115,8 @@ def resolve_categories(
         NoInterestError: Nothing was chosen, or nothing chosen resolves to an active category.
         TooManyCategoriesError: More than 40 categories result.
     """
-    chosen = list(
-        dict.fromkeys(
-            [*interests, *([MEETINGS] if meetings else []), *([faculty] if faculty else [])]
-        )
-    )
+    asked = [*interests, *([MEETINGS] if meetings else []), *([faculty] if faculty else [])]
+    chosen: list[str] = list(dict.fromkeys(asked))
     faculties = catalog.faculties()
     for entry in chosen:
         if entry not in catalog.interests and entry not in faculties:
