@@ -109,6 +109,12 @@ class FakeListmonk:
         if found is not None:
             self.user_blocklists(found.email)
 
+    async def resubscribe(self, existing: ListmonkSubscriber, list_ids: set[int]) -> None:
+        self._enter("resubscribe")
+        found = self.subscribers[existing.id]
+        lists = {**found.lists, **dict.fromkeys(list_ids, "confirmed")}
+        self.subscribers[found.id] = replace(found, status="enabled", lists=lists)
+
     async def archive_list(self, list_id: int) -> None:
         self._enter("archive_list")
         self.archived.add(list_id)

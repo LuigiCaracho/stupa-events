@@ -179,7 +179,11 @@ async def requeue(maker: Maker, jobs: list[Job]) -> None:
 
 
 async def handle_upsert(maker: Maker, port: ListmonkPort, email_key: str, job: Job) -> None:
-    """Align the subscriber on Listmonk with the profile; Listmonk's opt-out wins."""
+    """Align the subscriber on Listmonk with the profile; Listmonk's opt-out wins.
+
+    Only a job marked `reconfirmed` (a new double opt-in after an unsubscribe) lifts an old
+    blocklist or list opt-out first: the person has just confirmed again on our side.
+    """
     if job.subscriber_id is None:
         return
     target = await sync.load_target(maker, job.subscriber_id, email_key)
@@ -188,6 +192,9 @@ async def handle_upsert(maker: Maker, port: ListmonkPort, email_key: str, job: J
     keys = sync.desired_keys(target.mail_enabled, target.categories)
     ids = await sync.resolve_list_ids(maker, port, keys)
     existing = await port.find_subscriber(target.email)
+    if existing is not None and job.payload.get("reconfirmed"):
+        await port.resubscribe(existing, set(ids.values()))
+        existing = await port.find_subscriber(target.email)
     decision = sync.plan(existing, set(ids.values()))
     if decision.action == "opted_out":
         await sync.mark_unsubscribed(maker, target.subscriber_id)

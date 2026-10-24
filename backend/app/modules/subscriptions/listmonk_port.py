@@ -67,6 +67,10 @@ class ListmonkPort(Protocol):
         """Blocklist the subscriber."""
         ...
 
+    async def resubscribe(self, existing: ListmonkSubscriber, list_ids: set[int]) -> None:
+        """Lift a blocklist and confirm `list_ids` again, after a new double opt-in of ours."""
+        ...
+
     async def archive_list(self, list_id: int) -> None:
         """Archive the list; Listmonk keeps it, nothing is deleted."""
         ...

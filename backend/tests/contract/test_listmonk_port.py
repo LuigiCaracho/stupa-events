@@ -102,6 +102,20 @@ async def test_blocklist_is_final_and_delete_is_idempotent(harness: Harness) -> 
     await harness.port.delete_subscriber(sub.id)
 
 
+async def test_resubscribe_lifts_the_block_and_confirms_the_lists(harness: Harness) -> None:
+    a, b = await make_list(harness), await make_list(harness)
+    address = email()
+    sub = await harness.port.upsert_subscriber(address, {a, b}, {})
+    harness.made["subscribers"].append(sub.id)
+    await harness.port.blocklist(sub.id)
+    blocked = await harness.port.find_subscriber(address)
+    assert blocked is not None
+    await harness.port.resubscribe(blocked, {a, b})
+    back = await harness.port.find_subscriber(address)
+    assert back is not None and back.status == "enabled"
+    assert back.lists == {a: "confirmed", b: "confirmed"}
+
+
 async def test_list_states_and_count(harness: Harness) -> None:
     a = await make_list(harness)
     addresses = [email(), email()]

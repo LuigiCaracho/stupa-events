@@ -161,6 +161,19 @@ async def test_a_list_the_person_left_is_not_added_again(maker, fake) -> None:  
     assert await scalar(maker, "SELECT status FROM subscriber") == "confirmed"
 
 
+async def test_a_new_double_opt_in_lifts_the_old_blocklist(maker, fake) -> None:  # noqa: ANN001
+    sid = await add_subscriber(maker, "a@example.test")
+    await enqueue(maker, "upsert", sid)
+    await run(maker, fake)
+    fake.user_blocklists("a@example.test")
+    await enqueue(maker, "upsert", sid, payload='{"reconfirmed": true}')
+    await run(maker, fake)
+    remote = fake.by_email("a@example.test")
+    assert remote is not None and remote.status == "enabled"
+    assert set(remote.lists.values()) == {"confirmed"} and len(remote.lists) == 2
+    assert await scalar(maker, "SELECT status FROM subscriber") == "confirmed"
+
+
 async def test_unsubscribe_job_blocklists_the_subscriber(maker, fake) -> None:  # noqa: ANN001
     sid = await add_subscriber(maker, "a@example.test")
     await enqueue(maker, "upsert", sid)
