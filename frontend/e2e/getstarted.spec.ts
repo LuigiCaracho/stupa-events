@@ -19,7 +19,8 @@ test.use({ baseURL: BASE_URL, locale: 'de-DE', viewport: PHONE });
 test.describe.configure({ mode: 'serial' });
 
 const stamp = (): string => `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-const addressOf = (name: string): string => `${name}@example.test`;
+// The API validates addresses like a mail server would: the special-use TLD `.test` is refused.
+const addressOf = (name: string): string => `${name}@example.org`;
 
 interface Answers {
   interests: string[];
