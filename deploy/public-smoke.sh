@@ -41,8 +41,12 @@ etag="$(grep -i '^etag:' "${headers}" | head -1 | cut -d' ' -f2- | tr -d '\r')"
 code="$(curl -sS -o /dev/null -w '%{http_code}' -H "If-None-Match: ${etag}" "${base}/e/${slug}")"
 [[ "${code}" == 304 ]] || fail "If-None-Match answered ${code}, not 304"
 
-for path in / /suche /kalender /rueckblick /sitemap.xml /robots.txt /api/public/events /api/public/today "/ics/e/${slug}.ics" /api/auth/me; do
-  curl -fsS -o /dev/null -D "${tmp}/ck" "${base}${path}" || fail "${path} did not answer 2xx (rate limit?)"
+for path in / /suche /kalender /rueckblick /start /abos /sitemap.xml /robots.txt /api/public/events /api/public/today \
+  /api/public/getstarted/questions "/ics/e/${slug}.ics" /api/auth/me; do
+  code="$(curl -sS -o /dev/null -D "${tmp}/ck" -w '%{http_code}' "${base}${path}")"
+  # Anonymous /api/auth/me is a 401 by design; the probe is about the missing cookie.
+  [[ "${code}" == 2* || ( "${path}" == /api/auth/me && "${code}" == 401 ) ]] ||
+    fail "${path} answered ${code} (rate limit?)"
   ! grep -qi '^set-cookie:' "${tmp}/ck" || fail "Set-Cookie on ${path}"
   sleep 0.3
 done
