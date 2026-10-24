@@ -83,17 +83,21 @@ def assert_allowed_url(
     *,
     allowlist: Iterable[str] = (),
     resolver: Resolver = default_resolver,
+    allow_private: bool = False,
 ) -> list[str]:
     """Check the target URL against the SSRF guard.
 
     A host that is already an IP literal goes through the check directly, without DNS.
+    `allow_private` skips the IP check for operator-configured targets (Listmonk in the
+    Docker network or on loopback); it requires a non-empty allowlist.
 
     Returns:
         The checked target IPs.
 
     Raises:
         SsrfError: The scheme is not supported, the host is missing, the allowlist is set
-            and does not contain the host, or one target IP is non-global.
+            and does not contain the host, one target IP is non-global, or `allow_private`
+            is set without an allowlist.
     """
     parsed = urlsplit(url)
     if parsed.scheme.lower() not in ("http", "https"):
@@ -105,6 +109,10 @@ def assert_allowed_url(
     allow = {h.lower() for h in allowlist}
     if allow and host.lower() not in allow:
         raise SsrfError(f"host not in allowlist: {host!r}")
+    if allow_private:
+        if not allow:
+            raise SsrfError("allow_private needs an allowlist")
+        return []
 
     try:
         literal = ipaddress.ip_address(host)

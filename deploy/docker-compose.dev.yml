@@ -1,7 +1,8 @@
 # Backing services for local development WITHOUT web/api/worker containers: run uvicorn, arq and
 # `ng serve` on the host against these ports. Loopback only; every credential is a throwaway.
 # Start: docker compose -f deploy/docker-compose.dev.yml up -d
-# Host ports: postgres 5434, redis 6381, minio 9100 (console 9101), clamav 3311, keycloak 8090.
+# Host ports: postgres 5434, redis 6381, minio 9100 (console 9101), clamav 3311, keycloak 8090,
+# listmonk 9002, mailpit smtp 1026 (1025 is taken by Proton Bridge on the dev laptop) (UI/API 8025).
 # Do not run it together with docker-compose.yml: same postgres port 5434.
 # Keycloak needs `127.0.0.1 host.docker.internal` in /etc/hosts (see docker-compose.keycloak.yml).
 
@@ -17,6 +18,7 @@ services:
       EVENTS_APP_PASSWORD: ${EVENTS_APP_PASSWORD:-dev-app}
       EVENTS_MIGRATOR_PASSWORD: ${EVENTS_MIGRATOR_PASSWORD:-dev-migrator}
       EVENTS_PUBLIC_PASSWORD: ${EVENTS_PUBLIC_PASSWORD:-dev-public}
+      EVENTS_SUBS_PASSWORD: ${EVENTS_SUBS_PASSWORD:-dev-subs}
     ports:
       - "127.0.0.1:5434:5432"
     volumes:
@@ -66,6 +68,55 @@ services:
     volumes:
       - clamav_data:/var/lib/clamav
 
+  listmonk-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: listmonk
+      POSTGRES_USER: listmonk
+      POSTGRES_PASSWORD: ${LISTMONK_DB_PASSWORD:-dev-listmonk}
+    volumes:
+      - listmonk_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U listmonk -d listmonk"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  listmonk:
+    image: listmonk/listmonk:v5.1.0
+    pull_policy: missing
+    command: ["sh", "-c", "./listmonk --install --idempotent --yes --config '' && ./listmonk --config ''"]
+    environment:
+      LISTMONK_app__address: 0.0.0.0:9000
+      LISTMONK_db__host: listmonk-db
+      LISTMONK_db__port: "5432"
+      LISTMONK_db__user: listmonk
+      LISTMONK_db__password: ${LISTMONK_DB_PASSWORD:-dev-listmonk}
+      LISTMONK_db__database: listmonk
+      LISTMONK_db__ssl_mode: disable
+      LISTMONK_ADMIN_USER: ${LISTMONK_ADMIN_USER:-admin}
+      LISTMONK_ADMIN_PASSWORD: ${LISTMONK_ADMIN_PASSWORD:-dev-listmonk-admin}
+    ports:
+      - "127.0.0.1:9002:9000"
+    depends_on:
+      listmonk-db:
+        condition: service_healthy
+
+  mailpit:
+    image: axllent/mailpit:v1.31.2
+    pull_policy: missing
+    ports:
+      - "127.0.0.1:1026:1025"
+      - "127.0.0.1:8025:8025"
+
+  altcha:
+    image: ghcr.io/altcha-org/sentinel:1.31.1
+    pull_policy: missing
+    profiles: ["parity"]
+    environment:
+      DEFAULT_ROOT_PASSWORD: ${ALTCHA_ROOT_PASSWORD:-dev-altcha-root}
+      ALTCHA_HMAC_SECRET: ${ALTCHA_HMAC_SECRET:-dev-altcha-hmac-secret}
+
   keycloak:
     extends:
       file: docker-compose.keycloak.yml
@@ -75,6 +126,7 @@ volumes:
   pg_data:
   minio_data:
   clamav_data:
+  listmonk_data:
 
 networks:
   internal:

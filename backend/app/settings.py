@@ -93,6 +93,11 @@ class Settings(BaseSettings):
         "oidc_redirect_url",
         "oidc_post_logout_redirect_url",
         "public_database_url",
+        "listmonk_url",
+        "listmonk_api_user",
+        "listmonk_api_token",
+        "subs_database_url",
+        "pgcrypto_email_key",
         mode="before",
     )
     @classmethod
@@ -170,7 +175,14 @@ class Settings(BaseSettings):
 
     publish_requires_editor: bool = False
 
-    @field_validator("cors_allow_origins", mode="before")
+    listmonk_url: str | None = None
+    listmonk_api_user: str | None = None
+    listmonk_api_token: str | None = Field(default=None, min_length=_MIN_SECRET_LEN)
+    listmonk_allowed_hosts: CsvList = []
+    pgcrypto_email_key: str | None = Field(default=None, min_length=32)
+    subs_database_url: str | None = None
+
+    @field_validator("cors_allow_origins", "listmonk_allowed_hosts", mode="before")
     @classmethod
     def _accept_csv_lists(cls, value: Any) -> Any:
         """Accept a comma-separated list, as `deploy/.env.example` documents it."""
@@ -180,6 +192,11 @@ class Settings(BaseSettings):
     def storage_enabled(self) -> bool:
         """Object storage is active only when a MinIO endpoint is set."""
         return bool(self.minio_endpoint)
+
+    @property
+    def listmonk_enabled(self) -> bool:
+        """Listmonk is active only when URL, API user and token are set."""
+        return bool(self.listmonk_url and self.listmonk_api_user and self.listmonk_api_token)
 
     @property
     def clamav_enabled(self) -> bool:

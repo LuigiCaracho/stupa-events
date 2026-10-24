@@ -312,7 +312,7 @@
     {
       "path": "backend/app/shared/ssrf.py",
       "source": "backend/app/modules/webhooks/ssrf.py",
-      "mode": "K"
+      "mode": "U"
     },
     {
       "path": "backend/migrations/env.py",
