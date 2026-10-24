@@ -103,6 +103,8 @@ export const subscriptionsDe = {
   'public.manage.faculty': 'Fachschaft',
   'public.manage.save': 'Speichern',
   'public.manage.saved': 'Gespeichert.',
+  'public.manage.consentTitle': 'Einwilligung für neue Mails',
+  'public.manage.consentSave': 'Zustimmen und speichern',
   'public.manage.mail': 'Mail',
   'public.manage.mailSwitch': 'Mails zu meinen Interessen bekommen',
   'public.manage.mailHint': 'Ausschalten meldet dich von allen Listen ab.',

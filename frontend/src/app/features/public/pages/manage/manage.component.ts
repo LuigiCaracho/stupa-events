@@ -14,6 +14,7 @@ import {
   signal,
 } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { resourceValue } from '@core/api/resource-value';
 import { I18nService } from '@core/i18n/i18n.service';
@@ -22,6 +23,7 @@ import { NoteComponent } from '@shared/ui/note/note.component';
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
 import {
   ButtonComponent,
+  CheckboxComponent,
   DialogComponent,
   SwitchComponent,
   ToastService,
@@ -30,7 +32,8 @@ import { firstValueFrom, throwError } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { SubscriptionsApi } from '../../api/subscriptions-api.service';
 import { subscriptionErrorOf } from '../../api/subscription-error';
-import type { QuestionOption, RotatedIcsOut } from '../../model/subscriptions.models';
+import { consentSentence } from '../../model/questionnaire-state';
+import type { MeUpdate, QuestionOption, RotatedIcsOut } from '../../model/subscriptions.models';
 import { ChipGroupComponent } from '../../ui/chip-group/chip-group.component';
 import { errorText } from '../../ui/error-text';
 import { LinkButtonComponent } from '../../ui/link-button/link-button.component';
@@ -49,8 +52,10 @@ type Phase = 'loading' | 'ready' | 'invalid' | 'failed' | 'deleted';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     RouterLink,
+    FormsModule,
     TranslatePipe,
     ButtonComponent,
+    CheckboxComponent,
     DialogComponent,
     SwitchComponent,
     NoteComponent,
@@ -87,6 +92,8 @@ export class ManagePageComponent {
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly rotated = signal<RotatedIcsOut | null>(null);
+  protected readonly pending = signal<MeUpdate | null>(null);
+  protected readonly consentTicked = signal(false);
   protected readonly confirmRotate = signal(false);
   protected readonly confirmDelete = signal(false);
 
@@ -110,6 +117,16 @@ export class ManagePageComponent {
     ...this.options().faculty,
   ]);
   protected readonly facultySelected = computed(() => [this.faculty()]);
+
+  protected readonly consentText = computed(() => {
+    const labels = new Map(this.options().interests.map((o) => [o.value, o.label]));
+    const slugs = (this.pending()?.interests ?? this.stored()).filter((s) => labels.has(s));
+    const template = resourceValue(this.questions, undefined)?.consent.template ?? '';
+    return consentSentence(
+      template,
+      slugs.map((s) => labels.get(s) ?? s),
+    );
+  });
 
   private readonly stored = computed(() => this.current()?.interests ?? []);
   protected readonly dirty = computed(() => {
@@ -152,16 +169,19 @@ export class ManagePageComponent {
   }
 
   protected save(): Promise<void> {
-    return this.write({ interests: this.merged() }, () =>
-      this.toast.success(this.i18n.translate('public.manage.saved')),
-    );
+    return this.write({ interests: this.merged() });
   }
 
   protected setMail(on: boolean): Promise<void> {
     this.mailEnabled.set(on);
-    return this.write({ mailEnabled: on }, () =>
-      this.toast.success(this.i18n.translate('public.manage.saved')),
-    );
+    return this.write({ mailEnabled: on });
+  }
+
+  protected saveWithConsent(): Promise<void> {
+    const body = this.pending();
+    const version = resourceValue(this.questions, undefined)?.consent.version;
+    if (!body || !version || !this.consentTicked()) return Promise.resolve();
+    return this.write({ ...body, consent: { version, accepted: true } });
   }
 
   protected async rotate(): Promise<void> {
@@ -179,14 +199,19 @@ export class ManagePageComponent {
     });
   }
 
-  private write(
-    body: { interests?: string[]; mailEnabled?: boolean },
-    done: () => void,
-  ): Promise<void> {
+  private write(body: MeUpdate): Promise<void> {
     return this.act(async (token) => {
-      const next = await firstValueFrom(this.api.updateMe(token, body));
-      this.me.set(next);
-      done();
+      try {
+        this.me.set(await firstValueFrom(this.api.updateMe(token, body)));
+      } catch (err) {
+        if (subscriptionErrorOf(err).kind !== 'consentRequired') throw err;
+        this.pending.set({ interests: body.interests, mailEnabled: body.mailEnabled });
+        this.mailEnabled.set(this.current()?.mailEnabled ?? false);
+        return;
+      }
+      this.pending.set(null);
+      this.consentTicked.set(false);
+      this.toast.success(this.i18n.translate('public.manage.saved'));
     });
   }
 

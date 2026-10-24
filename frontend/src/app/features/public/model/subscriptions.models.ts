@@ -68,6 +68,7 @@ export interface MeOut {
 export interface MeUpdate {
   interests?: string[];
   mailEnabled?: boolean;
+  consent?: { version: string; accepted: boolean };
 }
 
 export type RotatedIcsOut = Pick<ProfileOut, 'icsUrl' | 'webcalUrl'>;

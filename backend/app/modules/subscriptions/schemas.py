@@ -144,6 +144,7 @@ class MeUpdate(CamelModel):
 
     interests: list[Slug] | None = Field(default=None, max_length=40)
     mail_enabled: bool | None = None
+    consent: ConsentIn | None = None
 
 
 class RotatedIcsOut(CamelModel):

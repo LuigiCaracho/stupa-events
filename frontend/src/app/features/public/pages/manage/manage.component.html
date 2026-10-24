@@ -59,6 +59,33 @@
       </div>
     </section>
 
+    @if (pending()) {
+      <section class="mg__card" aria-labelledby="mg-consent">
+        <h2 id="mg-consent" class="mg__h2">{{ 'public.manage.consentTitle' | t }}</h2>
+        <app-checkbox
+          name="consent"
+          [ngModel]="consentTicked()"
+          (ngModelChange)="consentTicked.set($event)"
+        >
+          {{ consentText() }}
+        </app-checkbox>
+        <p class="mg__hint">
+          <a routerLink="/datenschutz" target="_blank" rel="noopener">{{
+            'public.start.privacy' | t
+          }}</a>
+        </p>
+        <div class="mg__actions">
+          <app-button
+            variant="primary"
+            [disabled]="!consentTicked()"
+            [loading]="busy()"
+            (click)="saveWithConsent()"
+            >{{ 'public.manage.consentSave' | t }}</app-button
+          >
+        </div>
+      </section>
+    }
+
     <section class="mg__card" aria-labelledby="mg-mail">
       <h2 id="mg-mail" class="mg__h2">{{ 'public.manage.mail' | t }}</h2>
       <app-switch

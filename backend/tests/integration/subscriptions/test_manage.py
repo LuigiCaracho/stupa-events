@@ -109,7 +109,14 @@ async def test_changing_the_interests_rewrites_categories_consent_and_queues_an_
     token = await subs.register(ADDRESS, interests=("party",))
     await subs.sql("UPDATE subscriber SET consent_text_version = 'old', consent_categories = '{}'")
     jobs = await subs.scalar("SELECT count(*) FROM outbox")
-    response = await subs.me(token, "PUT", json={"interests": ["kultur", "fachschaft:nxt"]})
+    wider = {"interests": ["kultur", "fachschaft:nxt"]}
+    refused = await subs.me(token, "PUT", json=wider)
+    assert refused.status_code == 422 and refused.json()["code"] == "consent_required"
+    stale = {**wider, "consent": {"version": "old", "accepted": True}}
+    assert (await subs.me(token, "PUT", json=stale)).status_code == 409
+    assert await subs.scalar("SELECT count(*) FROM outbox") == jobs
+    given = {"version": "2026-10-1", "accepted": True}
+    response = await subs.me(token, "PUT", json={**wider, "consent": given})
     assert response.status_code == 200
     assert response.json()["interests"] == ["kultur", "fachschaft:nxt"]
     assert [c["slug"] for c in response.json()["categories"]] == [
@@ -123,6 +130,18 @@ async def test_changing_the_interests_rewrites_categories_consent_and_queues_an_
     assert await subs.scalar("SELECT count(*) FROM outbox") == jobs + 1
     assert (
         await subs.scalar("SELECT state FROM outbox ORDER BY created_at DESC LIMIT 1") == "pending"
+    )
+
+
+async def test_narrowing_the_interests_leaves_the_consent_proof_alone(subs: SubsApi) -> None:
+    token = await subs.register(ADDRESS, interests=("party", "kultur"))
+    before = (await subs.sql("SELECT consent_at, consent_categories FROM subscriber"))[0]
+    response = await subs.me(token, "PUT", json={"interests": ["party"]})
+    assert response.status_code == 200
+    after = (await subs.sql("SELECT consent_at, consent_categories FROM subscriber"))[0]
+    assert (after.consent_at, after.consent_categories) == (
+        before.consent_at,
+        before.consent_categories,
     )
 
 
@@ -197,7 +216,14 @@ async def test_deleting_removes_address_profile_tokens_and_leaves_a_clean_tombst
     assert ADDRESS not in str(data) and manage not in str(data)
     [job] = await subs.sql("SELECT op, state, payload FROM outbox WHERE op = 'delete'")
     assert job.state == "pending" and job.payload["emailEnc"]
-    states = {r.state for r in await subs.sql("SELECT state FROM outbox WHERE op <> 'delete'")}
+    [block] = await subs.sql("SELECT state, payload FROM outbox WHERE op = 'unsubscribe'")
+    assert block.state == "pending" and block.payload["emailEnc"]
+    states = {
+        r.state
+        for r in await subs.sql(
+            "SELECT state FROM outbox WHERE op NOT IN ('delete', 'unsubscribe')"
+        )
+    }
     assert states <= {"done"}
     again = await subs.subscribe(email=ADDRESS)
     assert again.status_code == 202 and link_of(subs.queue.sent[-1])[0] == "bestaetigen"

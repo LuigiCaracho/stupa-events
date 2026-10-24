@@ -3,8 +3,9 @@
 The token is the proof of the mailbox: it is looked up by its SHA-256 digest, must belong to
 a `confirmed` subscriber and must not be expired; every other case is the same
 `InvalidTokenError`. The link does not extend itself. Changing the interests rewrites the
-consent proof (the person sees the new sentence on the page); changes reach Listmonk through
-the outbox. Deleting calls the `privacy_*` function and nothing else.
+consent proof only when mail would reach a category the person never agreed to; then the page
+shows the sentence and the request carries its version and the tick (`consent_required`). A
+narrower choice leaves the proof as it is. Changes reach Listmonk through the outbox. Deleting calls the `privacy_*` function and nothing else.
 """
 
 from __future__ import annotations
@@ -21,9 +22,9 @@ from app.modules.subscriptions.enqueue import enqueue_outbox
 from app.modules.subscriptions.interests import Catalog
 from app.modules.subscriptions.models import Subscriber, SubscriptionProfile
 from app.modules.subscriptions.problems import InvalidTokenError
-from app.modules.subscriptions.schemas import MeUpdate, RotatedIcsOut, SubscriptionMeOut
+from app.modules.subscriptions.schemas import ConsentIn, MeUpdate, RotatedIcsOut, SubscriptionMeOut
 from app.settings import Settings
-from app.shared.errors import NotFoundError, ValidationProblem
+from app.shared.errors import ConflictError, NotFoundError, ValidationProblem
 from app.shared.ratelimit import RateLimiter
 
 
@@ -81,6 +82,25 @@ async def show(session: AsyncSession, catalog: Catalog, owner: Owner) -> Subscri
     )
 
 
+async def _record_consent(
+    session: AsyncSession, owner: Owner, given: ConsentIn | None, categories: list[str]
+) -> None:
+    if given is None or not given.accepted:
+        raise ValidationProblem("Bitte bestätige die Einwilligung.", code="consent_required")
+    if given.version != consent.CURRENT_VERSION:
+        raise ConflictError("Der Einwilligungstext hat sich geändert.", code="consent_outdated")
+    await session.execute(
+        update(Subscriber)
+        .where(Subscriber.id == owner.subscriber_id)
+        .values(
+            consent_text_version=consent.CURRENT_VERSION,
+            consent_categories=categories,
+            consent_at=func.now(),
+            updated_at=func.now(),
+        )
+    )
+
+
 async def update_me(
     session: AsyncSession, catalog: Catalog, owner: Owner, change: MeUpdate
 ) -> SubscriptionMeOut:
@@ -94,25 +114,28 @@ async def update_me(
         raise ValidationProblem("Nichts zu ändern.", code="validation_error")
     if owner.profile_id is None:
         raise NotFoundError("Kein Profil.", code="no_profile")
+    current = (
+        await session.execute(
+            select(
+                SubscriptionProfile.categories,
+                SubscriptionProfile.mail_enabled,
+                Subscriber.consent_categories,
+            )
+            .join(Subscriber, Subscriber.id == SubscriptionProfile.subscriber_id)
+            .where(SubscriptionProfile.id == owner.profile_id)
+        )
+    ).one()
     values: dict[str, object] = {"updated_at": func.now()}
+    categories = list(current.categories)
     if change.interests is not None:
         resolution = doi.resolve_interests(catalog, change.interests)
-        values |= {
-            "interests": list(resolution.interests),
-            "categories": list(resolution.categories),
-        }
-        await session.execute(
-            update(Subscriber)
-            .where(Subscriber.id == owner.subscriber_id)
-            .values(
-                consent_text_version=consent.CURRENT_VERSION,
-                consent_categories=list(resolution.categories),
-                consent_at=func.now(),
-                updated_at=func.now(),
-            )
-        )
+        categories = list(resolution.categories)
+        values |= {"interests": list(resolution.interests), "categories": categories}
+    mail_enabled = current.mail_enabled if change.mail_enabled is None else change.mail_enabled
     if change.mail_enabled is not None:
         values["mail_enabled"] = change.mail_enabled
+    if mail_enabled and not set(categories) <= set(current.consent_categories):
+        await _record_consent(session, owner, change.consent, categories)
     await session.execute(
         update(SubscriptionProfile)
         .where(SubscriptionProfile.id == owner.profile_id)

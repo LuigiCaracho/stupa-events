@@ -6,6 +6,7 @@ export type SubscriptionErrorKind =
   | 'altchaInvalid'
   | 'rateLimited'
   | 'consentOutdated'
+  | 'consentRequired'
   | 'invalidToken'
   | 'unknownInterest'
   | 'noInterest'
@@ -21,6 +22,7 @@ const BY_CODE: Record<string, SubscriptionErrorKind> = {
   altcha_invalid: 'altchaInvalid',
   rate_limited: 'rateLimited',
   consent_outdated: 'consentOutdated',
+  consent_required: 'consentRequired',
   invalid_token: 'invalidToken',
   unknown_interest: 'unknownInterest',
   no_interest: 'noInterest',

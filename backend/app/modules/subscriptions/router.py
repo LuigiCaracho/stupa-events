@@ -278,7 +278,7 @@ async def me(
     "/subscriptions/me",
     response_model=SubscriptionMeOut,
     dependencies=posts,
-    responses={**_COMMON, **_TOKEN_404, 422: _PROBLEM, 429: _PROBLEM},
+    responses={**_COMMON, **_TOKEN_404, 409: _PROBLEM, 422: _PROBLEM, 429: _PROBLEM},
 )
 async def update_me(
     body: MeUpdate,

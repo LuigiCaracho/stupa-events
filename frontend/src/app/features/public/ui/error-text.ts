@@ -5,6 +5,7 @@ import type { SubscriptionError, SubscriptionErrorKind } from '../api/subscripti
 const KEYS: Record<Exclude<SubscriptionErrorKind, 'rateLimited'>, TranslationKey> = {
   altchaInvalid: 'public.sub.error.altchaInvalid',
   consentOutdated: 'public.sub.error.consentOutdated',
+  consentRequired: 'public.start.consentMissing',
   invalidToken: 'public.sub.error.invalidToken',
   unknownInterest: 'public.sub.error.unknownInterest',
   noInterest: 'public.sub.error.noInterest',

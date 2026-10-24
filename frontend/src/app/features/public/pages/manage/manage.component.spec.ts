@@ -58,6 +58,29 @@ describe('ManagePageComponent', () => {
     expect(screen.getByRole('button', { name: 'Speichern' })).toBeDisabled();
   });
 
+  it('asks for the consent sentence when the server needs it and sends the tick with the retry', async () => {
+    const h = await open();
+    await press(h, 'Kino, Konzerte, Kultur');
+    await press(h, 'Speichern');
+    h.http
+      .expectOne(ME_URL)
+      .flush({ status: 422, code: 'consent_required' }, { status: 422, statusText: 'x' });
+    await tick(h);
+    const save = screen.getByRole('button', { name: 'Zustimmen und speichern' });
+    expect(save).toBeDisabled();
+    await userEvent.click(screen.getByRole('checkbox'));
+    await tick(h);
+    await press(h, 'Zustimmen und speichern');
+    const req = h.http.expectOne(ME_URL);
+    expect(req.request.body).toEqual({
+      interests: ['party', 'kultur', 'fachschaft:fsi'],
+      consent: { version: QUESTIONNAIRE.consent.version, accepted: true },
+    });
+    req.flush({ ...ME, interests: ['party', 'kultur', 'fachschaft:fsi'] });
+    await tick(h);
+    expect(screen.queryByRole('button', { name: 'Zustimmen und speichern' })).toBeNull();
+  });
+
   it('does not let the last interest go', async () => {
     const h = await open();
     await press(h, 'Partys und Feiern');
