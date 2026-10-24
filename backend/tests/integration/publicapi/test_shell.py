@@ -112,7 +112,13 @@ async def test_fixed_pages_category_and_headers(api: Api, site: Site) -> None:
 async def test_same_bytes_for_every_user_agent_and_304(api: Api, site: Site) -> None:
     url = f"/e/{site.slugs['movie']}"
     bodies = set()
-    for agent in ("WhatsApp/2.24.1", "Synapse (bot)", "facebookexternalhit/1.1", "Mozilla/5.0"):
+    for agent in (
+        "WhatsApp/2.24.1",
+        "Synapse (bot; +https://github.com/element-hq/synapse)",
+        "facebookexternalhit/1.1",
+        "Signal-Desktop/7.0",
+        "Mozilla/5.0",
+    ):
         bodies.add((await page(api, url, headers={"User-Agent": agent})).content)
     assert len(bodies) == 1
     first = await page(api, url)

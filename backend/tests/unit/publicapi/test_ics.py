@@ -234,3 +234,16 @@ def test_foreign_tzid_is_written_in_the_one_zone_that_has_a_vtimezone() -> None:
     body = build_calendar([mapped], base_url=BASE_URL, uid_domain=UID_DOMAIN).decode()
     assert "Asia/Tokyo" not in body
     assert "DTSTART;TZID=Europe/Berlin:20260601T190000" in body
+
+
+def test_single_event_golden() -> None:
+    event = CASES["cancelled"][:1]
+    body = build_calendar(event, base_url=BASE_URL, uid_domain=UID_DOMAIN, name=event[0].title)
+    path = GOLDEN / "event-single.ics"
+    if os.environ.get("UPDATE_GOLDEN") == "1":
+        path.write_bytes(body)
+    assert body == path.read_bytes()
+    assert (
+        b"STATUS:CANCELLED" in body
+        and event[0].title.encode() in body.split(b"X-WR-CALNAME:")[1].split(b"\r\n")[0]
+    )
