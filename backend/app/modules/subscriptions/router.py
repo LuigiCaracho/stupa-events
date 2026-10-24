@@ -48,6 +48,7 @@ from app.shared.errors import ProblemDetail, ServiceUnavailableError
 SubsSession = Annotated[AsyncSession, Depends(get_subs_session)]
 TokenHeader = Annotated[str | None, Header(alias="X-Subscription-Token")]
 _PROBLEM: dict[str, Any] = {"model": ProblemDetail}
+_COMMON: dict[int | str, dict[str, Any]] = {413: _PROBLEM, 503: _PROBLEM}
 _TOKEN_404: dict[int | str, dict[str, Any]] = {404: _PROBLEM}
 QUESTIONS_CACHE = "public, max-age=300"
 
@@ -122,7 +123,7 @@ def build_questionnaire(catalog: Catalog) -> QuestionnaireOut:
     )
 
 
-@router.get("/getstarted/questions", response_model=QuestionnaireOut)
+@router.get("/getstarted/questions", response_model=QuestionnaireOut, responses=_COMMON)
 async def questions(
     request: Request, response: Response, session: SubsSession
 ) -> QuestionnaireOut | Response:
@@ -141,7 +142,7 @@ async def questions(
     status_code=202,
     response_model=SubscribeOut,
     dependencies=posts,
-    responses={400: _PROBLEM, 409: _PROBLEM, 422: _PROBLEM, 429: _PROBLEM},
+    responses={**_COMMON, 400: _PROBLEM, 409: _PROBLEM, 422: _PROBLEM, 429: _PROBLEM},
 )
 async def subscribe(
     body: SubscribeIn,
@@ -167,7 +168,7 @@ async def subscribe(
     "/subscriptions/confirm/preview",
     response_model=ConfirmPreviewOut,
     dependencies=posts,
-    responses={**_TOKEN_404, 429: _PROBLEM},
+    responses={**_COMMON, **_TOKEN_404, 429: _PROBLEM},
 )
 async def confirm_preview(
     body: TokenIn,
@@ -192,7 +193,7 @@ async def confirm_preview(
     "/subscriptions/confirm",
     response_model=ConfirmOut,
     dependencies=posts,
-    responses={**_TOKEN_404, 429: _PROBLEM},
+    responses={**_COMMON, **_TOKEN_404, 429: _PROBLEM},
 )
 async def confirm(
     body: TokenIn,
@@ -218,7 +219,7 @@ async def confirm(
     status_code=202,
     response_model=dict[str, Any],
     dependencies=posts,
-    responses={400: _PROBLEM, 422: _PROBLEM, 429: _PROBLEM},
+    responses={**_COMMON, 400: _PROBLEM, 422: _PROBLEM, 429: _PROBLEM},
 )
 async def manage_link(
     body: ManageLinkIn,
@@ -256,7 +257,7 @@ async def _owner(
     "/subscriptions/me",
     response_model=SubscriptionMeOut,
     dependencies=[Depends(_ready)],
-    responses=_TOKEN_404,
+    responses={**_COMMON, **_TOKEN_404, 429: _PROBLEM},
 )
 async def me(
     request: Request,
@@ -277,7 +278,7 @@ async def me(
     "/subscriptions/me",
     response_model=SubscriptionMeOut,
     dependencies=posts,
-    responses={**_TOKEN_404, 422: _PROBLEM},
+    responses={**_COMMON, **_TOKEN_404, 422: _PROBLEM},
 )
 async def update_me(
     body: MeUpdate,
@@ -299,7 +300,7 @@ async def update_me(
     "/subscriptions/me/ics-token",
     response_model=RotatedIcsOut,
     dependencies=posts,
-    responses=_TOKEN_404,
+    responses={**_COMMON, **_TOKEN_404, 429: _PROBLEM},
 )
 async def rotate_ics_token(
     request: Request,
@@ -320,7 +321,7 @@ async def rotate_ics_token(
     "/subscriptions/me",
     status_code=204,
     dependencies=[Depends(_ready)],
-    responses=_TOKEN_404,
+    responses={**_COMMON, **_TOKEN_404, 429: _PROBLEM},
 )
 async def delete_me(
     request: Request,

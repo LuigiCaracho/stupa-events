@@ -32,8 +32,16 @@ from app.shared.errors import is_cookie_free_path
 from tests.integration.archive.fixture import archived_movienight
 from tests.integration.events.harness import Api
 from tests.integration.publicapi import site_data
+from tests.integration.subscriptions.subs_harness import (
+    ADDRESS_KEY,
+    HASH_KEY,
+    SubsApi,
+    subs,
+    subs_url,
+)
 
 pytestmark = pytest.mark.integration
+__fixtures__ = (subs, subs_url)
 SCHEMA_FILE = Path(__file__).resolve().parents[2] / "schema" / "feed-v2.json"
 FEED_SCHEMA = jsonschema_rs.validator_for(json.loads(SCHEMA_FILE.read_text()))
 CHECKS = [
@@ -79,11 +87,21 @@ def draw(operation: Any, mode: GenerationMode) -> list[Any]:
 def public_operations(api: Api) -> list[Any]:
     schema = schemathesis.openapi.from_dict(api.app.openapi())
     found = [result.ok() for result in schema.get_all_operations()]
-    return [op for op in found if is_cookie_free_path(op.path.replace("{slug}", "x"))]
+    return [
+        op
+        for op in found
+        if is_cookie_free_path(op.path.replace("{slug}", "x").replace("{token}", "x"))
+    ]
 
 
-async def test_schemathesis(api: Api) -> None:
-    site_data.configure(api)
+async def test_schemathesis(subs: SubsApi) -> None:
+    api = subs.api
+    site_data.configure(
+        api,
+        pgcrypto_email_key=ADDRESS_KEY,
+        email_hash_key=HASH_KEY,
+        min_response_seconds=0,
+    )
     await archived_movienight(api)
     await api.to_state("published", title="Zweiter Termin")
     operations = public_operations(api)
@@ -107,6 +125,19 @@ async def test_schemathesis(api: Api) -> None:
         "/k/{slug}",
         "/sitemap.xml",
         "/robots.txt",
+        "/start",
+        "/abos",
+        "/bestaetigen/{token}",
+        "/abo/{token}",
+        "/ics/p/{token}.ics",
+        "/api/public/altcha/challenge",
+        "/api/public/getstarted/questions",
+        "/api/public/subscriptions",
+        "/api/public/subscriptions/confirm",
+        "/api/public/subscriptions/confirm/preview",
+        "/api/public/subscriptions/manage-link",
+        "/api/public/subscriptions/me",
+        "/api/public/subscriptions/me/ics-token",
     }
     sent = 0
     for operation in operations:
