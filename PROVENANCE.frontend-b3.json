@@ -1,0 +1,13 @@
+{
+  "upstream": {
+    "repo": "STUPA-MAKERS/STUPA-Workflow",
+    "commit": "93c33d6"
+  },
+  "files": [
+    {
+      "path": "frontend/src/app/features/public/ui/altcha.service.ts",
+      "source": "frontend/src/app/features/apply/altcha.service.ts",
+      "mode": "U"
+    }
+  ]
+}
