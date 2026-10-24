@@ -2,8 +2,8 @@
 
 The release is refused while the circuit breaker is open or while the Listmonk subscriber count
 of the list differs from the number of our confirmed subscribers who want mail on that list
-(PLAN 8.7.7): a mismatch means an unreconciled opt-out or a stranger on the list. A dead erasure job blocks
-it too.
+(PLAN 8.7.7): a mismatch means an unreconciled opt-out or a stranger on the list. A dead
+erasure job blocks it too.
 """
 
 from __future__ import annotations
@@ -75,8 +75,8 @@ async def release_digest(
 
     Raises:
         ReleaseBlockedError: Unknown or not a draft (`not_draft`), Listmonk down
-            (`listmonk_unavailable`), an erasure job is dead (`erasure_pending`) or the counts differ
-            (`count_mismatch`).
+            (`listmonk_unavailable`), an erasure job is dead (`erasure_pending`) or the counts
+            differ (`count_mismatch`).
     """
     async with maker() as session:
         run = await session.get(DigestRun, run_id)
