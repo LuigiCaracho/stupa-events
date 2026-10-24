@@ -9,7 +9,8 @@ the rate limiter is in memory, the mail queue records, and a test changes the se
 from __future__ import annotations
 
 import re
-from collections.abc import AsyncIterator
+import time
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -23,7 +24,13 @@ from app.modules.notifications.mail import MailMessage
 from app.modules.subscriptions.db import get_subs_session
 from app.modules.subscriptions.router import mail_queue
 from app.settings import Settings, get_settings
-from app.shared.altcha import AltchaVerifier, InMemoryReplayGuard
+from app.shared.altcha import (
+    AltchaVerifier,
+    InMemoryReplayGuard,
+    ReplayGuard,
+    create_challenge,
+    solve_challenge,
+)
 from app.shared.antiabuse import get_altcha_verifier, get_rate_limiter
 from app.shared.ratelimit import NullRateLimiter, RateLimiter
 from tests._support.factories import make_settings
@@ -62,6 +69,7 @@ class SubsApi:
     maker: async_sessionmaker[AsyncSession]
     settings: Settings
     limiter: RateLimiter = field(default_factory=NullRateLimiter)
+    solver: Callable[[], str] | None = None
 
     def configure(self, **over: Any) -> Settings:
         """Replace the settings (the app reads them on every request)."""
@@ -80,14 +88,23 @@ class SubsApi:
         self.limiter = limiter
         self.api.app.dependency_overrides[get_rate_limiter] = lambda: limiter
 
-    def require_altcha(self) -> AltchaVerifier:
-        """Turn the ALTCHA check on with an in-memory replay guard."""
-        verifier = AltchaVerifier(ALTCHA_SECRET, replay=InMemoryReplayGuard())
+    def require_altcha(
+        self, replay: ReplayGuard | None = None, *, solve: bool = False
+    ) -> AltchaVerifier:
+        """Turn the ALTCHA check on; `solve` makes `post` bring a fresh solution itself."""
+        verifier = AltchaVerifier(ALTCHA_SECRET, replay=replay or InMemoryReplayGuard())
         self.api.app.dependency_overrides[get_altcha_verifier] = lambda: verifier
+        if solve:
+            self.solver = lambda: solve_challenge(
+                create_challenge(ALTCHA_SECRET, expires=int(time.time()) + 60, max_number=50)
+            )
         return verifier
 
     async def post(self, path: str, body: dict[str, Any] | None = None, **kw: Any) -> Response:
-        return await self.api.client.post(path, json=body if body is not None else {}, **kw)
+        payload = body if body is not None else {}
+        if self.solver is not None and "altcha" in payload and not payload["altcha"]:
+            payload = {**payload, "altcha": self.solver()}
+        return await self.api.client.post(path, json=payload, **kw)
 
     async def sql(self, statement: str, **params: Any) -> list[Any]:
         return await self.api.sql(statement, **params)
