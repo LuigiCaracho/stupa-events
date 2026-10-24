@@ -33,6 +33,16 @@ describe('authInterceptor', () => {
     req.flush({});
   });
 
+  it('leaves the anonymous subscription routes without credentials and CSRF header', () => {
+    document.cookie = 'XSRF-TOKEN=csrf-abc; path=/';
+    httpClient.post('/api/public/subscriptions', {}).subscribe();
+    const req = http.expectOne('/api/public/subscriptions');
+    expect(req.request.withCredentials).toBe(false);
+    expect(req.request.headers.has('X-XSRF-TOKEN')).toBe(false);
+    req.flush({});
+    document.cookie = 'XSRF-TOKEN=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+  });
+
   it('leaves non-api requests untouched', () => {
     httpClient.get('/assets/logos/stupa-mark.svg').subscribe();
     const req = http.expectOne('/assets/logos/stupa-mark.svg');

@@ -11,6 +11,18 @@ const CSRF_COOKIE = 'XSRF-TOKEN';
 const CSRF_HEADER = 'X-XSRF-TOKEN';
 const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
+/** Anonymous subscription routes: no credentials, no CSRF header, nothing of the session leaves with them (B3 contract 6). */
+const ANONYMOUS_PREFIXES = [
+  '/api/public/subscriptions',
+  '/api/public/getstarted',
+  '/api/public/altcha',
+];
+
+function isAnonymousRoute(url: string): boolean {
+  const path = /^https?:\/\//i.test(url) ? new URL(url).pathname : url;
+  return ANONYMOUS_PREFIXES.some((prefix) => path.startsWith(prefix));
+}
+
 /**
  * Tells whether the URL points at the same-origin `/api`. Only then may the caller
  * attach the session cookie and the CSRF header. Otherwise the credentials leak to
@@ -61,7 +73,9 @@ function readCookie(name: string): string | null {
  * It leaves a foreign origin untouched. No credential and no header leaves.
  */
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  if (!isSameOriginApi(req.url, inject(LOCATION).origin)) return next(req);
+  if (!isSameOriginApi(req.url, inject(LOCATION).origin) || isAnonymousRoute(req.url)) {
+    return next(req);
+  }
 
   const auth = inject(AuthService);
   const csrfToken = UNSAFE_METHODS.has(req.method) ? readCookie(CSRF_COOKIE) : null;
