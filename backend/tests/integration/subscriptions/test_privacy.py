@@ -142,3 +142,17 @@ async def test_erase_removes_address_profile_tokens_and_the_listmonk_record(make
         ("subscriber.erase", {"found": True, "by": "sub-admin"}),
         ("subscriber.erase", {"found": False, "by": "sub-admin"}),
     ]
+
+
+async def test_dead_erasure_job_loses_its_ciphertext_after_the_outbox_cutoff(maker) -> None:  # noqa: ANN001
+    sid = await add_subscriber(maker, "gone@example.test")
+    async with maker.begin() as session:
+        await session.execute(text("SELECT privacy_erase_subscriber(:i)"), {"i": sid})
+        await session.execute(
+            text("UPDATE outbox SET state = 'dead', created_at = :t WHERE op = 'delete'"),
+            {"t": NOW - timedelta(days=31)},
+        )
+    assert await scalar(maker, "SELECT payload ? 'emailEnc' FROM outbox WHERE op = 'delete'")
+    await purge_expired(maker, maker, now=NOW)
+    row = await one(maker, "SELECT state, payload FROM outbox WHERE op = 'delete'")
+    assert row.state == "dead" and "emailEnc" not in row.payload

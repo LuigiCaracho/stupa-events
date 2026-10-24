@@ -2,7 +2,8 @@
 
 The release is refused while the circuit breaker is open or while the Listmonk subscriber count
 of the list differs from the number of our confirmed subscribers who want mail on that list
-(PLAN 8.7.7): a mismatch means an unreconciled opt-out or a stranger on the list.
+(PLAN 8.7.7): a mismatch means an unreconciled opt-out or a stranger on the list. A dead erasure job blocks
+it too.
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ from app.modules.subscriptions.listmonk_sync import ALL_KEY
 from app.modules.subscriptions.models import (
     DigestRun,
     ListmonkList,
+    Outbox,
     Subscriber,
     SubscriptionProfile,
 )
@@ -49,6 +51,15 @@ async def own_count(maker: Maker, key: str) -> int:
         return int(await session.scalar(stmt) or 0)
 
 
+async def dead_erasures(maker: Maker) -> int:
+    """Count `delete` and `unsubscribe` jobs that gave up: an erased person may still be listed."""
+    stmt = select(func.count()).select_from(Outbox).where(
+        Outbox.state == "dead", Outbox.op.in_(("delete", "unsubscribe"))
+    )
+    async with maker() as session:
+        return int(await session.scalar(stmt) or 0)
+
+
 async def release_digest(
     maker: Maker,
     port: ListmonkPort,
@@ -62,7 +73,8 @@ async def release_digest(
 
     Raises:
         ReleaseBlockedError: Unknown or not a draft (`not_draft`), Listmonk down
-            (`listmonk_unavailable`) or the counts differ (`count_mismatch`).
+            (`listmonk_unavailable`), an erasure job is dead (`erasure_pending`) or the counts differ
+            (`count_mismatch`).
     """
     async with maker() as session:
         run = await session.get(DigestRun, run_id)
@@ -75,6 +87,8 @@ async def release_digest(
         raise ReleaseBlockedError("not_draft")
     if breaker is not None and await breaker.exists(BREAKER_KEY):
         raise ReleaseBlockedError("listmonk_unavailable")
+    if await dead_erasures(maker):
+        raise ReleaseBlockedError("erasure_pending")
     if await port.subscriber_count(listed.listmonk_id) != await own_count(maker, run.list_key):
         raise ReleaseBlockedError("count_mismatch")
     await port.start_campaign(run.campaign_id)

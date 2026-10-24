@@ -148,6 +148,24 @@ async def test_release_is_refused_when_counts_differ_and_works_when_they_match(
     assert [c["status"] for c in fake.campaigns.values()].count("running") == 1
 
 
+async def test_release_is_refused_while_an_erasure_job_is_dead(maker, fake, events) -> None:  # noqa: ANN001
+    await populated(maker, fake)
+    await build_drafts(maker, fake, base_url="https://x.test", now=MONDAY)
+    run_id = await scalar(maker, "SELECT id FROM digest_run WHERE list_key = 'party'")
+    sid = await scalar(maker, "SELECT id FROM subscriber LIMIT 1")
+    async with maker.begin() as session:
+        await session.execute(
+            text(
+                "INSERT INTO outbox (op, subscriber_id, idempotency_key, state)"
+                " VALUES ('delete', :s, 'delete:dead', 'dead')"
+            ),
+            {"s": sid},
+        )
+    with pytest.raises(ReleaseBlockedError) as blocked:
+        await release_digest(maker, fake, run_id, by_sub="sub-editor")
+    assert blocked.value.code == "erasure_pending"
+
+
 async def test_release_waits_while_the_breaker_is_open_and_only_drafts_release(
     maker, fake, events
 ) -> None:  # noqa: ANN001
