@@ -265,9 +265,19 @@
       "mode": "U"
     },
     {
+      "path": "backend/app/modules/subscriptions/altcha_router.py",
+      "source": "backend/app/modules/antiabuse/router.py",
+      "mode": "U"
+    },
+    {
       "path": "backend/app/settings.py",
       "source": "backend/app/settings.py",
       "mode": "U"
+    },
+    {
+      "path": "backend/app/shared/altcha.py",
+      "source": "backend/app/shared/altcha.py",
+      "mode": "K"
     },
     {
       "path": "backend/app/shared/antiabuse.py",
@@ -397,6 +407,11 @@
     {
       "path": "backend/tests/unit/notifications/test_direct_queue_bounded.py",
       "source": "backend/tests/unit/modules/notifications/test_direct_queue_bounded.py",
+      "mode": "K"
+    },
+    {
+      "path": "backend/tests/unit/shared/test_altcha.py",
+      "source": "backend/tests/unit/shared/test_altcha.py",
       "mode": "K"
     },
     {

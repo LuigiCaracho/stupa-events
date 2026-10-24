@@ -3,16 +3,18 @@
 The FastAPI dependencies here run before the endpoint logic. They enforce a body cap
 (413) and the rate limits (429 with ``Retry-After``). The rate limiter builds from the
 injected ``Settings`` and caches lazily on ``app.state``, so tests can replace it through
-``dependency_overrides``. ALTCHA comes with the public forms in stage B.
+``dependency_overrides``. ALTCHA guards the public forms (stage B): the solution travels in
+the JSON body and the verifier checks it locally.
 
 These are dependencies and not middleware on purpose. Each route can then set its own
 throttle, and the OpenAPI contract shows the behavior.
 
-Copied from STUPA-Workflow@93c33d6 backend/app/shared/antiabuse.py (reduced to M1)
+Copied from STUPA-Workflow@93c33d6 backend/app/shared/antiabuse.py (reduced to M1, plus ALTCHA)
 """
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable
 from typing import Annotated
 
@@ -20,7 +22,8 @@ from fastapi import Depends, Request
 
 from app.deps import Principal, get_current_principal
 from app.settings import Settings, get_settings
-from app.shared.errors import PayloadTooLargeError, RateLimitedError
+from app.shared.altcha import AltchaError, AltchaVerifier, NullAltchaVerifier, RedisReplayGuard
+from app.shared.errors import BadRequestError, PayloadTooLargeError, RateLimitedError
 from app.shared.ratelimit import NullRateLimiter, RateLimiter, RedisRateLimiter
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
@@ -67,7 +70,28 @@ def get_rate_limiter(request: Request, settings: SettingsDep) -> RateLimiter:
     return limiter
 
 
+def get_altcha_verifier(
+    request: Request, settings: SettingsDep
+) -> AltchaVerifier | NullAltchaVerifier:
+    """Return the process-wide verifier (the no-op one while no secret is set)."""
+    state = request.app.state
+    verifier = getattr(state, "_altcha_verifier", None)
+    if verifier is None:
+        if settings.altcha_enabled:
+            assert settings.altcha_hmac_secret is not None
+            verifier = AltchaVerifier(
+                settings.altcha_hmac_secret,
+                replay=RedisReplayGuard(_redis_client(request, settings)),
+                replay_ttl_seconds=settings.altcha_challenge_ttl_seconds,
+            )
+        else:
+            verifier = NullAltchaVerifier()
+        state._altcha_verifier = verifier
+    return verifier
+
+
 RateLimiterDep = Annotated[RateLimiter, Depends(get_rate_limiter)]
+AltchaDep = Annotated["AltchaVerifier | NullAltchaVerifier", Depends(get_altcha_verifier)]
 
 
 def body_cap(limit_attr: str) -> Callable[[Request, Settings], None]:
@@ -170,3 +194,22 @@ async def rate_limit_search(
         window=60,
         detail="Too many searches. Try again later.",
     )
+
+
+async def verify_altcha_solution(
+    verifier: AltchaVerifier | NullAltchaVerifier, solution: str
+) -> None:
+    """Verify one solution.
+
+    Raises:
+        BadRequestError: `altcha_invalid` for a missing, wrong, expired or reused solution.
+    """
+    try:
+        await verifier.verify(solution or None)
+    except AltchaError as exc:
+        raise BadRequestError("Altcha verification failed.", code="altcha_invalid") from exc
+
+
+def now_unix() -> int:
+    """Return the current time in unix seconds."""
+    return int(time.time())

@@ -16,6 +16,7 @@ from pydantic import Field, ValidationError, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 _MIN_SECRET_LEN = 16
+_MIN_KEY_LEN = 32
 
 _log = logging.getLogger("app.settings")
 
@@ -181,6 +182,16 @@ class Settings(BaseSettings):
     listmonk_allowed_hosts: CsvList = []
     pgcrypto_email_key: str | None = Field(default=None, min_length=32)
     subs_database_url: str | None = None
+    altcha_hmac_secret: str | None = Field(default=None, min_length=_MIN_SECRET_LEN)
+    altcha_max_number: int = 100_000
+    altcha_challenge_ttl_seconds: int = 300
+    pgcrypto_email_key: str | None = Field(default=None, min_length=_MIN_KEY_LEN)
+    email_hash_key: str | None = Field(default=None, min_length=_MIN_KEY_LEN)
+    min_response_seconds: float = Field(default=0.6, ge=0, le=5)
+    rl_subs_ip_per_hour: int = 10
+    rl_subs_confirm_per_hour: int = 30
+    rl_subs_me_per_hour: int = 60
+    subs_mails_per_day: int = 3
 
     @field_validator("cors_allow_origins", "listmonk_allowed_hosts", mode="before")
     @classmethod
@@ -192,6 +203,16 @@ class Settings(BaseSettings):
     def storage_enabled(self) -> bool:
         """Object storage is active only when a MinIO endpoint is set."""
         return bool(self.minio_endpoint)
+
+    @property
+    def altcha_enabled(self) -> bool:
+        """ALTCHA is active only when a HMAC secret is set."""
+        return bool(self.altcha_hmac_secret)
+
+    @property
+    def subs_keys_enabled(self) -> bool:
+        """Mail subscriptions work only with the address key and the hash key."""
+        return bool(self.pgcrypto_email_key and self.email_hash_key)
 
     @property
     def listmonk_enabled(self) -> bool:
@@ -237,6 +258,30 @@ class Settings(BaseSettings):
         """
         if self.environment == "production" and "*" in self.forwarded_allow_ips:
             raise ValueError('FORWARDED_ALLOW_IPS must not be "*" in production.')
+        return self
+
+    @model_validator(mode="after")
+    def _subscription_secrets_outside_development(self) -> "Settings":
+        """Require the subscription secrets and keep the two keys apart outside development.
+
+        Raises:
+            ValueError: A secret is missing, or the two keys are equal.
+        """
+        if self.pgcrypto_email_key and self.pgcrypto_email_key == self.email_hash_key:
+            raise ValueError("PGCRYPTO_EMAIL_KEY and EMAIL_HASH_KEY must differ.")
+        if self.environment == "development" or not self.strict_security_enabled:
+            return self
+        required = {
+            "altcha_hmac_secret": self.altcha_hmac_secret,
+            "pgcrypto_email_key": self.pgcrypto_email_key,
+            "email_hash_key": self.email_hash_key,
+            "subs_database_url": self.subs_database_url,
+            "listmonk_url": self.listmonk_url,
+            "listmonk_api_token": self.listmonk_api_token,
+        }
+        missing = sorted(name.upper() for name, value in required.items() if not value)
+        if missing:
+            raise ValueError(f"Missing subscription configuration: {', '.join(missing)}")
         return self
 
     @model_validator(mode="after")

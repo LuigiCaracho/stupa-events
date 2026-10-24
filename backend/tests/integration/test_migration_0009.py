@@ -62,7 +62,7 @@ def objects(engine: Engine) -> tuple[set[str], set[str]]:
 def test_upgrade_creates_the_tables_functions_and_interests(migrated: tuple[str, str]) -> None:
     with scratch_database(migrated, "0009_subscriptions") as (engine, _):
         tables, functions = objects(engine)
-        assert TABLES <= tables
+        assert tables >= TABLES
         assert functions == FUNCTIONS
         with engine.connect() as conn:
             rows = conn.execute(text("SELECT slug, category_ids FROM interest")).all()
@@ -80,7 +80,7 @@ def test_downgrade_removes_everything_and_upgrade_again_works(migrated: tuple[st
         assert not TABLES & tables
         assert not functions
         command.upgrade(config, "0009_subscriptions")  # type: ignore[arg-type]
-        assert TABLES <= objects(engine)[0]
+        assert objects(engine)[0] >= TABLES
 
 
 def test_erase_leaves_a_tombstone_without_personal_data(migrated: tuple[str, str]) -> None:

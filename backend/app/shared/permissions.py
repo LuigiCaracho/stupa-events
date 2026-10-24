@@ -39,6 +39,9 @@ PERMISSION_CATALOGUE: tuple[str, ...] = (
     "admin.mappings",
     "admin.sessions.revoke",
     "admin.status",
+    "digest.release",
+    "privacy.erase",
+    "subscriber.stats",
 )
 
 ORG_ROLES: tuple[str, ...] = ("viewer", "submitter", "organizer")
@@ -60,6 +63,8 @@ _EDITOR = _ORGANIZER | {
     "import.manage",
     "taxonomy.manage",
     "venue.manage",
+    "digest.release",
+    "subscriber.stats",
 }
 
 ROLE_PERMISSIONS: Mapping[str, frozenset[str]] = {
@@ -79,6 +84,9 @@ ROLE_PERMISSIONS: Mapping[str, frozenset[str]] = {
             "taxonomy.manage",
             "venue.manage",
             "import.manage",
+            "digest.release",
+            "privacy.erase",
+            "subscriber.stats",
         }
     ),
 }

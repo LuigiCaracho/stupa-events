@@ -66,6 +66,16 @@ def test_csv_lists_and_bootstrap_sets() -> None:
     assert make_settings(cors_allow_origins='["https://c"]').cors_allow_origins == ["https://c"]
 
 
+SUBS_SETTINGS = {
+    "altcha_hmac_secret": "a" * 16,
+    "pgcrypto_email_key": "p" * 32,
+    "email_hash_key": "h" * 32,
+    "subs_database_url": "postgresql+asyncpg://events_subs:pw@db/events",
+    "listmonk_url": "https://lists.example.org",
+    "listmonk_api_token": "t" * 20,
+}
+
+
 def test_wildcard_proxy_is_refused_in_production_only() -> None:
     assert make_settings(forwarded_allow_ips="*").forwarded_allow_ips == "*"
     with pytest.raises(SettingsError):
@@ -77,10 +87,28 @@ def test_derived_flags() -> None:
     assert s.storage_enabled and s.clamav_enabled and s.smtp_enabled
     assert s.strict_security_enabled
     assert not make_settings().storage_enabled
-    assert make_settings(strict_security=False, environment="production").strict_security_enabled
+    assert make_settings(
+        strict_security=False, environment="production", **SUBS_SETTINGS
+    ).strict_security_enabled
     assert not make_settings(strict_security=False).strict_security_enabled
 
 
 def test_storage_without_clamav_warns(caplog: pytest.LogCaptureFixture) -> None:
     make_settings(minio_endpoint="minio:9000")
     assert "CLAMAV is disabled" in caplog.text
+
+
+def test_production_needs_the_subscription_secrets() -> None:
+    with pytest.raises(SettingsError, match="ALTCHA_HMAC_SECRET.*PGCRYPTO_EMAIL_KEY"):
+        make_settings(environment="production")
+    assert make_settings(environment="production", **SUBS_SETTINGS).altcha_enabled
+
+
+def test_development_runs_without_the_subscription_secrets() -> None:
+    settings = make_settings()
+    assert not settings.altcha_enabled and not settings.subs_keys_enabled
+
+
+def test_the_address_key_and_the_hash_key_must_differ() -> None:
+    with pytest.raises(SettingsError, match="must differ"):
+        make_settings(pgcrypto_email_key="k" * 32, email_hash_key="k" * 32)
