@@ -148,6 +148,9 @@ test('mail path: DOI mail, GET confirms nothing, the button does, manage, new ad
   await expect(page).toHaveURL(/\/abo$/);
   await page.getByRole('button', { name: 'Kino, Konzerte, Kultur' }).click();
   await page.getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.getByRole('heading', { name: 'Einwilligung für neue Mails' })).toBeVisible();
+  await page.getByRole('checkbox').check();
+  await page.getByRole('button', { name: 'Zustimmen und speichern' }).click();
   await expect(page.getByText('Gespeichert.')).toBeVisible();
 
   await page.getByRole('button', { name: 'Neue URL erzeugen' }).click();
