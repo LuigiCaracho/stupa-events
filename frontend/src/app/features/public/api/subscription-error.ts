@@ -30,7 +30,9 @@ const DEFAULT_WAIT_MINUTES = 15;
 
 function retryMinutes(err: unknown): number {
   const cause = err instanceof Error && err.cause instanceof HttpErrorResponse ? err.cause : err;
-  const seconds = Number(cause instanceof HttpErrorResponse ? cause.headers.get('Retry-After') : null);
+  const seconds = Number(
+    cause instanceof HttpErrorResponse ? cause.headers.get('Retry-After') : null,
+  );
   return Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds / 60) : DEFAULT_WAIT_MINUTES;
 }
 

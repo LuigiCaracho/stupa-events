@@ -1,0 +1,15 @@
+<div class="pl__actions">
+  <a appLinkButton="fill" [href]="webcalUrl()">{{ 'public.links.open' | t }}</a>
+</div>
+<div class="pl__field">
+  <label class="pl__label" [for]="fieldId">{{ 'public.links.url' | t }}</label>
+  <div class="pl__row">
+    <input class="pl__url" [id]="fieldId" type="text" readonly [value]="icsUrl()" />
+    <app-button variant="outlined" (click)="copy()">{{ 'public.links.copy' | t }}</app-button>
+  </div>
+</div>
+@if (copyFailed()) {
+  <app-note kind="warn" role="alert">{{ 'public.links.copyFailed' | t }}</app-note>
+}
+<p class="pl__hint">{{ 'public.links.google' | t }}</p>
+<p class="pl__hint">{{ 'public.links.delay' | t }} {{ 'public.links.secret' | t }}</p>

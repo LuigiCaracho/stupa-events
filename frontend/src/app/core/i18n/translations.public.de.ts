@@ -126,10 +126,6 @@ export const publicDe = {
   'public.subscribe.thunderbird': 'Thunderbird',
   'public.subscribe.thunderbirdBody':
     'Im Kalender auf „Neuer Kalender“ und „Im Netzwerk“ gehen, als Format „iCalendar (ICS)“ wählen und die kopierte Adresse einfügen.',
-  'public.subscribe.more': 'Weitere Wege',
-  'public.subscribe.mail': 'Per Mail',
-  'public.subscribe.profile': 'Persönliches Profil',
-  'public.subscribe.soon': 'Kommt bald',
 
   'public.legal.imprint': 'Impressum',
   'public.legal.privacy': 'Datenschutz',

@@ -64,11 +64,42 @@ describe('SubscribePageComponent', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Markier die Adresse bitte von Hand.');
   });
 
-  it('shows mail and profile as "Kommt bald" and disabled', async () => {
+  it('points to Get started and says that mail needs a confirmation', async () => {
     await open();
-    const soon = screen.getAllByRole('button', { name: 'Kommt bald' });
-    expect(soon).toHaveLength(2);
-    soon.forEach((b) => expect(b).toBeDisabled());
+    expect(
+      screen.getByRole('heading', { name: 'Persönlich: Interessen wählen' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Get started' })).toHaveAttribute('href', '/start');
+    expect(screen.getByText('Mail-Abo gibt es nur mit Bestätigung.')).toBeInTheDocument();
+  });
+
+  it('asks for the manage link in a dialog and shows the same sentence whatever the address', async () => {
+    const h = await open();
+    await userEvent.click(screen.getByRole('button', { name: 'Verwaltungslink anfordern' }));
+    await tick(h);
+    await userEvent.type(screen.getByLabelText('Mailadresse'), 'wer@example.test');
+    await userEvent.click(screen.getByRole('button', { name: 'Link anfordern' }));
+    h.http.expectOne('/api/public/altcha/challenge').flush(null, { status: 404, statusText: 'x' });
+    await tick(h);
+    await tick(h);
+    const req = h.http.expectOne('/api/public/subscriptions/manage-link');
+    expect(req.request.body).toEqual({ email: 'wer@example.test', altcha: '' });
+    req.flush({}, { status: 202, statusText: 'Accepted' });
+    await tick(h);
+    expect(
+      screen.getByText('Wenn die Adresse bei uns angemeldet ist, ist der Link unterwegs.'),
+    ).toBeInTheDocument();
+  });
+
+  it('does not send a malformed address', async () => {
+    const h = await open();
+    await userEvent.click(screen.getByRole('button', { name: 'Verwaltungslink anfordern' }));
+    await tick(h);
+    await userEvent.type(screen.getByLabelText('Mailadresse'), 'kaputt');
+    await userEvent.click(screen.getByRole('button', { name: 'Link anfordern' }));
+    await tick(h);
+    expect(screen.getByText('Das sieht nicht wie eine Mailadresse aus.')).toBeInTheDocument();
+    h.http.expectNone('/api/public/altcha/challenge');
   });
 
   it('explains Google, Apple and Thunderbird', async () => {

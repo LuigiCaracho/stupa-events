@@ -1,0 +1,64 @@
+@use 'breakpoints' as bp;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: 44rem;
+  margin: 0 auto;
+  padding-inline: var(--space-4);
+  box-sizing: border-box;
+}
+@include bp.not-phone {
+  :host {
+    padding-inline: var(--space-5);
+  }
+}
+@include bp.phone {
+  :host {
+    --control-height: 2.75rem;
+  }
+}
+.mg__title {
+  margin: 0;
+  font-size: var(--fs-d2);
+  line-height: var(--lh-d2);
+  font-weight: var(--fw-semibold);
+}
+.mg__card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface-1);
+}
+.mg__h2,
+.mg__h3 {
+  margin: 0;
+  font-weight: var(--fw-semibold);
+}
+.mg__h2 {
+  font-size: var(--fs-h2);
+  line-height: var(--lh-h2);
+}
+.mg__h3 {
+  font-size: var(--fs-h3);
+  line-height: var(--lh-h3);
+}
+.mg__text,
+.mg__hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  line-height: var(--lh-relaxed);
+}
+.mg__actions,
+.mg__footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.mg__footer {
+  justify-content: flex-end;
+}

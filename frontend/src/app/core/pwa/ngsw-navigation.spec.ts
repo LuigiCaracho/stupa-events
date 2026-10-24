@@ -25,6 +25,8 @@ const SERVER_RENDERED = [
   '/ics/**',
   '/e/**',
   '/k/**',
+  '/abo/**',
+  '/bestaetigen/**',
   '/tiles/**',
   '/sitemap.xml',
   '/robots.txt',

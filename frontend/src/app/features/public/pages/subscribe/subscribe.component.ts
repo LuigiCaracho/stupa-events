@@ -1,7 +1,8 @@
 /**
  * P07 Abos (`/abos`, anchor `#k=<slug>`): the calendar subscription addresses. One calendar for everything and one per
- * category, each as a `webcal:` link that opens the calendar app and as an `https` address to copy. The mail
- * subscription and the personal profile follow in a later stage and are shown as "kommt bald". No QR codes yet.
+ * category, each as a `webcal:` link that opens the calendar app and as an `https` address to copy. The personal part
+ * (interests, calendar and mail) starts at Get started (`/start`); "Verwaltungslink anfordern" asks for the magic link
+ * of the manage page. No QR codes yet.
  */
 import {
   ChangeDetectionStrategy,
@@ -13,13 +14,13 @@ import {
 } from '@angular/core';
 import { resourceValue } from '@core/api/resource-value';
 import { rxResource, toSignal } from '@angular/core/rxjs-interop';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { NoteComponent } from '@shared/ui/note/note.component';
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
-import { ButtonComponent, ToastService } from '@stupa-makers/ui-kit';
+import { ButtonComponent, DialogComponent, ToastService } from '@stupa-makers/ui-kit';
 import { PublicApi } from '../../api/public-api.service';
 import { publicErrorOf } from '../../api/public-error';
 import {
@@ -31,6 +32,7 @@ import {
 } from '../../model/subscribe-links';
 import { LinkButtonComponent } from '../../ui/link-button/link-button.component';
 import { LoadErrorComponent } from '../../ui/load-error/load-error.component';
+import { ManageLinkFormComponent } from '../../ui/manage-link-form/manage-link-form.component';
 import { usePageTitle } from '../../ui/page-title';
 import { ShareService } from '../../ui/share.service';
 
@@ -39,13 +41,16 @@ import { ShareService } from '../../ui/share.service';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    RouterLink,
     TranslatePipe,
     ButtonComponent,
+    DialogComponent,
     EmptyStateComponent,
     NoteComponent,
     SkeletonComponent,
     LinkButtonComponent,
     LoadErrorComponent,
+    ManageLinkFormComponent,
   ],
   templateUrl: './subscribe.component.html',
   styleUrl: './subscribe.component.scss',
@@ -63,6 +68,7 @@ export class SubscribePageComponent {
   });
   protected readonly marked = computed(() => anchoredCategory(this.fragment()));
   protected readonly copyFailed = signal(false);
+  protected readonly manageOpen = signal(false);
   protected readonly loaded = computed(() => resourceValue(this.data, undefined));
   protected readonly error = computed(() =>
     this.data.error() ? publicErrorOf(this.data.error()) : null,

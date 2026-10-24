@@ -1,0 +1,35 @@
+<div class="cf" aria-live="polite">
+  <h1 class="cf__title">{{ 'public.confirm.title' | t }}</h1>
+  @switch (phase()) {
+    @case ('checking') {
+      <app-skeleton variant="items" [count]="2" [label]="'public.confirm.checking' | t" />
+    }
+    @case ('ready') {
+      <section class="cf__card">
+        <p class="cf__body">{{ sentence() }}</p>
+        <p class="cf__hint">{{ 'public.confirm.hint' | t }}</p>
+        @if (error(); as text) {
+          <app-note kind="error" icon="alert" role="alert">{{ text }}</app-note>
+        }
+        <app-button variant="primary" [loading]="busy()" (click)="confirm()">{{
+          'public.confirm.button' | t
+        }}</app-button>
+      </section>
+    }
+    @case ('done') {
+      <section class="cf__card">
+        <app-note icon="check" role="status">{{ 'public.confirm.done' | t }}</app-note>
+        <p class="cf__hint">{{ 'public.confirm.doneManage' | t }}</p>
+        <a appLinkButton="tonal" routerLink="/abos">{{ 'public.start.toSubscribe' | t }}</a>
+      </section>
+    }
+    @case ('invalid') {
+      <section class="cf__card">
+        <app-note kind="warn" icon="alert" role="alert">{{
+          'public.confirm.invalid' | t
+        }}</app-note>
+        <a appLinkButton="fill" routerLink="/start">{{ 'public.confirm.again' | t }}</a>
+      </section>
+    }
+  }
+</div>

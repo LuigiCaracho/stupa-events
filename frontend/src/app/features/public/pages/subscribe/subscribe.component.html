@@ -77,16 +77,24 @@
   </details>
 </section>
 
-<section class="sub__section" aria-labelledby="sub-more">
-  <h2 id="sub-more" class="sub__h2">{{ 'public.subscribe.more' | t }}</h2>
-  <ul class="sub__rows">
-    <li class="sub__row">
-      <span class="sub__h3">{{ 'public.subscribe.mail' | t }}</span>
-      <app-button variant="tonal" [disabled]="true">{{ 'public.subscribe.soon' | t }}</app-button>
-    </li>
-    <li class="sub__row">
-      <span class="sub__h3">{{ 'public.subscribe.profile' | t }}</span>
-      <app-button variant="tonal" [disabled]="true">{{ 'public.subscribe.soon' | t }}</app-button>
-    </li>
-  </ul>
+<section class="sub__card" aria-labelledby="sub-more">
+  <h2 id="sub-more" class="sub__h2">{{ 'public.subscribe.mail.title' | t }}</h2>
+  <p class="sub__text">{{ 'public.subscribe.mail.body' | t }}</p>
+  <div class="sub__actions">
+    <a appLinkButton="fill" routerLink="/start">{{ 'public.subscribe.mail.start' | t }}</a>
+    <app-button variant="text" (click)="manageOpen.set(true)">{{
+      'public.subscribe.mail.manageLink' | t
+    }}</app-button>
+  </div>
+  <p class="sub__text">{{ 'public.subscribe.mail.hint' | t }}</p>
 </section>
+
+<app-dialog
+  [open]="manageOpen()"
+  [title]="'public.subscribe.mail.manageTitle' | t"
+  [subtitle]="'public.subscribe.mail.manageBody' | t"
+  [closeLabel]="'action.close' | t"
+  (closed)="manageOpen.set(false)"
+>
+  <app-manage-link-form />
+</app-dialog>

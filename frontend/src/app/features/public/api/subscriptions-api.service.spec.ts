@@ -2,6 +2,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import type { Observable } from 'rxjs';
 import { SubscriptionsApi } from './subscriptions-api.service';
 
 describe('SubscriptionsApi', () => {
@@ -9,7 +10,9 @@ describe('SubscriptionsApi', () => {
   let http: HttpTestingController;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
     api = TestBed.inject(SubscriptionsApi);
     http = TestBed.inject(HttpTestingController);
   });
@@ -36,7 +39,7 @@ describe('SubscriptionsApi', () => {
     ['rotateIcsToken', () => api.rotateIcsToken('t'), 'POST', '/me/ics-token'],
     ['deleteMe', () => api.deleteMe('t'), 'DELETE', '/me'],
   ])('%s uses the header on %s %s', (_name, call, method, path) => {
-    call().subscribe();
+    (call() as Observable<unknown>).subscribe();
     const req = http.expectOne(`/api/public/subscriptions${path}`);
     expect(req.request.method).toBe(method);
     expect(req.request.headers.get('X-Subscription-Token')).toBe('t');

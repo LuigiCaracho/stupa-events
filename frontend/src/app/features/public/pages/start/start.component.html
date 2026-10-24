@@ -1,0 +1,147 @@
+<header class="st__head">
+  <h1 class="st__title">{{ 'public.start.title' | t }}</h1>
+  <p class="st__lede">{{ 'public.start.lede' | t }}</p>
+</header>
+
+@if (questions.error()) {
+  <app-load-error kind="failed" (retry)="reload()" />
+} @else if (!loaded()) {
+  <app-skeleton variant="items" [count]="3" [label]="'common.loading' | t" />
+} @else {
+  <app-stepper
+    [steps]="steps()"
+    [activeIndex]="state.stepIndex()"
+    [orientation]="phone() ? 'vertical' : 'horizontal'"
+    [navigable]="stepId() !== 'result'"
+    [ariaLabel]="'public.start.progress' | t"
+    (stepSelect)="onStepSelect($event)"
+  />
+
+  <section class="st__card" [attr.aria-label]="'public.start.title' | t">
+    @switch (stepId()) {
+      @case ('interests') {
+        <h2 class="st__h2" tabindex="-1" data-step-heading>{{ 'public.start.interests' | t }}</h2>
+        <app-chip-group
+          [options]="interestOptions()"
+          [selected]="state.interests()"
+          [label]="'public.start.interestsList' | t"
+          (chosen)="state.toggleInterest($event)"
+        />
+        <h3 class="st__h3" id="st-meetings">{{ 'public.start.meetings' | t }}</h3>
+        <app-segmented
+          [ariaLabel]="'public.start.meetings' | t"
+          [options]="yesNo()"
+          [value]="state.meetings() ? 'yes' : 'no'"
+          (valueChange)="meetingsValue($event)"
+        />
+      }
+      @case ('faculty') {
+        <h2 class="st__h2" tabindex="-1" data-step-heading>{{ 'public.start.faculty' | t }}</h2>
+        <p class="st__hint">{{ 'public.start.facultyHint' | t }}</p>
+        <app-chip-group
+          [options]="facultyOptions()"
+          [selected]="facultySelected()"
+          [label]="'public.start.facultyList' | t"
+          (chosen)="pickFaculty($event)"
+        />
+      }
+      @case ('channel') {
+        <h2 class="st__h2" tabindex="-1" data-step-heading>{{ 'public.start.channel' | t }}</h2>
+        <app-segmented
+          [ariaLabel]="'public.start.channel' | t"
+          width="fill"
+          [options]="channels()"
+          [value]="state.channel()"
+          (valueChange)="channelValue($event)"
+        />
+        <p class="st__hint">{{ 'public.start.channelHint' | t }}</p>
+      }
+      @case ('mail') {
+        <h2 class="st__h2" tabindex="-1" data-step-heading>{{ 'public.start.mail' | t }}</h2>
+        <app-input
+          type="email"
+          name="email"
+          [label]="'public.start.email' | t"
+          [error]="emailError()"
+          [ngModel]="state.email()"
+          (ngModelChange)="state.email.set($event)"
+        />
+        <app-checkbox
+          name="consent"
+          [ngModel]="state.consent()"
+          (ngModelChange)="state.consent.set($event)"
+        >
+          {{ consentText() }}
+          <a routerLink="/datenschutz" target="_blank" rel="noopener">{{
+            'public.start.privacy' | t
+          }}</a>
+        </app-checkbox>
+        @if (consentError()) {
+          <app-note kind="error" icon="alert" role="alert">{{
+            'public.start.consentMissing' | t
+          }}</app-note>
+        }
+        <p class="st__hint">{{ 'public.start.mailHint' | t }}</p>
+      }
+      @case ('result') {
+        @if (result(); as out) {
+          <h2 class="st__h2" tabindex="-1" data-step-heading>{{ 'public.start.result' | t }}</h2>
+          @if (out.profile.categories.length > 0) {
+            <h3 class="st__h3">{{ 'public.start.resultCategories' | t }}</h3>
+            <ul class="st__cats">
+              @for (c of out.profile.categories; track c.slug) {
+                <li class="st__cat">{{ c.name }}</li>
+              }
+            </ul>
+          }
+          <app-profile-links [icsUrl]="out.profile.icsUrl" [webcalUrl]="out.profile.webcalUrl" />
+          @if (out.mail.requested) {
+            <app-note icon="mail" role="status">
+              <strong>{{ 'public.start.mailSent' | t }}</strong>
+              {{ 'public.start.mailSentBody' | t }}
+            </app-note>
+            <h3 class="st__h3">{{ 'public.start.manage' | t }}</h3>
+            <p class="st__hint">
+              {{ 'public.start.manageBody' | t }}
+              <a routerLink="/abos">{{ 'public.start.toSubscribe' | t }}</a>
+            </p>
+          }
+          <div class="st__nav">
+            <app-button variant="text" (click)="restart()">{{
+              'public.start.again' | t
+            }}</app-button>
+          </div>
+        }
+      }
+    }
+
+    @if (lockMessage()) {
+      <p class="st__hint" id="st-lock">{{ 'public.start.interestsLock' | t }}</p>
+    }
+    @if (error(); as text) {
+      <app-note kind="error" icon="alert" role="alert">{{ text }}</app-note>
+    }
+    <p class="st__status" role="status">
+      @if (busy()) {
+        {{ 'public.start.checking' | t }}
+      }
+    </p>
+
+    @if (stepId() !== 'result') {
+      <div class="st__nav">
+        @if (state.stepIndex() > 0) {
+          <app-button variant="outlined" (click)="back()">{{ 'public.start.back' | t }}</app-button>
+        }
+        @if (isLastQuestion()) {
+          <app-button variant="primary" [loading]="busy()" (click)="submit()">{{
+            'public.start.submit' | t
+          }}</app-button>
+        } @else {
+          <app-button variant="primary" [disabled]="!state.canAdvance()" (click)="next()">{{
+            'public.start.next' | t
+          }}</app-button>
+        }
+      </div>
+    }
+  </section>
+}

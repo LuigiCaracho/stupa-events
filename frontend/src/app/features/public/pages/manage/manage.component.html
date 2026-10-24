@@ -1,0 +1,132 @@
+<header class="mg__head">
+  <h1 class="mg__title">{{ 'public.manage.title' | t }}</h1>
+</header>
+
+@switch (phase()) {
+  @case ('loading') {
+    <app-skeleton variant="items" [count]="3" [label]="'public.manage.loading' | t" />
+  }
+  @case ('failed') {
+    <app-note kind="error" icon="alert" role="alert">
+      <span>{{ 'public.sub.error.failed' | t }}</span>
+      <app-button variant="text" size="sm" (click)="reload()">{{
+        'public.error.reload' | t
+      }}</app-button>
+    </app-note>
+  }
+  @case ('invalid') {
+    <section class="mg__card">
+      <app-note kind="warn" icon="alert" role="alert">
+        <strong>{{ 'public.manage.invalid' | t }}</strong>
+        {{ 'public.manage.invalidBody' | t }}
+      </app-note>
+      <app-manage-link-form />
+    </section>
+  }
+  @case ('deleted') {
+    <section class="mg__card">
+      <app-note icon="check" role="status">{{ 'public.manage.deleted' | t }}</app-note>
+      <a appLinkButton="tonal" routerLink="/start">{{ 'public.manage.toStart' | t }}</a>
+    </section>
+  }
+  @case ('ready') {
+    @if (error(); as text) {
+      <app-note kind="error" icon="alert" role="alert">{{ text }}</app-note>
+    }
+
+    <section class="mg__card" aria-labelledby="mg-interests">
+      <h2 id="mg-interests" class="mg__h2">{{ 'public.manage.interests' | t }}</h2>
+      <app-chip-group
+        [options]="interestOptions()"
+        [selected]="interests()"
+        [label]="'public.manage.interests' | t"
+        (chosen)="toggleInterest($event)"
+      />
+      <h3 class="mg__h3">{{ 'public.manage.faculty' | t }}</h3>
+      <app-chip-group
+        [options]="facultyOptions()"
+        [selected]="facultySelected()"
+        [label]="'public.manage.faculty' | t"
+        (chosen)="pickFaculty($event)"
+      />
+      @if (interests().length === 0) {
+        <p class="mg__hint">{{ 'public.start.interestsLock' | t }}</p>
+      }
+      <div class="mg__actions">
+        <app-button variant="primary" [disabled]="!canSave()" [loading]="busy()" (click)="save()">{{
+          'public.manage.save' | t
+        }}</app-button>
+      </div>
+    </section>
+
+    <section class="mg__card" aria-labelledby="mg-mail">
+      <h2 id="mg-mail" class="mg__h2">{{ 'public.manage.mail' | t }}</h2>
+      <app-switch
+        [checked]="mailEnabled()"
+        [hint]="'public.manage.mailHint' | t"
+        [disabled]="busy()"
+        (checkedChange)="setMail($event)"
+        >{{ 'public.manage.mailSwitch' | t }}</app-switch
+      >
+    </section>
+
+    @if (hasProfile()) {
+      <section class="mg__card" aria-labelledby="mg-cal">
+        <h2 id="mg-cal" class="mg__h2">{{ 'public.manage.calendar' | t }}</h2>
+        <p class="mg__text">{{ 'public.manage.calendarBody' | t }}</p>
+        @if (rotated(); as links) {
+          <app-note icon="check" role="status">{{ 'public.manage.rotated' | t }}</app-note>
+          <app-profile-links [icsUrl]="links.icsUrl" [webcalUrl]="links.webcalUrl" />
+        }
+        <div class="mg__actions">
+          <app-button variant="outlined" (click)="confirmRotate.set(true)">{{
+            'public.manage.rotate' | t
+          }}</app-button>
+        </div>
+      </section>
+    }
+
+    <section class="mg__card" aria-labelledby="mg-del">
+      <h2 id="mg-del" class="mg__h2">{{ 'public.manage.delete' | t }}</h2>
+      <div class="mg__actions">
+        <app-button variant="danger" (click)="confirmDelete.set(true)">{{
+          'public.manage.deleteButton' | t
+        }}</app-button>
+      </div>
+    </section>
+  }
+}
+
+<app-dialog
+  [open]="confirmRotate()"
+  [title]="'public.manage.rotateTitle' | t"
+  [closeLabel]="'action.close' | t"
+  (closed)="confirmRotate.set(false)"
+>
+  <p>{{ 'public.manage.rotateConfirm' | t }}</p>
+  <div dialog-footer class="mg__footer">
+    <app-button variant="text" (click)="confirmRotate.set(false)">{{
+      'action.cancel' | t
+    }}</app-button>
+    <app-button variant="primary" [loading]="busy()" (click)="rotate()">{{
+      'public.manage.rotate' | t
+    }}</app-button>
+  </div>
+</app-dialog>
+
+<app-dialog
+  [open]="confirmDelete()"
+  [title]="'public.manage.deleteTitle' | t"
+  [closeLabel]="'action.close' | t"
+  (closed)="confirmDelete.set(false)"
+>
+  <p>{{ 'public.manage.deleteConfirm' | t }}</p>
+  <div dialog-footer class="mg__footer">
+    <app-button variant="text" (click)="confirmDelete.set(false)">{{
+      'action.cancel' | t
+    }}</app-button>
+    <app-button variant="danger" [loading]="busy()" (click)="remove()">{{
+      'public.manage.deleteButton' | t
+    }}</app-button>
+  </div>
+</app-dialog>

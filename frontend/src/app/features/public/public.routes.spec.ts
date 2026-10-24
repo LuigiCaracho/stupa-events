@@ -12,6 +12,11 @@ describe('PUBLIC_ROUTES', () => {
       'k/:slug',
       'rueckblick',
       'abos',
+      'start',
+      'bestaetigen/:token',
+      'bestaetigen',
+      'abo/:token',
+      'abo',
       'impressum',
       'datenschutz',
       'offline',
@@ -23,6 +28,12 @@ describe('PUBLIC_ROUTES', () => {
     for (const route of [...PUBLIC_ROUTES, shell.find((r) => r.path === '**')!]) {
       expect(route.data).toMatchObject({ frame: 'public', footer: true });
     }
+  });
+
+  it('shows the confirmation page without the site chrome', () => {
+    const confirm = PUBLIC_ROUTES.filter((r) => r.path?.startsWith('bestaetigen'));
+    expect(confirm).toHaveLength(2);
+    confirm.forEach((r) => expect(r.data).toMatchObject({ chrome: false }));
   });
 
   it('makes the start page a plain page: no guard, no redirect', () => {

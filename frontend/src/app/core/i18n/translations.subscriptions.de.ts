@@ -1,0 +1,123 @@
+/**
+ * German strings of Get started (P06), the mail part of Abos (P07), confirm (P08) and manage (P09) of the public site
+ * (B3). People are addressed with "du" and gendered with a colon or neutral.
+ */
+export const subscriptionsDe = {
+  'public.start.title': 'Get started',
+  'public.start.lede':
+    'Beantworte ein paar Fragen und hol dir deinen persönlichen Kalender. Ein Konto brauchst du dafür nicht.',
+  'public.start.progress': 'Fortschritt',
+  'public.start.step.interests': 'Interessen',
+  'public.start.step.faculty': 'Fachschaft',
+  'public.start.step.channel': 'Kanal',
+  'public.start.step.mail': 'Mail',
+  'public.start.step.result': 'Fertig',
+  'public.start.interests': 'Was interessiert dich?',
+  'public.start.interestsList': 'Interessen',
+  'public.start.interestsLock': 'Wähl mindestens ein Interesse.',
+  'public.start.meetings': 'Interessieren dich Sitzungen und Gremien?',
+  'public.start.yes': 'Ja',
+  'public.start.no': 'Nein',
+  'public.start.faculty': 'Zu welcher Fachschaft gehörst du?',
+  'public.start.facultyList': 'Fachschaften',
+  'public.start.facultyHint': 'Das ist optional.',
+  'public.start.facultyNone': 'Keine',
+  'public.start.channel': 'Wie möchtest du auf dem Laufenden bleiben?',
+  'public.start.channelCalendar': 'Nur Kalender',
+  'public.start.channelMail': 'Kalender und Mail',
+  'public.start.channelHint':
+    'Mail gibt es nur mit Bestätigung. Abbestellen geht jederzeit mit einem Klick.',
+  'public.start.mail': 'Wohin soll die Mail gehen?',
+  'public.start.email': 'Mailadresse',
+  'public.start.emailInvalid': 'Das sieht nicht wie eine Mailadresse aus.',
+  'public.start.consentMissing': 'Bitte bestätige die Einwilligung.',
+  'public.start.privacy': 'Datenschutz',
+  'public.start.mailHint':
+    'Wir schicken dir eine Bestätigung. Ohne Bestätigung speichern wir nichts.',
+  'public.start.next': 'Weiter',
+  'public.start.back': 'Zurück',
+  'public.start.submit': 'Profil erstellen',
+  'public.start.checking': 'Die Spam-Prüfung läuft …',
+  'public.start.result': 'Dein Kalender ist fertig',
+  'public.start.resultCategories': 'Das steckt drin',
+  'public.start.mailSent': 'Wir haben dir eine Bestätigungsmail geschickt.',
+  'public.start.mailSentBody':
+    'Erst mit dem Klick auf den Link in der Mail ist dein Mail-Abo aktiv.',
+  'public.start.manage': 'Abo verwalten',
+  'public.start.manageBody':
+    'Den Link zum Verwalten schicken wir dir mit jeder Mail. Du kannst ihn auch auf der Seite Abos anfordern.',
+  'public.start.toSubscribe': 'Zu den Abos',
+  'public.start.again': 'Neu beginnen',
+
+  'public.links.open': 'In Kalender-App öffnen',
+  'public.links.url': 'Dein Kalender-Link',
+  'public.links.copy': 'Kopieren',
+  'public.links.copied': 'Link kopiert.',
+  'public.links.copyFailed': 'Link konnte nicht kopiert werden. Markier ihn bitte von Hand.',
+  'public.links.google':
+    'Google Kalender: Am Computer unter „Weitere Kalender“ auf „Per URL hinzufügen“ gehen und den Link einfügen.',
+  'public.links.delay': 'Änderungen kommen mit Verzögerung an.',
+  'public.links.secret': 'Der Link gehört dir allein. Gib ihn nicht weiter.',
+
+  'public.sub.error.altchaInvalid':
+    'Die Prüfung gegen Spam hat nicht geklappt. Bitte versuch es noch einmal.',
+  'public.sub.error.rateLimited': 'Zu viele Versuche. Bitte warte {minutes} Minuten.',
+  'public.sub.error.rateLimitedOne': 'Zu viele Versuche. Bitte warte eine Minute.',
+  'public.sub.error.consentOutdated':
+    'Der Einwilligungstext hat sich geändert. Bitte lade die Seite neu und bestätige noch einmal.',
+  'public.sub.error.invalidToken': 'Dieser Link ist ungültig oder abgelaufen.',
+  'public.sub.error.unknownInterest': 'Ein Interesse gibt es nicht mehr. Bitte wähl neu.',
+  'public.sub.error.noInterest': 'Wähl mindestens ein Interesse.',
+  'public.sub.error.invalidInput': 'Das sieht nicht wie eine Mailadresse aus.',
+  'public.sub.error.failed': 'Das hat nicht geklappt. Bitte versuch es noch einmal.',
+
+  'public.subscribe.mail.title': 'Persönlich: Interessen wählen',
+  'public.subscribe.mail.body':
+    'Sag uns, was dich interessiert, und hol dir deinen eigenen Kalender, auf Wunsch mit einer Mail pro Woche.',
+  'public.subscribe.mail.start': 'Get started',
+  'public.subscribe.mail.hint': 'Mail-Abo gibt es nur mit Bestätigung.',
+  'public.subscribe.mail.manageLink': 'Verwaltungslink anfordern',
+  'public.subscribe.mail.manageTitle': 'Verwaltungslink anfordern',
+  'public.subscribe.mail.manageBody':
+    'Wir schicken dir einen Link zum Verwalten deines Abos. Er gilt zwei Stunden.',
+  'public.subscribe.mail.send': 'Link anfordern',
+  'public.subscribe.mail.sent': 'Wenn die Adresse bei uns angemeldet ist, ist der Link unterwegs.',
+
+  'public.confirm.title': 'Abo bestätigen',
+  'public.confirm.checking': 'Link wird geprüft …',
+  'public.confirm.body': 'Du willst Mails zu {categories} bekommen.',
+  'public.confirm.bodyAny': 'Du willst Mails zu den Terminen der Hochschule bekommen.',
+  'public.confirm.hint': 'Erst mit deinem Klick wird das Abo aktiv.',
+  'public.confirm.button': 'Abo bestätigen',
+  'public.confirm.done': 'Danke, dein Abo ist aktiv.',
+  'public.confirm.doneManage':
+    'Den Link zum Verwalten schicken wir dir mit jeder Mail. Du kannst ihn auch auf der Seite Abos anfordern.',
+  'public.confirm.invalid': 'Dieser Link ist abgelaufen oder wurde schon benutzt.',
+  'public.confirm.again': 'Neu anmelden',
+
+  'public.manage.title': 'Abo verwalten',
+  'public.manage.loading': 'Dein Abo wird geladen …',
+  'public.manage.invalid': 'Dieser Verwaltungslink ist ungültig.',
+  'public.manage.invalidBody': 'Er ist vielleicht abgelaufen. Hier bekommst du einen neuen.',
+  'public.manage.interests': 'Interessen',
+  'public.manage.faculty': 'Fachschaft',
+  'public.manage.save': 'Speichern',
+  'public.manage.saved': 'Gespeichert.',
+  'public.manage.mail': 'Mail',
+  'public.manage.mailSwitch': 'Mails zu meinen Interessen bekommen',
+  'public.manage.mailHint': 'Ausschalten meldet dich von allen Listen ab.',
+  'public.manage.calendar': 'Kalender',
+  'public.manage.calendarBody':
+    'Deinen Kalender-Link zeigen wir nur einmal beim Anlegen. Du kannst jederzeit einen neuen erzeugen.',
+  'public.manage.rotate': 'Neue URL erzeugen',
+  'public.manage.rotateTitle': 'Neue URL erzeugen?',
+  'public.manage.rotateConfirm': 'Der alte Link hört dann auf zu funktionieren.',
+  'public.manage.rotated': 'Hier ist dein neuer Link. Wir zeigen ihn nur jetzt.',
+  'public.manage.delete': 'Löschen',
+  'public.manage.deleteButton': 'Alles abbestellen und Daten löschen',
+  'public.manage.deleteTitle': 'Alles löschen?',
+  'public.manage.deleteConfirm':
+    'Wir löschen deine Adresse und dein Profil. Das lässt sich nicht rückgängig machen.',
+  'public.manage.deleted': 'Erledigt. Wir haben deine Adresse und dein Profil gelöscht.',
+  'public.manage.toStart': 'Neu anmelden',
+} as const;

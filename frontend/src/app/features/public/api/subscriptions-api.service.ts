@@ -26,7 +26,10 @@ export class SubscriptionsApi {
   private readonly options = { withCredentials: false };
 
   questions(): Observable<QuestionnaireOut> {
-    return this.http.get<QuestionnaireOut>(`${this.root}/public/getstarted/questions`, this.options);
+    return this.http.get<QuestionnaireOut>(
+      `${this.root}/public/getstarted/questions`,
+      this.options,
+    );
   }
 
   subscribe(body: SubscribeIn): Observable<SubscribeOut> {
@@ -34,7 +37,11 @@ export class SubscriptionsApi {
   }
 
   confirmPreview(token: string): Observable<ConfirmPreviewOut> {
-    return this.http.post<ConfirmPreviewOut>(`${this.base}/confirm/preview`, { token }, this.options);
+    return this.http.post<ConfirmPreviewOut>(
+      `${this.base}/confirm/preview`,
+      { token },
+      this.options,
+    );
   }
 
   confirm(token: string): Observable<{ status: string }> {

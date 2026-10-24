@@ -23,7 +23,9 @@ describe('AltchaService', () => {
     }
   });
   beforeEach(() => {
-    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting()] });
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
     http = TestBed.inject(HttpTestingController);
     service = TestBed.inject(AltchaService);
   });

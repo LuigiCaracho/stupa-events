@@ -1,0 +1,24 @@
+<form class="mlf" novalidate (ngSubmit)="submit()">
+  <app-input
+    type="email"
+    name="email"
+    [label]="'public.start.email' | t"
+    [error]="emailError()"
+    [ngModel]="email()"
+    (ngModelChange)="email.set($event)"
+  />
+  <app-button type="submit" variant="primary" [loading]="busy()">{{
+    'public.subscribe.mail.send' | t
+  }}</app-button>
+</form>
+<p class="mlf__status" role="status">
+  @if (busy()) {
+    {{ 'public.start.checking' | t }}
+  }
+</p>
+@if (sent()) {
+  <app-note icon="check" role="status">{{ 'public.subscribe.mail.sent' | t }}</app-note>
+}
+@if (error(); as text) {
+  <app-note kind="error" icon="alert" role="alert">{{ text }}</app-note>
+}

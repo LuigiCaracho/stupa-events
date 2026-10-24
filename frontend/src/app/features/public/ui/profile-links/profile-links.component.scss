@@ -1,0 +1,48 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.pl__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.pl__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.pl__label {
+  font-size: var(--fs-small);
+  font-weight: var(--fw-semibold);
+  color: var(--color-text-muted);
+}
+.pl__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.pl__url {
+  flex: 1 1 14rem;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-field);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--fs-small);
+  box-sizing: border-box;
+}
+.pl__url:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+.pl__hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--fs-small);
+  line-height: var(--lh-relaxed);
+}

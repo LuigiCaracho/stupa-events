@@ -13,6 +13,7 @@ import { formatDe } from './translations.format.de';
 import { lifecycleDe } from './translations.lifecycle.de';
 import { publicDe } from './translations.public.de';
 import { shellDe } from './translations.shell.de';
+import { subscriptionsDe } from './translations.subscriptions.de';
 import { sharedDe } from './translations.shared.de';
 
 export type Locale = 'de';
@@ -31,6 +32,7 @@ export const de = {
   ...formatDe,
   ...archiveDe,
   ...publicDe,
+  ...subscriptionsDe,
 } as const;
 
 export type TranslationKey = keyof typeof de;
