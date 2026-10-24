@@ -12,6 +12,7 @@ from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from typing import Any
 
+import pytest
 import pytest_asyncio
 from sqlalchemy import Engine, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -34,7 +35,7 @@ async def maker(migrated: tuple[str, str], engine: Engine) -> AsyncIterator[Make
     await async_engine.dispose()
 
 
-@pytest_asyncio.fixture
+@pytest.fixture
 def fake() -> FakeListmonk:
     return FakeListmonk()
 
