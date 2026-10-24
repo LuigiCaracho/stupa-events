@@ -7,6 +7,7 @@ text search. Everything is thrown away on exit.
 
 from __future__ import annotations
 
+import asyncio
 import os
 import re
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -54,10 +55,10 @@ async def scratch_app(
     with PostgresContainer("postgres:16-alpine", driver="psycopg") as container:
         sync_url = container.get_connection_url()
         async_url = sync_url.replace("postgresql+psycopg://", "postgresql+asyncpg://")
-        command.upgrade(make_alembic_config(async_url), "head")
-        grant_roles(sync_url)
+        await asyncio.to_thread(command.upgrade, make_alembic_config(async_url), "head")
+        await asyncio.to_thread(grant_roles, sync_url)
         engine = create_engine(sync_url)
-        slugs = seed_events(engine, events)
+        slugs = await asyncio.to_thread(seed_events, engine, events)
         engine.dispose()
         public = create_async_engine(
             async_url.replace("test:test", "events_public:pw"), pool_size=4, max_overflow=2

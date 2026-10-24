@@ -58,12 +58,9 @@ if ${compose} logs --no-color web api 2>/dev/null | grep -q "${secret}"; then
   fail "the search text reached a container log"
 fi
 
-first="$(curl -fsS -D - -o /dev/null "${base}/api/public/today" | grep -i '^date:' | head -1)"
-sleep 1
-second="$(curl -fsS -D - -o /dev/null "${base}/api/public/today" | grep -i '^date:' | head -1)"
-if [[ "${first}" != "${second}" ]]; then
-  fail "two requests a second apart returned different Date headers (the proxy cache did not serve the second)"
-fi
+curl -fsS -o /dev/null "${base}/api/public/today"
+status="$(curl -fsS -D - -o /dev/null "${base}/api/public/today" | grep -i '^x-cache-status:' | tr -d '\r' | awk '{print toupper($2)}')"
+[[ "${status}" == "HIT" ]] || fail "the second /api/public/today was not served by the proxy cache (X-Cache-Status: ${status:-none})"
 
 [[ "${failed}" == 0 ]] && echo "public-smoke ok (${slug})"
 exit "${failed}"

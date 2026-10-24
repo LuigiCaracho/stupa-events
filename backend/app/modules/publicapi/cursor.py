@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
 
+from app.modules.publicapi.clock import representable
 from app.shared.errors import FieldError, ValidationProblem
 
 
@@ -35,8 +36,8 @@ def decode(raw: str) -> Cursor:
     try:
         data = json.loads(base64.urlsafe_b64decode(raw.encode()))
         starts_at = datetime.fromisoformat(data["startsAt"])
-        if starts_at.tzinfo is None:
-            raise ValueError("naive")
+        if starts_at.tzinfo is None or not representable(starts_at):
+            raise ValueError("naive or out of range")
         return Cursor(starts_at, UUID(data["id"]))
     except (ValueError, KeyError, TypeError, binascii.Error, json.JSONDecodeError) as exc:
         raise ValidationProblem(

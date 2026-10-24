@@ -120,3 +120,21 @@ def test_the_scan_sql_has_a_cap_and_binds_the_words() -> None:
     sql, params = memory.hits_sql(SiteFilters(now=NOW, words=tuple(parse("Kino'; DROP"))))
     assert f"LIMIT {memory.HIT_CAP}" in sql and "DROP" not in sql and "ORDER BY rank DESC" in sql
     assert params.statement(sql).compile().params
+
+
+def test_events_without_a_category_count_in_no_category_facet() -> None:
+    bare = hit(5, category_slug=None, category_name=None)
+    filters = SiteFilters(now=NOW)
+    facets = memory._category_facets([bare, ROWS[0]], filters)
+    assert [(f.slug, f.count) for f in facets] == [("kino", 1)]
+
+
+def test_a_cursor_outside_the_database_years_is_invalid() -> None:
+    import pytest
+
+    from app.modules.publicapi import cursor
+    from app.shared.errors import ValidationProblem
+
+    early = cursor.encode(datetime(1, 1, 3, tzinfo=UTC), __import__("uuid").UUID(int=1))
+    with pytest.raises(ValidationProblem):
+        cursor.decode(early)

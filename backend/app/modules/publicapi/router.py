@@ -20,6 +20,7 @@ from app.modules.files.storage import StorageError
 from app.modules.media.derivatives import parse_derivative_id
 from app.modules.publicapi import cursor as cursors
 from app.modules.publicapi import serving
+from app.modules.publicapi.clock import representable
 from app.modules.publicapi.db import get_public_session
 from app.modules.publicapi.etag import matches
 from app.modules.publicapi.schemas import FeedOut
@@ -55,8 +56,8 @@ def parse_since(raw: str | None) -> datetime | None:
         return None
     try:
         value = datetime.fromisoformat(raw)
-        if value.utcoffset() is None:
-            raise ValueError("naive")
+        if value.utcoffset() is None or not representable(value):
+            raise ValueError("naive or out of range")
     except ValueError as exc:
         raise BadRequestError(INVALID_SINCE_HINT, code="invalid_since") from exc
     return value
@@ -70,6 +71,18 @@ def pick_organization(organization: str | None, org: str | None) -> str | None:
             errors=[FieldError(field="org", msg="differs from organization")],
         )
     return organization if organization is not None else org
+
+
+def check_range(value: datetime | None, field: str) -> None:
+    """Reject an instant outside the years 1970 to 2199.
+
+    Raises:
+        ValidationProblem: for such a value (the database driver cannot bind it).
+    """
+    if value is not None and not representable(value):
+        raise ValidationProblem(
+            "Invalid request.", errors=[FieldError(field=field, msg="outside 1970 to 2199")]
+        )
 
 
 @router.api_route(
@@ -92,6 +105,8 @@ async def event_feed(
     cursor: Annotated[str | None, Query(max_length=200)] = None,
 ) -> Response:
     """Return the public events by start time with `ETag`, a cursor and a five minute cache."""
+    check_range(from_, "from")
+    check_range(to, "to")
     query = FeedQuery(
         from_,
         to,

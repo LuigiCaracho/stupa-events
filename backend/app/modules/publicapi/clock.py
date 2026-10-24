@@ -13,6 +13,8 @@ from zoneinfo import ZoneInfo
 from fastapi import Depends
 
 BERLIN = ZoneInfo("Europe/Berlin")
+EARLIEST = datetime(1970, 1, 1, tzinfo=UTC)
+LATEST = datetime(2200, 1, 1, tzinfo=UTC)
 
 
 def now() -> datetime:
@@ -49,3 +51,8 @@ def months_between(moment: datetime, year: int, month: int) -> int:
     """Return how many months `year-month` lies after the Berlin month of `moment`."""
     today = berlin_date(moment)
     return (year - today.year) * 12 + month - today.month
+
+
+def representable(moment: datetime) -> bool:
+    """Tell if an aware instant lies in the years the database and the drivers can bind safely."""
+    return EARLIEST <= moment < LATEST
