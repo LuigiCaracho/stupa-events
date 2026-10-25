@@ -73,6 +73,7 @@ ROUTE_PERMS: dict[tuple[str, str], frozenset[str]] = {
     ("GET", "/api/admin/venues"): frozenset({"venue.manage"}),
     ("POST", "/api/admin/venues"): frozenset({"venue.manage"}),
     ("PATCH", "/api/admin/venues/{venue_id}"): frozenset({"venue.manage"}),
+    ("POST", "/api/admin/venues/{venue_id}/geocode"): frozenset({"venue.manage"}),
     ("GET", "/api/organizations"): _READ,
     ("GET", "/api/categories"): _READ,
     ("GET", "/api/venues"): _READ,

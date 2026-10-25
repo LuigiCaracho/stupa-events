@@ -195,6 +195,10 @@ class Settings(BaseSettings):
     subs_mails_per_day: int = 3
     subs_body_max_bytes: int = 4096
 
+    nominatim_enabled: bool = False
+    nominatim_base_url: str = "https://nominatim.openstreetmap.org"
+    nominatim_contact: str | None = None
+
     @field_validator("cors_allow_origins", "listmonk_allowed_hosts", mode="before")
     @classmethod
     def _accept_csv_lists(cls, value: Any) -> Any:
@@ -284,6 +288,17 @@ class Settings(BaseSettings):
         missing = sorted(name.upper() for name, value in required.items() if not value)
         if missing:
             raise ValueError(f"Missing subscription configuration: {', '.join(missing)}")
+        return self
+
+    @model_validator(mode="after")
+    def _nominatim_names_a_contact(self) -> "Settings":
+        """Require a contact for the `User-Agent` when the geocoder is on.
+
+        Raises:
+            ValueError: `NOMINATIM_ENABLED` is set without `NOMINATIM_CONTACT`.
+        """
+        if self.nominatim_enabled and not (self.nominatim_contact or "").strip():
+            raise ValueError("NOMINATIM_CONTACT is required when NOMINATIM_ENABLED is set.")
         return self
 
     @model_validator(mode="after")

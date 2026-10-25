@@ -25,6 +25,7 @@ from app.modules.events.revisions_router import router as revisions_router
 from app.modules.events.router import router as events_router
 from app.modules.followup.router import router as followup_router
 from app.modules.formats.router import router as formats_router
+from app.modules.geocode.router import router as geocode_router
 from app.modules.library.router import router as library_router
 from app.modules.notifications.router import router as notifications_router
 from app.modules.orgs.router import router as orgs_router
@@ -44,6 +45,7 @@ ROUTERS: tuple[APIRouter, ...] = (
     mappings_router,
     principals_router,
     *ADMIN_TAXONOMY_ROUTERS,
+    geocode_router,
     orgs_router,
     taxonomy_router,
     events_router,

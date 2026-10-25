@@ -25,6 +25,7 @@ from worker.advance import archive_ended, purge_drafts
 from worker.audit_verify import process_audit_verification
 from worker.digest import build_digest_drafts
 from worker.gc import gc_media, gc_notifications
+from worker.geocode_gc import gc_geocode_cache
 from worker.mail import on_startup as mail_on_startup
 from worker.mail import send_due_reminders, send_mail
 from worker.outbox import outbox_run
@@ -59,6 +60,7 @@ class WorkerSettings:
         func(rebuild_public_cache, keep_result=0, timeout=300),
         gc_media,
         gc_notifications,
+        gc_geocode_cache,
         scan_attachment,
         requeue_stale_scans,
         func(process_audit_verification, timeout=AUDIT_VERIFY_JOB_TIMEOUT_SECONDS),
@@ -81,6 +83,7 @@ class WorkerSettings:
         cron(purge_drafts, hour=3, minute=30),
         cron(gc_notifications, hour=3, minute=40),
         cron(gc_media, hour=3, minute=50),
+        cron(gc_geocode_cache, hour=4, minute=0),
         cron(send_due_reminders, minute=10, timeout=300, unique=True),
         cron(rebuild_public_cache, minute=5, timeout=300, unique=True, keep_result=0),
         cron(requeue_stale_scans, minute={3, 13, 23, 33, 43, 53}, timeout=120, unique=True),

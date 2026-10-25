@@ -53,4 +53,6 @@ class AuditAction(StrEnum):
     ROLE_CHANGE = "role_change"
     SESSION_REVOKE = "session_revoke"
     CONFIG_CHANGE = "config_change"
+    # A geocode request for a venue: carries the venue id and `found`, never the address.
+    VENUE_GEOCODE = "venue_geocode"
     EXPORT = "export"

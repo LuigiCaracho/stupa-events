@@ -211,6 +211,7 @@ class VenuePatch(CamelModel):
     lat: Latitude | None = None
     lon: Longitude | None = None
     public_precision: PublicPrecision | None = None
+    geocode_source: Literal["pin", "nominatim"] | None = None
     is_private: bool | None = None
     notes: Notes = None
     active: bool | None = None
