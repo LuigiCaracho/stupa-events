@@ -1,5 +1,5 @@
 /**
- * The phone navigation of the public frame (viewport <= 768 px): Heute, Suche, Kalender, Abos. Four entries of 44 px
+ * The phone navigation of the public frame (viewport <= 768 px): Heute, Kalender, Karte, Abos (the search is the pill in the header). Four entries of 44 px
  * touch targets at least, the safe area below, `aria-current` on the open page. The shell shows it only under the
  * phone media query and only in the `public` frame; the signed-in frame keeps its own bar.
  */
@@ -18,5 +18,5 @@ import { PUBLIC_NAV } from '../public-nav';
   styleUrl: './public-bottom-bar.component.scss',
 })
 export class PublicBottomBarComponent {
-  readonly items = PUBLIC_NAV;
+  readonly items = PUBLIC_NAV.filter((item) => item.phone);
 }

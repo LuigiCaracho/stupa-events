@@ -7,6 +7,7 @@ export const publicDe = {
   'public.nav.today': 'Heute',
   'public.nav.search': 'Suche',
   'public.nav.calendar': 'Kalender',
+  'public.nav.map': 'Karte',
   'public.nav.subscribe': 'Abos',
   'public.nav.toDossier': 'Zum Dossier',
   'public.footer.imprint': 'Impressum',

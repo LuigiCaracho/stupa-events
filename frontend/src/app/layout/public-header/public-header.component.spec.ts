@@ -41,10 +41,10 @@ describe('PublicHeaderComponent', () => {
     expect(container.querySelector('.pub__title')).toHaveTextContent('STUPA Events');
   });
 
-  it('lists Heute, Suche, Kalender and Abos and marks the open page', async () => {
+  it('lists Heute, Suche, Kalender, Karte and Abos and marks the open page', async () => {
     await setup('/suche?q=kino');
     const nav = screen.getByRole('navigation', { name: 'Hauptnavigation' });
-    expect(nav.querySelectorAll('a')).toHaveLength(4);
+    expect(nav.querySelectorAll('a')).toHaveLength(5);
     expect(screen.getByRole('link', { name: 'Suche' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: 'Heute' })).not.toHaveAttribute('aria-current');
   });

@@ -14,11 +14,11 @@ async function setup(url: string) {
 }
 
 describe('PublicBottomBarComponent', () => {
-  it('has the four places and links them', async () => {
+  it('has the four places (search is in the header pill) and links them', async () => {
     await setup('/');
     const links = screen.getAllByRole('link');
-    expect(links.map((l) => l.textContent?.trim())).toEqual(['Heute', 'Suche', 'Kalender', 'Abos']);
-    expect(links.map((l) => l.getAttribute('href'))).toEqual(['/', '/suche', '/kalender', '/abos']);
+    expect(links.map((l) => l.textContent?.trim())).toEqual(['Heute', 'Kalender', 'Karte', 'Abos']);
+    expect(links.map((l) => l.getAttribute('href'))).toEqual(['/', '/kalender', '/karte', '/abos']);
   });
 
   it('marks the open page with aria-current, and Heute only on the start page', async () => {
