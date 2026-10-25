@@ -1,0 +1,45 @@
+:host {
+  display: block;
+  position: relative;
+  min-width: 0;
+}
+
+.map__canvas {
+  width: 100%;
+  min-height: 12rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg, 12px);
+  background: var(--color-surface-sunken);
+  overflow: hidden;
+}
+
+:host([data-map-state='error']) .map__canvas {
+  visibility: hidden;
+}
+
+.map__error {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 1rem;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.map__skip {
+  position: absolute;
+  z-index: 2;
+  top: 0.5rem;
+  left: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-surface);
+  color: var(--color-primary);
+  transform: translateY(-200%);
+}
+
+.map__skip:focus-visible {
+  transform: none;
+}

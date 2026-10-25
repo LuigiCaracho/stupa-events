@@ -1,0 +1,13 @@
+@if (skipTarget(); as target) {
+  <a class="map__skip" [attr.href]="'#' + target">{{ 'map.skip' | t }}</a>
+}
+<div
+  #canvas
+  class="map__canvas"
+  role="region"
+  [attr.aria-label]="label()"
+  [style.height]="height()"
+></div>
+@if (state() === 'error') {
+  <p class="map__error" role="alert">{{ 'map.error' | t }}</p>
+}

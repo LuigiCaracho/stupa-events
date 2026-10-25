@@ -10,6 +10,7 @@ import { calendarDe } from './translations.calendar.de';
 import { dossierDe } from './translations.dossier.de';
 import { eventsDe } from './translations.events.de';
 import { formatDe } from './translations.format.de';
+import { mapDe } from './translations.map.de';
 import { lifecycleDe } from './translations.lifecycle.de';
 import { publicDe } from './translations.public.de';
 import { shellDe } from './translations.shell.de';
@@ -33,6 +34,7 @@ export const de = {
   ...archiveDe,
   ...publicDe,
   ...subscriptionsDe,
+  ...mapDe,
 } as const;
 
 export type TranslationKey = keyof typeof de;
