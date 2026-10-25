@@ -1,3 +1,4 @@
+/** Copied from STUPA-Workflow@93c33d6 frontend/src/app/core/pwa/ngsw-navigation.spec.ts */
 /**
  * The service worker must not answer for paths the server renders itself.
  *
