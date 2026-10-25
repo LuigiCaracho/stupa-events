@@ -147,7 +147,7 @@ describe('MapPageComponent', () => {
   it('notes a truncated answer', async () => {
     const ctx = await setup('/karte');
     await respond(ctx, body([FAR], true));
-    expect(screen.getByText('Es werden nur die ersten 1 Orte gezeigt.')).toBeInTheDocument();
+    expect(screen.getByText('Es werden nur die ersten 1 Events gezeigt.')).toBeInTheDocument();
   });
 
   it('shows the load error with a retry', async () => {
