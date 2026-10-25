@@ -166,7 +166,7 @@ PUBLIC_FIELDS: Mapping[str, frozenset[str]] = {
     "PublicMapCollection": frozenset({"type", "generated_at", "truncated", "features"}),
     "PublicCampusProperties": frozenset({"building_no", "name", "approx", "count"}),
     "PublicCampusFeature": frozenset({"type", "geometry", "properties"}),
-    "PublicCampusCollection": frozenset({"type", "generated_at", "features"}),
+    "PublicCampusCollection": frozenset({"type", "generated_at", "attribution", "features"}),
     "IcsRow": frozenset(
         {
             "id",

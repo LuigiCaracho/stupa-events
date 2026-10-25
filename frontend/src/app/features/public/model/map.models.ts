@@ -43,6 +43,7 @@ export interface PublicCampusFeature {
 
 export interface PublicCampusCollection {
   type: 'FeatureCollection';
+  attribution?: string;
   features: PublicCampusFeature[];
 }
 

@@ -108,6 +108,14 @@ async def claim_slot(redis: Any) -> None:
         )
 
 
+async def release_slot_later(redis: Any) -> None:
+    """Start the 2-second gap after the answer so slow upstream calls never overlap."""
+    try:
+        await redis.pexpire(SLOT_KEY, SLOT_MS)
+    except Exception:  # noqa: BLE001 - the gap from the claim still holds
+        return
+
+
 async def _store(db: AsyncSession, norm: str, hit: nominatim.Hit | None, now: datetime) -> None:
     values: dict[str, Any] = {
         "query_hash": query_hash(norm),
@@ -164,6 +172,8 @@ async def resolve(
         raise ServiceUnavailableError(
             "Die Ortssuche antwortet gerade nicht.", code="geocode_unavailable"
         ) from exc
+    finally:
+        await release_slot_later(redis)
     await _store(db, norm, hit, moment)
     if hit is None:
         return GeocodeResult(False, None, None, None, cached=False)

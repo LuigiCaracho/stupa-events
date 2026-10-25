@@ -120,6 +120,7 @@ export class MapComponent {
   private map: MlMap | null = null;
   private marker: Marker | null = null;
   private fitted = false;
+  private viewKept = false;
   private styleUrl = '';
 
   constructor() {
@@ -159,6 +160,9 @@ export class MapComponent {
       map.setStyle(this.styleUrl, STYLE_OPTIONS);
       this.addControls(map);
       map.on('style.load', () => this.onStyleLoad());
+      map.on('movestart', (event: { originalEvent?: unknown }) => {
+        if (event.originalEvent) this.viewKept = true;
+      });
       map.on('idle', () => this.onIdle());
       map.on('error', () => this.state() === 'loading' && this.fail());
       if (this.mode() === 'pick') this.attachPick(map);
@@ -341,7 +345,7 @@ export class MapComponent {
     const mode = this.mode();
     if (!map || mode === 'pick') return;
     const bounds = collectionBounds(this.collection());
-    if (!bounds || (this.fitted && mode === 'campus')) return;
+    if (!bounds || (this.fitted && mode === 'campus') || this.viewKept) return;
     this.fitted = true;
     const [w, s, e, n] = bounds;
     const single = w === e && s === n;
@@ -387,6 +391,7 @@ export class MapComponent {
       pointCollection(position) as never,
     );
     if (position) {
+      this.viewKept = true;
       map.flyTo({ center: [position.lon, position.lat], zoom: 13, animate: !this.reducedMotion() });
     }
   }

@@ -13,6 +13,12 @@ def test_a_bbox_is_four_ordered_numbers() -> None:
     assert parse_bbox(None) is None
 
 
+def test_a_bbox_is_rounded_so_the_cache_keys_stay_few() -> None:
+    assert parse_bbox("9.123456,48.412345,9.3,48.6") == (9.123, 48.412, 9.3, 48.6)
+    with pytest.raises(ValidationProblem):
+        parse_bbox("9.0001,48.4,9.0004,48.6")
+
+
 @pytest.mark.parametrize(
     "raw",
     [

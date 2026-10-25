@@ -6,7 +6,7 @@ hid after a lookup (`hidden` with a geocode source). A venue with a coordinate k
 of a drawn campus building gets the polygon's centroid, a venue with street and town is
 geocoded, a curated destination is geocoded by its name, everything else stays `hidden`.
 Nothing here talks to the network or the database.
-
+"""
 
 from __future__ import annotations
 

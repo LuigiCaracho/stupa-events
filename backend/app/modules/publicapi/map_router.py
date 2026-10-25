@@ -57,11 +57,11 @@ def _problem(field: str, msg: str) -> ValidationProblem:
 
 
 def parse_bbox(raw: str | None) -> maps.BBox | None:
-    """Read `minLon,minLat,maxLon,maxLat`; anything else is a 422."""
+    """Read `minLon,minLat,maxLon,maxLat` rounded to 3 decimals; anything else is a 422."""
     if raw is None:
         return None
     try:
-        west, south, east, north = (float(part) for part in raw.split(","))
+        west, south, east, north = (round(float(part), 3) for part in raw.split(","))
     except ValueError:
         raise _problem("bbox", "expected four numbers") from None
     if not (-180 <= west < east <= 180 and -90 <= south < north <= 90):

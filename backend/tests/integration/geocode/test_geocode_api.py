@@ -35,6 +35,7 @@ async def test_a_lookup_goes_out_once_and_the_answer_is_cached(rig: Rig) -> None
     assert request.url.params["format"] == "jsonv2" and request.url.params["limit"] == "1"
     assert request.headers["user-agent"].startswith("STUPA-Events/")
     assert "kontakt@example.org" in request.headers["user-agent"]
+    assert rig.slot.extended == 1
     rig.slot.expire()
     again = await geocode(rig, venue)
     assert again["cached"] is True and again["lat"] == first["lat"]

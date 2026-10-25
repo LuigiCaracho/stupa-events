@@ -103,6 +103,21 @@ describe('MapComponent', () => {
     expect(FakeMap.last.layers.has('ev-clusters')).toBe(true);
   });
 
+  it('keeps the view the user chose when the data changes', async () => {
+    const fixture = await mount(() => Promise.resolve(fakeLib));
+    FakeMap.last.fire('style.load');
+    expect(FakeMap.last.easeTo).toHaveBeenCalledTimes(1);
+    FakeMap.last.fire('movestart', { originalEvent: {} });
+    fixture.componentInstance.data.set({
+      type: 'FeatureCollection',
+      features: [
+        { type: 'Feature', geometry: { type: 'Point', coordinates: [9.3, 48.6] }, properties: {} },
+      ],
+    });
+    fixture.detectChanges();
+    expect(FakeMap.last.easeTo).toHaveBeenCalledTimes(1);
+  });
+
   it('starts with the style of the resolved theme', async () => {
     await mount(() => Promise.resolve(fakeLib));
     expect(FakeMap.last.styles[0]).toMatch(/^\/map-style\/style-(light|dark)\.json$/);

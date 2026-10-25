@@ -70,7 +70,10 @@ test('T1b: the sprite is requested with an absolute URL, answers 200 and the con
   page.on('response', (r) => {
     if (r.url().includes('/sprites/')) sprites.push({ url: r.url(), status: r.status() });
   });
-  page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+  // the shell's anonymous session probe answers 401 on purpose
+  page.on('console', (m) => {
+    if (m.type() === 'error' && !m.text().includes('401')) errors.push(m.text());
+  });
   await openWorld(page);
   await settle(page);
   expect(sprites.length).toBeGreaterThan(0);

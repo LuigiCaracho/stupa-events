@@ -61,6 +61,11 @@
     "additionalProperties": false,
     "description": "All buildings, those without events included.",
     "properties": {
+      "attribution": {
+        "default": "Gebäudeumrisse © OpenStreetMap-Mitwirkende (ODbL)",
+        "title": "Attribution",
+        "type": "string"
+      },
       "features": {
         "items": {
           "$ref": "#/$defs/PublicCampusFeature"

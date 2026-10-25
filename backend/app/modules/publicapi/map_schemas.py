@@ -72,9 +72,13 @@ class PublicCampusFeature(CamelModel):
     properties: PublicCampusProperties
 
 
+CAMPUS_ATTRIBUTION = "Gebäudeumrisse © OpenStreetMap-Mitwirkende (ODbL)"
+
+
 class PublicCampusCollection(CamelModel):
     """All buildings, those without events included."""
 
     type: Literal["FeatureCollection"] = "FeatureCollection"
     generated_at: datetime
+    attribution: str = CAMPUS_ATTRIBUTION
     features: list[PublicCampusFeature]

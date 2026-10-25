@@ -3,6 +3,7 @@
  * Build check for the map (C contract 2.5 and 2.6): MapLibre and the PMTiles reader stay out of `index.html` and the
  * initial bundle (the files `index.html` loads), the library ships as a static file under `/map/`, and the one caller
  * of `navigator.geolocation` is the near-me chunk (the zone.js polyfill only wraps the API and may name it).
+ * `MAP_LIB_VERSION` (the cache buster of the loader) must equal the installed maplibre-gl version.
  * Run after `npm run build`; exits 1 with the findings.
  */
 const { readFileSync, readdirSync, existsSync } = require('node:fs');
@@ -14,6 +15,14 @@ const initial = new Set(
   [...html.matchAll(/(?:src|href)="([^"]+\.js)"/g)].map((m) => m[1].replace(/^\//, '')),
 );
 const findings = [];
+
+const pinned = /MAP_LIB_VERSION = '([^']+)'/.exec(
+  readFileSync(join(__dirname, '..', 'src', 'app', 'shared', 'ui', 'map', 'map.models.ts'), 'utf8'),
+)?.[1];
+const installed = require('maplibre-gl/package.json').version;
+if (pinned !== installed) {
+  findings.push(`MAP_LIB_VERSION ${pinned} differs from the installed maplibre-gl ${installed}`);
+}
 
 for (const file of initial) {
   const code = readFileSync(join(dist, file), 'utf8');

@@ -39,7 +39,7 @@ def user_agent(settings: Settings) -> str:
     """Build the `User-Agent` the policy asks for: application, version and contact."""
     return (
         f"STUPA-Events/{settings.app_version} "
-        f"(+https://events.reutlingen.university; {settings.nominatim_contact})"
+        f"(+{settings.public_base_url}; {settings.nominatim_contact})"
     )
 
 

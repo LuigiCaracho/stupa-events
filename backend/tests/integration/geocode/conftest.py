@@ -33,6 +33,7 @@ class Slot:
     def __init__(self) -> None:
         self.taken = False
         self.broken = False
+        self.extended = 0
 
     async def set(
         self, key: str, value: str, nx: bool = False, px: int | None = None
@@ -42,6 +43,10 @@ class Slot:
         if nx and self.taken:
             return None
         self.taken = True
+        return True
+
+    async def pexpire(self, key: str, px: int) -> bool:
+        self.extended += 1
         return True
 
     def expire(self) -> None:
