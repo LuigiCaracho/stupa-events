@@ -1,11 +1,12 @@
 """Plan and report of the one-off pinning of the venues (`scripts/pin_venues.py`).
 
 `plan` is a pure function: it reads venue rows and the campus polygons and decides, per venue,
-how it gets a coordinate. A private or inactive venue is never touched, nor is one a human hid after a
-lookup (`hidden` with a geocode source); a venue with a coordinate keeps it, a venue of a drawn campus building gets the polygon's centroid, a venue
-with street and town is geocoded, a curated destination is geocoded by its name, everything
-else stays `hidden`. Nothing here talks to the network or the database.
-"""
+how it gets a coordinate. A private or inactive venue is never touched, nor is one a human
+hid after a lookup (`hidden` with a geocode source). A venue with a coordinate keeps it, a venue
+of a drawn campus building gets the polygon's centroid, a venue with street and town is
+geocoded, a curated destination is geocoded by its name, everything else stays `hidden`.
+Nothing here talks to the network or the database.
+
 
 from __future__ import annotations
 
