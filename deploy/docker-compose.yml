@@ -46,6 +46,7 @@ services:
       - ./web/security-headers.conf:/etc/nginx/snippets/security-headers.conf:ro
       - ./web/api-proxy.conf:/etc/nginx/snippets/api-proxy.conf:ro
       - ./web/proxy-cache.conf:/etc/nginx/snippets/proxy-cache.conf:ro
+      - tiles_data:/usr/share/nginx/tiles:ro
     networks:
       internal:
         ipv4_address: 172.29.10.10
@@ -230,6 +231,7 @@ volumes:
   redis_data:
   clamav_data:
   altcha_data:
+  tiles_data:
 
 networks:
   internal:

@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 # Start the local dev environment on the host: containers, migrations, API, worker and ng serve as user units.
-# Also seeds Listmonk (SMTP to Mailpit, API user, lists) and writes its token to backend/.env when missing.
+# Serves the map tiles of deploy/tiles on :8083 (the ng serve proxy forwards /tiles). Also seeds Listmonk (SMTP to Mailpit, API user, lists) and writes its token to backend/.env when missing.
 # Reads backend/.env via systemd EnvironmentFile, then the optional gitignored overlay backend/dev.env.local
 # (it wins; the Listmonk seed writes its token there when it exists); API and worker restart on failure, so the worker
 # survives the Redis outage of the acceptance cache check; NixOS needs libstdc++ and libmagic on LD_LIBRARY_PATH.
 set -euo pipefail
 R="$(cd "$(dirname "$0")/.." && pwd)"
 LIBS="$(nix build --no-link --print-out-paths nixpkgs#stdenv.cc.cc.lib nixpkgs#file | grep -v -- -man | sed 's|$|/lib|' | paste -sd:)"
+mkdir -p "$R/deploy/tiles"
+[[ -f "$R/deploy/tiles/world.pmtiles" ]] || echo "dev-up: no map tiles yet, run scripts/build-tiles.sh (the maps stay empty until then)" >&2
 docker compose -f "$R/deploy/docker-compose.dev.yml" up -d
 for _ in $(seq 1 30); do
   curl -fs -o /dev/null http://127.0.0.1:8090/realms/stupa-events/.well-known/openid-configuration && break

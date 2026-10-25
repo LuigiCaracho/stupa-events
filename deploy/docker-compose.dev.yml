@@ -2,7 +2,7 @@
 # `ng serve` on the host against these ports. Loopback only; every credential is a throwaway.
 # Start: docker compose -f deploy/docker-compose.dev.yml up -d
 # Host ports: postgres 5434, redis 6381, minio 9100 (console 9101), clamav 3311, keycloak 8090,
-# listmonk 9002, mailpit smtp 1026 (1025 is taken by Proton Bridge on the dev laptop) (UI/API 8025).
+# tiles 8083 (static PMTiles from deploy/tiles, see scripts/build-tiles.sh), listmonk 9002, mailpit smtp 1026 (1025 is taken by Proton Bridge on the dev laptop) (UI/API 8025).
 # Do not run it together with docker-compose.yml: same postgres port 5434.
 # Keycloak needs `127.0.0.1 host.docker.internal` in /etc/hosts (see docker-compose.keycloak.yml).
 
@@ -121,6 +121,14 @@ services:
     extends:
       file: docker-compose.keycloak.yml
       service: keycloak
+
+  tiles:
+    image: nginx:1.27-alpine
+    pull_policy: missing
+    ports:
+      - "127.0.0.1:8083:80"
+    volumes:
+      - ./tiles:/usr/share/nginx/html/tiles:ro
 
 volumes:
   pg_data:

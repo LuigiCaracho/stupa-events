@@ -29,6 +29,11 @@ paths=(
   /sitemap.xml
   /robots.txt
   /manifest.webmanifest
+  /karte
+  /campus
+  /tiles/world.pmtiles
+  /map/maplibre-gl-worker.mjs
+  /map-style/style-light.json
   /api/events/00000000-0000-0000-0000-000000000000/poster
   /api/events/00000000-0000-0000-0000-000000000000/attachments
 )

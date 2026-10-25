@@ -7,6 +7,11 @@
     "changeOrigin": true,
     "logLevel": "debug"
   },
+  "/tiles": {
+    "target": "http://localhost:8083",
+    "secure": false,
+    "changeOrigin": true
+  },
   "/ics": {
     "target": "http://localhost:8000",
     "secure": false,

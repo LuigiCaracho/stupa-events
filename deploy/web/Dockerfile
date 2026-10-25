@@ -18,3 +18,4 @@ COPY deploy/web/nginx.conf /etc/nginx/conf.d/default.conf
 COPY deploy/web/security-headers.conf deploy/web/api-proxy.conf deploy/web/proxy-cache.conf /etc/nginx/snippets/
 COPY deploy/web/real-ip.conf.template /etc/nginx/templates/
 COPY --from=build /app/dist/*/browser/ /usr/share/nginx/html/
+RUN mkdir -p /usr/share/nginx/tiles

@@ -69,6 +69,12 @@ odd="$(awk '/^[[:space:]]*location /{loc=$0} /access_log/ && !/access_log off/ &
 [[ "$(jq '[.services[].ports[]? | select(.target == 80)] | length' <<<"${cfg}")" -le 1 ]] || fail "port 80 published more than once"
 [[ "$(jq -r '.services.web.volumes[].target' <<<"${cfg}" | grep -c proxy-cache.conf)" == 1 ]] || fail "web must mount proxy-cache.conf"
 
+[[ "$(jq -r '[.services.web.volumes[] | select(.source == "tiles_data" and .target == "/usr/share/nginx/tiles" and .read_only == true)] | length' <<<"${cfg}")" == 1 ]] || fail "web must mount tiles_data read-only at /usr/share/nginx/tiles"
+for tile_loc in "/tiles/" "/map/"; do
+  grep -Eq "^[[:space:]]*location \^~ ${tile_loc}" web/nginx.conf || fail "nginx location ^~ ${tile_loc} missing"
+done
+awk '/^[[:space:]]*location \^~ \/tiles\//{open=1} open && /gzip off/{ok=1} open && /^[[:space:]]*}/{exit} END{exit !ok}' web/nginx.conf || fail "/tiles/ must set gzip off"
+
 if grep -nE 'docker (system|image|volume|container|builder) prune' *.sh ../.github/workflows/*.yml; then
   fail "prune in scripts or workflows"
 fi
