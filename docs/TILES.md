@@ -29,11 +29,11 @@ Solange die Dateien im Volume liegen, läuft der Betrieb auch nach Ablauf des Bu
 
 Die verifizierten Archive (`world.pmtiles`, `reutlingen.pmtiles`) sind die einzige reproduzierbare Quelle und gehören nach jedem erfolgreichen `fetch` plus `verify` in die Sicherung:
 
-1. Auf dem Zielhost liegt `tiles_data` (Compose-Volume) im borg-Lauf der Cloud-Sicherung; das Volume ist die Sicherungsquelle, solange `install` es gefüllt hat.
-2. Zusätzlich je Bump die beiden Dateien samt `deploy/tiles.lock` (Prüfsummen) auf die Storagebox legen, Verzeichnis `tiles/<PROTOMAPS_BUILD>/`.
-3. Ein Neuaufbau ohne gültigen Pin geht dann aus der Storagebox: Dateien nach `deploy/tiles/` kopieren, `scripts/build-tiles.sh verify`, `install`.
+1. `deploy/backup.sh` kopiert die Archive des Volumes `tiles_data` bei jedem Lauf nach `<Sicherung>/tiles/` (nur wenn das Volume existiert); die Aufbewahrung folgt `BACKUP_RETENTION_COUNT`.
+2. Ein Neuaufbau ohne gültigen Pin geht aus einer Sicherung: Dateien nach `deploy/tiles/` kopieren, `scripts/build-tiles.sh verify`, dann `install`.
+3. Die Sicherung selbst verlässt den Host nur, wenn Luis den Abgleich (Storagebox/borg) einrichtet.
 
-`install` läuft nur nach erfolgreichem `verify` des Quellordners und prüft das Volume danach erneut; ein Volume mit abweichenden Dateien kann also nicht still entstehen. Das Einrichten des Storagebox-Pfads ist die offene Weiche W-C3 (Betriebsentscheidung, nicht im Repo).
+`install` läuft nur nach erfolgreichem `verify` des Quellordners und prüft das Volume danach erneut; ein Volume mit abweichenden Dateien kann also nicht still entstehen. Offen bleibt die Weiche W-C3: ob Luis `backup.sh` so freigibt und den Abgleich auf die Storagebox einrichtet (Betriebsentscheidung).
 
 ## Dev
 

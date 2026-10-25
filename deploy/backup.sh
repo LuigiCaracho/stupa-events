@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Backup of the STUPA Events stack (PLAN 11.4): pg_dump custom format piped through age, a
 # `mc mirror` of the private attachment bucket (derivatives in events-public are regenerable and
-# skipped) and a manifest with row counts. Runs on the host, from cron (03:15).
+# skipped), the verified map archives of the tiles_data volume (the pinned Protomaps build expires
+# after about a week, so the copy is the only source) and a manifest with row counts. Runs on the host, from cron (03:15).
 # Needs: docker compose, age, jq, a deploy/.env with BACKUP_AGE_RECIPIENT, MINIO_ROOT_*.
 # Usage: deploy/backup.sh   (BACKUP_DIR defaults to /srv/stupa-events/backups)
 # Another stack, e.g. the dev services: COMPOSE_FILE=docker-compose.dev.yml ENV_FILE=.env.dev
@@ -34,6 +35,12 @@ minio_container="$("${compose[@]}" ps -q minio)"
 mc() { docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -e MC_HOST_events --network "container:${minio_container}" -v "${out}/minio:/out" "${MC_IMAGE}" "$@"; }
 mc mb --ignore-existing events/events-attachments >/dev/null
 mc mirror --overwrite events/events-attachments /out/events-attachments >/dev/null
+
+tiles_volume="$("${compose[@]}" config --format json | jq -r .name)_tiles_data"
+if docker volume inspect "${tiles_volume}" >/dev/null 2>&1; then
+  mkdir -p "${out}/tiles"
+  docker run --rm -v "${tiles_volume}:/t:ro" -v "${out}/tiles:/out" alpine:3 sh -c 'cp /t/*.pmtiles /out/ && chmod -R a+rX /out'
+fi
 
 rows="$("${compose[@]}" exec -T postgres psql -U postgres -d events -At -F, -c "
   SELECT table_name,
