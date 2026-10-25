@@ -30,6 +30,7 @@ class SiteFilters:
     words: tuple[Word, ...] = ()
     categories: tuple[str, ...] = ()
     organizations: tuple[str, ...] = ()
+    building: str | None = None
     start: datetime | None = None
     end: datetime | None = None
     past: bool = False
@@ -78,5 +79,7 @@ def where(
         parts.append(
             f"organization_slug = ANY({params.bind(list(filters.organizations), ARRAY(String))})"
         )
+    if filters.building is not None:
+        parts.append(f"venue_building_no = {params.bind(filters.building, String)}")
     parts.extend(f"({word_match(w, TSV, TITLE_FOLDED, 'false')})" for w in words)
     return " AND ".join(parts) or "true"

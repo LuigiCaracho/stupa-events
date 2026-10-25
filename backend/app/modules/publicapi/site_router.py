@@ -104,6 +104,7 @@ async def list_events(
     from_: Annotated[date | None, Query(alias="from"), DAY_RANGE] = None,
     to: Annotated[date | None, Query(), DAY_RANGE] = None,
     past: Annotated[bool, Query()] = False,
+    building: Annotated[str | None, Query(pattern=r"^[0-9]{1,3}[a-z]?$")] = None,
     limit: Annotated[int, Query(ge=1, le=50)] = 20,
     cursor: Annotated[str | None, Query(max_length=300)] = None,
 ) -> Response:
@@ -117,6 +118,7 @@ async def list_events(
         words=words,
         categories=tuple(category),
         organizations=tuple(organization),
+        building=building,
         start=day_start(from_) if from_ else None,
         end=day_end(to) if to else None,
         past=past,
@@ -152,6 +154,7 @@ async def list_events(
             "from": from_,
             "to": to,
             "past": past,
+            "building": building,
             "limit": limit,
             "cursor": cursor,
         },
