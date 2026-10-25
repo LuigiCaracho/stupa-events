@@ -39,9 +39,11 @@ Outcome = tuple[Decision, str, Decimal | None, Decimal | None]
 
 
 def pin(venue: Venue, lat: Decimal, lon: Decimal, source: str, at: datetime) -> None:
-    """Set the coordinate of a venue as a building-precision pin."""
+    """Pin a venue; `hidden` becomes `building`, a precision chosen by a human stays."""
     venue.lat, venue.lon = lat, lon
-    venue.geocode_source, venue.geocoded_at, venue.public_precision = source, at, "building"
+    venue.geocode_source, venue.geocoded_at = source, at
+    if venue.public_precision in (None, "hidden"):
+        venue.public_precision = "building"
 
 
 async def lookup(

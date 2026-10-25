@@ -1,8 +1,8 @@
 """Plan and report of the one-off pinning of the venues (`scripts/pin_venues.py`).
 
 `plan` is a pure function: it reads venue rows and the campus polygons and decides, per venue,
-how it gets a coordinate. A private or inactive venue is never touched, a venue with a
-coordinate keeps it, a venue of a drawn campus building gets the polygon's centroid, a venue
+how it gets a coordinate. A private or inactive venue is never touched, nor is one a human hid after a
+lookup (`hidden` with a geocode source); a venue with a coordinate keeps it, a venue of a drawn campus building gets the polygon's centroid, a venue
 with street and town is geocoded, a curated destination is geocoded by its name, everything
 else stays `hidden`. Nothing here talks to the network or the database.
 """
@@ -29,10 +29,13 @@ PLACE_QUERIES: Mapping[str, str] = {
     "flumserberg": "Flumserberg",
     "serfaus-fiss-ladis": "Serfaus-Fiss-Ladis",
 }
-Action = Literal["private", "inactive", "pinned", "campus", "geocode", "place", "hidden"]
+Action = Literal[
+    "private", "inactive", "kept_hidden", "pinned", "campus", "geocode", "place", "hidden"
+]
 SOURCES: Mapping[Action, str] = {
     "private": "privat, bleibt verborgen",
     "inactive": "inaktiv, übersprungen",
+    "kept_hidden": "von Hand verborgen, bleibt verborgen",
     "pinned": "hat schon eine Koordinate",
     "campus": "Gebäudepolygon",
     "geocode": "Adresse (Nominatim)",
@@ -71,6 +74,8 @@ def _decide(venue: Venue, polygons: Mapping[str, dict[str, Any]]) -> Decision:
         return decide(action="private")
     if venue.lat is not None:
         return decide(action="pinned")
+    if venue.public_precision == "hidden" and venue.geocode_source is not None:
+        return decide(action="kept_hidden")
     if venue.building_no is not None and venue.building_no in polygons:
         lon, lat = centroid(polygons[venue.building_no])
         return decide(action="campus", building=venue.building_no, lat=_six(lat), lon=_six(lon))

@@ -63,6 +63,15 @@ def test_private_inactive_and_pinned_venues_are_left_alone() -> None:
     assert (d["p"].action, d["i"].action, d["x"].action) == ("private", "inactive", "pinned")
 
 
+def test_a_venue_hidden_by_hand_after_a_lookup_is_not_geocoded_again() -> None:
+    manual = venue(
+        "m", address="Weg 1", city="Ort", geocode_source="manual", public_precision="hidden"
+    )
+    fresh = venue("f", address="Weg 1", city="Ort", public_precision="hidden")
+    d = decisions(manual, fresh)
+    assert (d["m"].action, d["f"].action) == ("kept_hidden", "geocode")
+
+
 def test_the_reference_venues_split_as_planned() -> None:
     rows = [Venue(**{**v, "active": True, "is_private": False, "lat": None}) for v in VENUES]
     by_action: dict[str, list[str]] = {}
