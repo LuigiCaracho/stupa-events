@@ -115,7 +115,7 @@ def test_a_fresh_database_has_the_same_objects(engine) -> None:  # noqa: ANN001
             ).scalars()
         )
         heads = conn.execute(text("SELECT version_num FROM alembic_version")).scalars().all()
-    assert heads == ["0012_purge_rearmed"]
+    assert heads == ["0013_maps"]
     assert {
         "document",
         "document_revision",
