@@ -8,6 +8,7 @@ frontend/.angular
 **/__pycache__
 backend
 docs
+deploy/tiles
 **/.env
 **/.env.*
 !**/.env.example
