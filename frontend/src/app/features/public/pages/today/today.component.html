@@ -7,7 +7,9 @@
   (activate)="openSearch()"
 />
 
-@if (error(); as kind) {
+@if (offlineFailure()) {
+  <app-offline-state level="2" />
+} @else if (error(); as kind) {
   <app-load-error [kind]="kind" (retry)="reload()" />
 } @else if (!loaded()) {
   <app-skeleton
@@ -27,6 +29,11 @@
     <a appLinkButton="tonal" routerLink="/kalender">{{ 'public.today.toCalendar' | t }}</a>
   </app-empty-state>
 } @else {
+  @if (note(); as n) {
+    <app-note kind="warn" icon="alert" role="status">{{
+      standKeys[n.key] | t: { time: n.clock }
+    }}</app-note>
+  }
   @if (hero(); as h) {
     <article class="hero">
       <a class="hero__link" [routerLink]="h.path">

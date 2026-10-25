@@ -8,6 +8,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, signal } f
 import { resourceValue } from '@core/api/resource-value';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
+import { OnlineService } from '@core/browser/online.service';
 import { I18nService } from '@core/i18n/i18n.service';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
@@ -20,6 +21,7 @@ import { whenText } from '../../model/event-format';
 import { EventPosterComponent } from '../../ui/event-poster/event-poster.component';
 import { EventRowComponent } from '../../ui/event-row/event-row.component';
 import { LinkButtonComponent } from '../../ui/link-button/link-button.component';
+import { OfflineStateComponent } from '../../ui/offline-state/offline-state.component';
 import { LoadErrorComponent } from '../../ui/load-error/load-error.component';
 import { usePageTitle } from '../../ui/page-title';
 import { ShareService } from '../../ui/share.service';
@@ -42,6 +44,7 @@ const web = (url: string | null): string | null => (url && /^https?:\/\//i.test(
     EventRowComponent,
     LinkButtonComponent,
     LoadErrorComponent,
+    OfflineStateComponent,
   ],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',
@@ -51,6 +54,7 @@ export class EventPageComponent {
   private readonly share = inject(ShareService);
   private readonly toast = inject(ToastService);
   private readonly i18n = inject(I18nService);
+  private readonly online = inject(OnlineService).online;
 
   readonly slug = input.required<string>();
   protected readonly data = rxResource({
@@ -58,6 +62,7 @@ export class EventPageComponent {
     stream: ({ params }) => this.api.event(params),
   });
   protected readonly event = computed(() => resourceValue(this.data, undefined));
+  protected readonly offlineFailure = computed(() => !!this.data.error() && !this.online());
   protected readonly error = computed(() =>
     this.data.error() ? publicErrorOf(this.data.error()) : null,
   );

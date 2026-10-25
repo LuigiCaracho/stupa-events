@@ -27,7 +27,7 @@ import {
 } from '../../api/admin.models';
 import { TaxonomyApi } from '../../api/taxonomy-api.service';
 import { TaxonomyTable } from '../taxonomy-table';
-import { toNumber } from './venue-geocode';
+import { SOURCE_KEYS, toNumber } from './venue-geocode';
 import { type AppliedPin, VenuePinSheetComponent } from './venue-pin-sheet.component';
 
 interface VenueValue {
@@ -146,6 +146,7 @@ export class VenuesComponent extends TaxonomyTable<AdminVenue, VenueValue> {
 
   protected readonly precisionOptions = optionsOf(this.i18n, PUBLIC_PRECISIONS, PRECISION_KEYS);
   protected readonly precisionKeys = PRECISION_KEYS;
+  protected readonly sourceKeys = SOURCE_KEYS;
 
   protected readonly sheetOpen = signal(false);
   private readonly applied = signal<AppliedPin | null>(null);

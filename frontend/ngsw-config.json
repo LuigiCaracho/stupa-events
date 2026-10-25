@@ -8,7 +8,6 @@
     "!/api/**",
     "!/.well-known/**",
     "!/ics/**",
-    "!/e/**",
     "!/k/**",
     "!/abo/**",
     "!/bestaetigen/**",
@@ -38,6 +37,32 @@
         "files": [
           "/**/*.(svg|cur|jpg|jpeg|png|apng|webp|avif|gif|otf|ttf|woff|woff2)"
         ]
+      }
+    }
+  ],
+  "dataGroups": [
+    {
+      "name": "today",
+      "urls": [
+        "/api/public/today"
+      ],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "timeout": "3s",
+        "maxAge": "1d",
+        "maxSize": 5
+      }
+    },
+    {
+      "name": "events",
+      "urls": [
+        "/api/public/events/*"
+      ],
+      "cacheConfig": {
+        "strategy": "freshness",
+        "timeout": "3s",
+        "maxAge": "1d",
+        "maxSize": 30
       }
     }
   ]

@@ -7,6 +7,8 @@ import { runAxe } from '../../../../../testing/a11y';
 import { CATEGORIES, card } from '../../../../../testing/public-fixtures';
 import { TodayComponent } from './today.component';
 
+let onLine = true;
+
 async function setup(today: object, categories: object = CATEGORIES, todayStatus = 200) {
   const view = await render(TodayComponent, {
     providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
@@ -34,6 +36,37 @@ const out = (over: object = {}) => ({
     },
   ],
   ...over,
+});
+
+describe('TodayComponent freshness and offline', () => {
+  beforeEach(() => {
+    onLine = true;
+    jest.spyOn(window.navigator, 'onLine', 'get').mockImplementation(() => onLine);
+  });
+  afterEach(() => jest.restoreAllMocks());
+
+  it('says nothing about the age of a fresh answer', async () => {
+    await setup(out({ generatedAt: new Date().toISOString() }));
+    expect(screen.queryByText(/Stand/)).not.toBeInTheDocument();
+  });
+
+  it('names the time of the answer when offline', async () => {
+    onLine = false;
+    await setup(out({ generatedAt: new Date().toISOString() }));
+    expect(screen.getByText(/^Offline, Stand \d\d:\d\d$/)).toBeInTheDocument();
+  });
+
+  it('warns about an answer older than an hour on the same day, or from yesterday', async () => {
+    await setup(out({ generatedAt: '2020-01-01T08:00:00Z' }));
+    expect(screen.getByText(/^Stand von gestern, \d\d:\d\d$/)).toBeInTheDocument();
+  });
+
+  it('shows the offline state when the request failed without a network', async () => {
+    onLine = false;
+    await setup({}, CATEGORIES, 500);
+    expect(screen.getByRole('heading', { name: 'Du bist offline.' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Zu Heute' })).toBeInTheDocument();
+  });
 });
 
 describe('TodayComponent', () => {

@@ -32,3 +32,9 @@ export function suggestion(answer: VenueGeocode): { lat: number; lon: number } |
   const lon = toNumber(answer.lon);
   return answer.found && lat !== null && lon !== null ? { lat, lon } : null;
 }
+
+export const SOURCE_KEYS: Record<string, TranslationKey> = {
+  pin: 'admin.pin.source.pin',
+  nominatim: 'admin.pin.source.nominatim',
+  import: 'admin.pin.source.import',
+};

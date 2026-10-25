@@ -13,7 +13,6 @@ export const mapDe = {
   'map.attributionToggle': 'Quellenangaben ein- oder ausblenden',
   'map.popupOpen': 'Zur Veranstaltung',
   'map.error': 'Die Karte konnte nicht geladen werden.',
-  'map.loading': 'Karte wird geladen',
   'public.map.title': 'Karte',
   'public.map.heading': 'Weltkarte',
   'public.map.lede': 'Wo es etwas gab und gibt.',

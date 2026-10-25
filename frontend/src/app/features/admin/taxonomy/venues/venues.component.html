@@ -142,7 +142,7 @@
       } @else if (row.lat !== null && row.lon !== null) {
         <span class="vn__pin">{{ row.lat }}, {{ row.lon }}</span>
         @if (row.geocodeSource) {
-          <span class="vn__source">{{ 'admin.pin.source.' + row.geocodeSource | t }}</span>
+          <span class="vn__source">{{ sourceKeys[row.geocodeSource] | t }}</span>
         }
       } @else {
         <span class="vn__source">{{ 'admin.pin.none' | t }}</span>
