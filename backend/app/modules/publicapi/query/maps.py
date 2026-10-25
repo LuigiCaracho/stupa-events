@@ -36,7 +36,7 @@ MAP_COLUMNS = (
 def _bbox(box: BBox | None, params: Params) -> str:
     if box is None:
         return ""
-    west, south, east, north = (params.bind(v, Float) for v in box)
+    west, south, east, north = (params.bind(v, Float()) for v in box)
     return f" AND venue_lon BETWEEN {west} AND {east} AND venue_lat BETWEEN {south} AND {north}"
 
 
