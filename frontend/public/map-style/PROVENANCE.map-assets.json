@@ -1,0 +1,23 @@
+{
+  "files": [
+    {
+      "path": "frontend/public/map-style/fonts/**",
+      "source": "protomaps/basemaps-assets@028c18f713baecad011301ff7a69acc39bcc2ae7 fonts/",
+      "license": "SIL OFL 1.1 (fonts/OFL.txt)",
+      "fetchedBy": "scripts/build-tiles.sh assets",
+      "subset": "Noto Sans Regular, Medium, Italic; ranges 0-255, 256-511, 7680-7935, 8192-8447, 8448-8703"
+    },
+    {
+      "path": "frontend/public/map-style/sprites/**",
+      "source": "protomaps/basemaps-assets@028c18f713baecad011301ff7a69acc39bcc2ae7 sprites/v4/",
+      "license": "BSD-3-Clause (repository license)",
+      "fetchedBy": "scripts/build-tiles.sh assets"
+    },
+    {
+      "path": "frontend/public/map-style/style-*.json",
+      "source": "@protomaps/basemaps@5.7.2 layers()",
+      "license": "BSD-3-Clause",
+      "generatedBy": "scripts/gen-map-style.mjs"
+    }
+  ]
+}
