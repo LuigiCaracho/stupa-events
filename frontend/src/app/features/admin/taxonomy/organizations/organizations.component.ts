@@ -77,7 +77,7 @@ const splitAccounts = (text: string): string[] =>
     ButtonComponent,
     CellDirective,
     DataTableComponent,
-      InputComponent,
+    InputComponent,
     NoteComponent,
     SelectFieldComponent,
     StatusTextComponent,
@@ -96,7 +96,7 @@ export class OrganizationsComponent extends TaxonomyTable<AdminOrganization, Org
     short: '',
     categoryId: '',
     instagram: '',
-      active: true,
+    active: true,
   });
 
   protected readonly categories = rxResource({ stream: () => this.api.categories() });

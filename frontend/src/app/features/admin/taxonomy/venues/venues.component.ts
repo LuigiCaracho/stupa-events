@@ -1,10 +1,12 @@
 /**
  * I23, tab "Orte" (`/verwaltung/orte`): venues as an inline-editable table. Many existing venues
- * have no address. Coordinates are greyed out until stage C (map pin); venues are only deactivated.
+ * have no address. Coordinates are two number fields plus a pin sheet with a map and a one-press address
+ * search; venues are only deactivated.
  */
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { TranslatePipe } from '@core/i18n/translate.pipe';
+import type { MapPin } from '@shared/ui/map/map.models';
 import { NoteComponent } from '@shared/ui/note/note.component';
 import { SelectFieldComponent } from '@shared/ui/select/select.component';
 import { StatusTextComponent } from '@shared/ui/status-text/status-text.component';
@@ -17,9 +19,16 @@ import {
   SwitchComponent,
 } from '@stupa-makers/ui-kit';
 import { PRECISION_KEYS, optionsOf } from '../../admin-labels';
-import { type AdminVenue, PUBLIC_PRECISIONS, type PublicPrecision } from '../../api/admin.models';
+import {
+  type AdminVenue,
+  PUBLIC_PRECISIONS,
+  type PublicPrecision,
+  type VenueWrite,
+} from '../../api/admin.models';
 import { TaxonomyApi } from '../../api/taxonomy-api.service';
 import { TaxonomyTable } from '../taxonomy-table';
+import { toNumber } from './venue-geocode';
+import { type AppliedPin, VenuePinSheetComponent } from './venue-pin-sheet.component';
 
 interface VenueValue {
   slug: string;
@@ -29,6 +38,8 @@ interface VenueValue {
   city: string;
   buildingNo: string;
   roomKey: string;
+  lat: string;
+  lon: string;
   publicPrecision: PublicPrecision;
   isPrivate: boolean;
   active: boolean;
@@ -42,6 +53,8 @@ const BLANK: VenueValue = {
   city: '',
   buildingNo: '',
   roomKey: '',
+  lat: '',
+  lon: '',
   publicPrecision: 'building',
   isPrivate: false,
   active: true,
@@ -88,6 +101,7 @@ const blankToNull = (text: string): string | null => text.trim() || null;
     SelectFieldComponent,
     StatusTextComponent,
     SwitchComponent,
+    VenuePinSheetComponent,
   ],
   templateUrl: './venues.component.html',
   styleUrl: './venues.component.scss',
@@ -103,6 +117,8 @@ export class VenuesComponent extends TaxonomyTable<AdminVenue, VenueValue> {
     city: '',
     buildingNo: '',
     roomKey: '',
+    lat: '',
+    lon: '',
     publicPrecision: 'building' as PublicPrecision,
     isPrivate: false,
     active: true,
@@ -131,6 +147,12 @@ export class VenuesComponent extends TaxonomyTable<AdminVenue, VenueValue> {
   protected readonly precisionOptions = optionsOf(this.i18n, PUBLIC_PRECISIONS, PRECISION_KEYS);
   protected readonly precisionKeys = PRECISION_KEYS;
 
+  protected readonly sheetOpen = signal(false);
+  private readonly applied = signal<AppliedPin | null>(null);
+  protected readonly editedVenue = computed(
+    () => this.loaded().find((row) => row.id === this.editingId()) ?? (this.isNew() ? DRAFT : null),
+  );
+
   protected rows() {
     return this.isNew() ? [DRAFT, ...this.loaded()] : this.loaded();
   }
@@ -152,14 +174,70 @@ export class VenuesComponent extends TaxonomyTable<AdminVenue, VenueValue> {
       city: row.city ?? '',
       buildingNo: row.buildingNo ?? '',
       roomKey: row.roomKey ?? '',
+      lat: row.lat === null ? '' : String(row.lat),
+      lon: row.lon === null ? '' : String(row.lon),
       publicPrecision: row.publicPrecision,
       isPrivate: row.isPrivate,
       active: row.active,
     };
   }
 
+  protected override startEdit(row: AdminVenue): void {
+    this.applied.set(null);
+    super.startEdit(row);
+  }
+
+  protected override startNew(): void {
+    this.applied.set(null);
+    super.startNew();
+  }
+
+  protected startPin(): MapPin | null {
+    const lat = toNumber(this.form.controls.lat.value);
+    const lon = toNumber(this.form.controls.lon.value);
+    return lat === null || lon === null ? null : { lat, lon };
+  }
+
+  protected openSheet(): void {
+    this.sheetOpen.set(true);
+  }
+
+  protected takePin(pin: AppliedPin): void {
+    this.applied.set(pin);
+    this.form.patchValue({ lat: pin.lat.toFixed(6), lon: pin.lon.toFixed(6) });
+    this.form.markAsDirty();
+  }
+
+  protected override validate(v: VenueValue): Record<string, string> {
+    const errors = super.validate(v);
+    const lat = toNumber(v.lat);
+    const lon = toNumber(v.lon);
+    const bad = this.i18n.translate('admin.err.coordinatesIncomplete');
+    const outOfRange =
+      (lat !== null && Math.abs(lat) > 90) || (lon !== null && Math.abs(lon) > 180);
+    if (String(v.lat).trim() !== '' && lat === null) errors['lat'] = bad;
+    if (String(v.lon).trim() !== '' && lon === null) errors['lon'] = bad;
+    if ((lat === null) !== (lon === null) || outOfRange) errors['lat'] = errors['lat'] ?? bad;
+    return errors;
+  }
+
+  private coordinates(id: string | null, v: VenueValue): Partial<VenueWrite> {
+    const lat = toNumber(v.lat);
+    const lon = toNumber(v.lon);
+    const row = this.loaded().find((r) => r.id === id);
+    if (toNumber(row?.lat) === lat && toNumber(row?.lon) === lon) return {};
+    const source = this.applied();
+    const searched = source?.source === 'nominatim' && source.lat === lat && source.lon === lon;
+    return {
+      lat,
+      lon,
+      ...(searched && lat !== null ? { geocodeSource: 'nominatim' as const } : {}),
+    };
+  }
+
   protected write(id: string | null, v: VenueValue) {
     const body = {
+      ...this.coordinates(id, v),
       name: v.name.trim(),
       address: blankToNull(v.address),
       postcode: blankToNull(v.postcode),

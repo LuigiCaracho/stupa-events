@@ -9,6 +9,7 @@ import type {
   AdminVenue,
   CategoryWrite,
   OrganizationWrite,
+  VenueGeocode,
   VenueWrite,
 } from './admin.models';
 
@@ -39,6 +40,10 @@ export class TaxonomyApi {
 
   updateVenue(id: string, body: VenueWrite): Observable<AdminVenue> {
     return this.http.patch<AdminVenue>(`${this.base}/venues/${id}`, body);
+  }
+
+  geocodeVenue(id: string): Observable<VenueGeocode> {
+    return this.http.post<VenueGeocode>(`${this.base}/venues/${id}/geocode`, {});
   }
 
   organizations(): Observable<AdminOrganization[]> {

@@ -99,6 +99,7 @@
           [ariaLabel]="'admin.col.precision' | t"
           [options]="precisionOptions"
           [clearable]="false"
+          [hint]="'admin.precision.help' | t"
         />
       } @else {
         {{ labelKey(precisionKeys, row.publicPrecision) | t }}
@@ -112,22 +113,40 @@
       }
     </ng-template>
     <ng-template appCell="coordinates" let-row>
-      <div class="vn__coords" [attr.title]="'admin.coordinatesLater' | t">
-        <app-input
-          type="number"
-          [ariaLabel]="'admin.col.lat' | t"
-          [placeholder]="'admin.col.lat' | t"
-          [disabled]="true"
-          [ngModel]="row.lat"
-        />
-        <app-input
-          type="number"
-          [ariaLabel]="'admin.col.lon' | t"
-          [placeholder]="'admin.col.lon' | t"
-          [disabled]="true"
-          [ngModel]="row.lon"
-        />
-      </div>
+      @if (editing(row)) {
+        <div
+          class="vn__edit"
+          (click)="$event.stopPropagation()"
+          (keydown.enter)="$event.stopPropagation()"
+        >
+          <div class="vn__coords">
+            <app-input
+              type="number"
+              [formControl]="form.controls.lat"
+              [ariaLabel]="'admin.col.lat' | t"
+              [placeholder]="'admin.col.lat' | t"
+              [error]="err('lat')"
+            />
+            <app-input
+              type="number"
+              [formControl]="form.controls.lon"
+              [ariaLabel]="'admin.col.lon' | t"
+              [placeholder]="'admin.col.lon' | t"
+              [error]="err('lon')"
+            />
+          </div>
+          <app-button variant="tonal" size="sm" (click)="openSheet()">{{
+            'admin.pin.set' | t
+          }}</app-button>
+        </div>
+      } @else if (row.lat !== null && row.lon !== null) {
+        <span class="vn__pin">{{ row.lat }}, {{ row.lon }}</span>
+        @if (row.geocodeSource) {
+          <span class="vn__source">{{ 'admin.pin.source.' + row.geocodeSource | t }}</span>
+        }
+      } @else {
+        <span class="vn__source">{{ 'admin.pin.none' | t }}</span>
+      }
     </ng-template>
     <ng-template appCell="active" let-row>
       @if (editing(row)) {
@@ -164,3 +183,10 @@
     </ng-template>
   </app-data-table>
 }
+
+<app-venue-pin-sheet
+  [(open)]="sheetOpen"
+  [venue]="editedVenue()"
+  [start]="startPin()"
+  (applied)="takePin($event)"
+/>

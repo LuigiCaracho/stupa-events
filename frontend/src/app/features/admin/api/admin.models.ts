@@ -11,8 +11,7 @@ export type OrganizationKind =
 export type RequiredProfile = 'generic' | 'party' | 'meeting' | 'trip';
 export type ColorToken = 'orange' | 'blue' | 'petrol' | 'navy' | 'yellow' | 'red';
 export type PublicPrecision = 'exact' | 'building' | 'hidden';
-export type MappingRole =
-  'admin' | 'editor' | 'stupa' | 'viewer' | 'submitter' | 'organizer';
+export type MappingRole = 'admin' | 'editor' | 'stupa' | 'viewer' | 'submitter' | 'organizer';
 
 export const CATEGORY_KINDS: readonly CategoryKind[] = ['format', 'fachschaft', 'partner'];
 export const ORGANIZATION_KINDS: readonly OrganizationKind[] = [
@@ -61,7 +60,15 @@ export interface AdminCategory {
 export type CategoryWrite = Partial<
   Pick<
     AdminCategory,
-    'name' | 'kind' | 'parentId' | 'short' | 'colorToken' | 'description' | 'requiredProfile' | 'sort' | 'active'
+    | 'name'
+    | 'kind'
+    | 'parentId'
+    | 'short'
+    | 'colorToken'
+    | 'description'
+    | 'requiredProfile'
+    | 'sort'
+    | 'active'
   >
 > & { slug?: string };
 
@@ -82,10 +89,7 @@ export interface AdminOrganization {
 }
 
 export type OrganizationWrite = Partial<
-  Pick<
-    AdminOrganization,
-    'name' | 'kind' | 'short' | 'categoryId' | 'instagram' | 'active'
-  >
+  Pick<AdminOrganization, 'name' | 'kind' | 'short' | 'categoryId' | 'instagram' | 'active'>
 > & { slug?: string };
 
 export interface AdminVenue {
@@ -123,8 +127,19 @@ export type VenueWrite = Partial<
     | 'publicPrecision'
     | 'isPrivate'
     | 'active'
+    | 'lat'
+    | 'lon'
   >
-> & { slug?: string };
+> & { slug?: string; geocodeSource?: 'pin' | 'nominatim' };
+
+export interface VenueGeocode {
+  found: boolean;
+  lat: number | string | null;
+  lon: number | string | null;
+  displayName: string | null;
+  cached: boolean;
+  attribution: string;
+}
 
 export interface GroupMapping {
   id: string;

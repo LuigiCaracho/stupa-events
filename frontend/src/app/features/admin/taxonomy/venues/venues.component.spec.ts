@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/angular';
+import { render, screen } from '@testing-library/angular';
 import userEvent from '@testing-library/user-event';
 import { of } from 'rxjs';
 import { runAxe } from '../../../../../testing/a11y';
@@ -12,6 +12,14 @@ function fakeTaxonomy() {
       of([
         makeVenue(),
         makeVenue({ id: 'ven-3', slug: 'foyer', name: 'Foyer', buildingNo: null, roomKey: null }),
+        makeVenue({
+          id: 'ven-4',
+          slug: 'hoersaal',
+          name: 'Hörsaal',
+          lat: 48.4829,
+          lon: 9.1873,
+          geocodeSource: 'nominatim',
+        }),
         makeVenue({
           id: 'ven-2',
           slug: 'aula',
@@ -38,13 +46,50 @@ async function setup() {
 }
 
 describe('VenuesComponent', () => {
-  it('lists venues with and without an address and greys out the coordinates', async () => {
+  it('lists venues with and without an address and shows a pin or "Noch kein Pin gesetzt."', async () => {
     await setup();
     expect(await screen.findByText('Alteburgstraße 150')).toBeInTheDocument();
     expect(screen.getByText('Kinosaal')).toBeInTheDocument();
-    await waitFor(() => {
-      for (const field of screen.getAllByRole('spinbutton')) expect(field).toBeDisabled();
-    });
+    expect(screen.getByText('48.4829, 9.1873')).toBeInTheDocument();
+    expect(screen.getByText('per Adresssuche')).toBeInTheDocument();
+    expect(screen.getAllByText('Noch kein Pin gesetzt.').length).toBe(3);
+    expect(screen.queryAllByRole('spinbutton')).toHaveLength(0);
+  });
+
+  it('edits the coordinates as a pair and sends them as numbers', async () => {
+    const { api } = await setup();
+    await userEvent.click(await screen.findByText('Foyer'));
+    await userEvent.type(screen.getByRole('spinbutton', { name: 'Breite' }), '48.4829');
+    await userEvent.type(screen.getByRole('spinbutton', { name: 'Länge' }), '9.1873');
+    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    expect(api.updateVenue).toHaveBeenCalledWith(
+      'ven-3',
+      expect.objectContaining({ lat: 48.4829, lon: 9.1873 }),
+    );
+    expect((api.updateVenue as jest.Mock).mock.calls[0][1]).not.toHaveProperty('geocodeSource');
+  });
+
+  it('refuses one coordinate without the other', async () => {
+    const { api } = await setup();
+    await userEvent.click(await screen.findByText('Foyer'));
+    await userEvent.type(screen.getByRole('spinbutton', { name: 'Breite' }), '48.4');
+    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    expect(api.updateVenue).not.toHaveBeenCalled();
+    expect(await screen.findByText('Breite und Länge nur zusammen.')).toBeInTheDocument();
+  });
+
+  it('does not resend an unchanged pin, which would reset its source', async () => {
+    const { api } = await setup();
+    await userEvent.click(await screen.findByText('Hörsaal'));
+    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    expect((api.updateVenue as jest.Mock).mock.calls[0][1]).not.toHaveProperty('lat');
+  });
+
+  it('opens the pin sheet from the edit row', async () => {
+    await setup();
+    await userEvent.click(await screen.findByText('Foyer'));
+    await userEvent.click(screen.getByRole('button', { name: 'Pin setzen' }));
+    expect(await screen.findByRole('dialog', { name: 'Pin setzen' })).toBeInTheDocument();
   });
 
   it('creates a venue without an address and turns blank texts into null', async () => {

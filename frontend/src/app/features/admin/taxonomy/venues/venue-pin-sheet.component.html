@@ -1,0 +1,39 @@
+<app-side-sheet
+  [(open)]="open"
+  [heading]="'admin.pin.heading' | t"
+  side="end"
+  (closed)="onClosed()"
+>
+  <div class="pin">
+    <p class="pin__hint">{{ 'admin.pin.hint' | t }}</p>
+    @defer (when open()) {
+      <app-map mode="pick" height="22rem" [pin]="view()" (pinChange)="setPin($event)" />
+    }
+    <div class="pin__bar">
+      <app-button
+        variant="tonal"
+        [disabled]="block() !== null"
+        [loading]="searching()"
+        (click)="search()"
+        >{{ 'admin.pin.search' | t }}</app-button
+      >
+      @if (block(); as why) {
+        <span class="pin__why">{{ why | t }}</span>
+      }
+    </div>
+    @if (fromSearch()) {
+      <app-note kind="info" icon="info" role="status">
+        {{ 'admin.pin.suggestion' | t }} {{ 'admin.pin.attribution' | t }}
+      </app-note>
+    }
+    @if (message(); as key) {
+      <app-note kind="warn" icon="alert" role="alert">{{ key | t }}</app-note>
+    }
+    <div class="pin__actions">
+      <app-button variant="text" (click)="open.set(false)">{{ 'action.cancel' | t }}</app-button>
+      <app-button variant="fill" [disabled]="pin() === null" (click)="apply()">{{
+        'admin.pin.apply' | t
+      }}</app-button>
+    </div>
+  </div>
+</app-side-sheet>

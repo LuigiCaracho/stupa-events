@@ -24,3 +24,20 @@
   grid-template-columns: 1fr 1fr;
   gap: var(--space-2);
 }
+
+.vn__edit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+.vn__pin {
+  font-variant-numeric: tabular-nums;
+}
+
+.vn__source {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: var(--fs-small);
+}

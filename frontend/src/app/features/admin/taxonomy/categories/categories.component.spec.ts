@@ -57,7 +57,10 @@ describe('CategoriesComponent', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Hinzufügen' }));
     await userEvent.type(screen.getByRole('textbox', { name: /Name/ }), ' Party ');
     await userEvent.type(screen.getByRole('textbox', { name: /Slug/ }), 'party');
-    await userEvent.type(screen.getByRole('textbox', { name: /Beschreibung/ }), ' Feiern auf dem Campus. ');
+    await userEvent.type(
+      screen.getByRole('textbox', { name: /Beschreibung/ }),
+      ' Feiern auf dem Campus. ',
+    );
     await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     expect(api.createCategory).toHaveBeenCalledWith({
       slug: 'party',
