@@ -16,6 +16,7 @@ import { TranslatePipe } from '@core/i18n/translate.pipe';
 import { MEDIA, ToastComponent } from '@stupa-makers/ui-kit';
 import { BottomBarComponent } from './bottom-bar/bottom-bar.component';
 import { InboxComponent } from '../features/notifications/inbox.component';
+import { InstallHintComponent } from './install-hint/install-hint.component';
 import { LoadBarComponent } from './load-bar/load-bar.component';
 import { mediaQuerySignal } from './media-query';
 import { NavRailComponent } from './nav-rail/nav-rail.component';
@@ -65,6 +66,7 @@ export type ShellFrame = 'rail' | 'public' | 'bare' | 'pending';
     PublicHeaderComponent,
     PublicBottomBarComponent,
     SiteFooterComponent,
+    InstallHintComponent,
   ],
   host: { '(document:keydown)': 'onKey($event)' },
   templateUrl: './shell.component.html',

@@ -1,0 +1,22 @@
+:host {
+  display: block;
+}
+
+.hint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-2) var(--space-4) 0;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border-inline-start: 3px solid var(--color-accent);
+  border-radius: var(--radius-field);
+  background: var(--color-surface-3);
+  color: var(--color-text);
+}
+
+.hint__msg {
+  flex: 1;
+  margin: 0;
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+}

@@ -1,0 +1,6 @@
+@if (visible()) {
+  <aside class="hint" [attr.aria-label]="'pwa.installLabel' | t">
+    <p class="hint__msg">{{ 'pwa.installHint' | t }}</p>
+    <app-button variant="text" size="sm" (click)="close()">{{ 'pwa.installClose' | t }}</app-button>
+  </aside>
+}

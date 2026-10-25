@@ -35,4 +35,7 @@ export const shellDe = {
   'placeholder.body': 'Diese Seite wird gerade gebaut.',
   'pwa.updateReady': 'Eine neue Version der App ist verfügbar.',
   'pwa.reload': 'Neu laden',
+  'pwa.installLabel': 'App installieren',
+  'pwa.installHint': 'Zum Installieren: Tippe auf Teilen und dann auf „Zum Home-Bildschirm“.',
+  'pwa.installClose': 'Schließen',
 } as const;
