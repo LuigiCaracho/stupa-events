@@ -20,6 +20,7 @@ FORMAT_ONLY = "LIBRARYONLY-"
 PUBLIC_TITLE = "CANARY-PUBLIC-TITLE"
 PUBLIC_SUMMARY = "CANARY-PUBLIC-SUMMARY"
 AMOUNT_DIGITS = "98765432101"
+HIDDEN_COORDINATE = ("12.34", "87.65")
 
 
 def format_mark(name: str) -> str:
@@ -226,9 +227,12 @@ async def seed_canary(api: Api) -> Canary:
         e=hidden_text["id"],
     )
     await api.sql(
-        "INSERT INTO venue (slug, name, address, postcode, city, notes, public_precision, is_private)"
-        " VALUES ('canary-private', 'Bei Ada', :a, :p, 'Reutlingen', :n, 'exact', true),"
-        " ('canary-hidden', 'Saal Hidden', :h, '72762', 'Reutlingen', NULL, 'hidden', false)",
+        "INSERT INTO venue (slug, name, address, postcode, city, notes, public_precision, is_private,"
+        " lat, lon, building_no)"
+        " VALUES ('canary-private', 'Bei Ada', :a, :p, 'Reutlingen', :n, 'exact', true,"
+        " 12.345678, 87.654321, '9'),"
+        " ('canary-hidden', 'Saal Hidden', :h, '72762', 'Reutlingen', NULL, 'hidden', false,"
+        " 12.345678, 87.654321, '6')",
         a=mark("PRIVATEADDRESS"),
         p=mark("PRIVATEADDRESS"),
         n=mark("PRIVATEADDRESS"),

@@ -4,3 +4,4 @@
 /backend/app/modules/publicapi/allowlist.py @stupa-makers/events-maintainers
 /backend/tests/schema/feed-v2.json @stupa-makers/events-maintainers
 /deploy/db/roles.sql @stupa-makers/events-maintainers
+/backend/tests/schema/public-map-v1.json @stupa-makers/events-maintainers

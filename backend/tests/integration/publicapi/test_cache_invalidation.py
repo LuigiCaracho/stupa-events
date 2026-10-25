@@ -33,6 +33,8 @@ async def test_a_private_flag_on_a_venue_shows_in_the_feed_at_once(
             "name": "Haus am Park",
             "address": "Parkweg 1",
             "city": "Reutlingen",
+            "lat": 48.49,
+            "lon": 9.2,
             "publicPrecision": "exact",
         },
     )

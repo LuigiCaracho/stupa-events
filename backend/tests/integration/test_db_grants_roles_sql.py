@@ -94,7 +94,10 @@ def test_migrator_owns_every_table_and_view(events_db: dict[str, Engine]) -> Non
 def test_public_role_reads_only_the_view(events_db: dict[str, Engine]) -> None:
     with events_db["public"].connect() as conn:
         conn.exec_driver_sql("SELECT count(*) FROM public_event_v").scalar_one()
+        conn.exec_driver_sql("SELECT count(*) FROM public_campus_building_v").scalar_one()
     for table in (
+        "campus_building",
+        "geocode_cache",
         "event",
         "organization",
         "category",
@@ -107,6 +110,17 @@ def test_public_role_reads_only_the_view(events_db: dict[str, Engine]) -> None:
         with pytest.raises(ProgrammingError) as err, events_db["public"].connect() as conn:
             conn.exec_driver_sql(f"SELECT 1 FROM {table}")
         assert "InsufficientPrivilege" in type(err.value.orig).__name__
+
+
+def test_map_tables_belong_to_the_app_role_alone(events_db: dict[str, Engine]) -> None:
+    with events_db["app"].begin() as conn:
+        conn.exec_driver_sql("SELECT count(*) FROM campus_building").scalar_one()
+        conn.exec_driver_sql("SELECT count(*) FROM geocode_cache").scalar_one()
+        conn.exec_driver_sql("DELETE FROM geocode_cache WHERE false")
+    _fails(events_db["app"], "DELETE FROM campus_building WHERE false")
+    for table in ("campus_building", "geocode_cache"):
+        with pytest.raises(ProgrammingError), events_db["subs"].connect() as conn:
+            conn.exec_driver_sql(f"SELECT 1 FROM {table}")
 
 
 def test_app_role_has_no_delete_on_domain_tables(events_db: dict[str, Engine]) -> None:

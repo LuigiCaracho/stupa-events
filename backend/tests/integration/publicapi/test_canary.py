@@ -12,6 +12,7 @@ from httpx import Response
 from tests._support.canary import (
     AMOUNT_DIGITS,
     FORMAT_ONLY,
+    HIDDEN_COORDINATE,
     INTERNAL,
     PUBLIC_SUMMARY,
     PUBLIC_TITLE,
@@ -154,6 +155,34 @@ def json_urls(feed: str) -> list[str]:
         for item in json.loads(feed)["items"]
         if item["image"]
     ]
+
+
+async def test_no_hidden_or_private_coordinate_reaches_a_map_route(api: Api) -> None:
+    await seed_canary(api)
+    window = {"from": "2000-01-01", "to": "2100-01-01"}
+    responses = [
+        await api.request(None, "GET", "/api/public/map/events"),
+        await api.request(None, "GET", "/api/public/map/events", params={"past": 1}),
+        await api.request(None, "GET", "/api/public/map/events", params={"bbox": "80,10,90,15"}),
+        await api.request(None, "GET", "/api/public/campus/buildings", params=window),
+        await api.request(
+            None, "GET", "/api/public/campus/events", params={"building": "9", **window}
+        ),
+        await api.request(
+            None, "GET", "/api/public/campus/events", params={"building": "6", **window}
+        ),
+        await api.request(None, "GET", "/api/public/events", params={"building": "9"}),
+    ]
+    assert [r.status_code for r in responses][:5] == [200, 200, 200, 200, 200]
+    assert not leaks(*responses)
+    for response in responses:
+        assert not any(digits in response.text for digits in HIDDEN_COORDINATE)
+        assert "Bei Ada" not in response.text and "Saal Hidden" not in response.text
+    assert (await api.request(None, "GET", "/api/public/map/events")).json()["features"] == []
+    campus = responses[3].json()["features"]
+    assert {f["properties"]["count"] for f in campus} == {0}
+    assert responses[4].json()["items"] == [] and responses[5].json()["items"] == []
+    assert responses[6].json()["items"] == []
 
 
 async def test_unconfirmed_text_and_private_addresses_never_reach_the_public(api: Api) -> None:

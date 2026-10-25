@@ -56,7 +56,18 @@ CONTRACT = {
     name: jsonschema_rs.validator_for(schema)
     for name, schema in json.loads((SCHEMA_FILE.parent / "public-site-v1.json").read_text()).items()
 }
+CONTRACT.update(
+    {
+        f"map-{name}": jsonschema_rs.validator_for(schema)
+        for name, schema in json.loads(
+            (SCHEMA_FILE.parent / "public-map-v1.json").read_text()
+        ).items()
+    }
+)
 CONTRACT_OF = {
+    "/api/public/map/events": "map-events",
+    "/api/public/campus/buildings": "map-campus",
+    "/api/public/campus/events": "search",
     "/api/public/events": "search",
     "/api/public/events/{slug}": "detail",
     "/api/public/today": "today",
@@ -114,6 +125,9 @@ async def test_schemathesis(subs: SubsApi) -> None:
         "/api/public/categories",
         "/api/public/calendar",
         "/api/public/archive",
+        "/api/public/map/events",
+        "/api/public/campus/buildings",
+        "/api/public/campus/events",
         "/ics/all.ics",
         "/ics/k/{slug}.ics",
         "/ics/e/{slug}.ics",
