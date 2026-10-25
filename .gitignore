@@ -40,3 +40,6 @@ frontend/e2e/.auth/
 .claude/settings.local.json
 .playwright-mcp/
 /*.png
+
+# Map tiles are built by scripts/build-tiles.sh, never committed
+deploy/tiles/

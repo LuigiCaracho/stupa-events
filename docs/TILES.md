@@ -1,0 +1,51 @@
+# Karten-Daten (Tiles, Style, Glyphen, Sprites)
+
+Die Karten laufen komplett auf eigener Origin: PMTiles-Archive unter `/tiles/`, Style, Glyphen und Sprites unter `/map-style/`. Kein Fremd-Origin, kein Tile-Dienst von Dritten. Die Tiles liegen **nicht im Git**; `scripts/build-tiles.sh` erzeugt sie aus einem gepinnten Protomaps-Build, `deploy/tiles.lock` hält die Pins und Prüfsummen.
+
+## Aufruf
+
+| Befehl | Wirkung |
+|---|---|
+| `scripts/build-tiles.sh` (`fetch`) | extrahiert `deploy/tiles/world.pmtiles` (Welt, Zoom 0 bis 5) und `deploy/tiles/reutlingen.pmtiles` (bbox 9.05,48.40,9.35,48.58, Zoom 0 bis 15) aus dem gepinnten Build, ungefähr 2 min, 32,5 MB. Schreibt über `.part`, prüft `pmtiles verify` und SHA-256, benennt erst dann um |
+| `scripts/build-tiles.sh verify` | prüft `deploy/tiles/` gegen `tiles.lock`, offline |
+| `scripts/build-tiles.sh install` | kopiert die Dateien über einen Wegwerf-Container in das Compose-Volume `tiles_data` und prüft sie dort erneut |
+| `scripts/build-tiles.sh assets` | lädt Glyphen und Sprites von `protomaps/basemaps-assets` am gepinnten Commit (Tarball-SHA-256 in `tiles.lock`) nach `frontend/public/map-style/` |
+| `scripts/build-tiles.sh bump <YYYYMMDD>` | pinnt einen neuen Build und schreibt die neuen Prüfsummen in `tiles.lock` |
+| `deploy/tiles-smoke.sh [base-url]` | prüft gegen einen laufenden Stack: Range-Request ergibt 206 mit `Content-Range`, `Accept-Ranges: bytes`, kein `Content-Encoding`, starkes ETag, Cache-Control, ein CSP-Header |
+
+`pmtiles` 1.31.2 wird aus dem PATH genommen, sonst aus `nix build nixpkgs#pmtiles`, sonst als gepinntes Release-Binary (SHA-256 in `tiles.lock`). Der Download ist **nur** im Skript; Tests und CI laden nie Tiles.
+
+## Ablauf nach Ablauf der Woche
+
+Der Protomaps-Bucket hält nur die Builds der letzten Woche. Ist `PROTOMAPS_BUILD` abgelaufen, meldet `fetch` "Build abgelaufen". Dann:
+
+1. `scripts/build-tiles.sh bump <aktuelles Datum>`: neue Pins und Prüfsummen, Größenvergleich.
+2. Diff von `deploy/tiles.lock` prüfen, `scripts/build-tiles.sh fetch`, Karten im Dev ansehen.
+3. `scripts/build-tiles.sh install` auf dem Zielhost, Commit der Lock-Datei.
+
+Solange die Dateien im Volume liegen, läuft der Betrieb auch nach Ablauf des Builds weiter; nur ein Neuaufbau braucht einen aktuellen Pin. Die beiden Dateien gehören in die Sicherung (Weiche W-C3).
+
+## Dev
+
+`deploy/docker-compose.dev.yml` startet den Dienst `tiles` (nginx, `127.0.0.1:8083`, bindet `deploy/tiles`); `frontend/proxy.conf.json` leitet `/tiles` dorthin (Range läuft durch). `deploy/dev-up.sh` weist auf `scripts/build-tiles.sh` hin, wenn die Dateien fehlen.
+
+## Produktion
+
+`web` mountet das Volume `tiles_data` read-only unter `/usr/share/nginx/tiles`. `location ^~ /tiles/`: statisch mit `Accept-Ranges`, `gzip off` (die Archive sind intern gzip, ein schwaches ETag oder `Content-Encoding` bräche das PMTiles-JS), `access_log off`, `Cache-Control: public, max-age=604800` (7 Tage), Rate-Limit `ev_tiles`. Der Service-Worker lässt `/tiles/**` unberührt (keine Cache-Gruppe, `ngsw-bypass` im Client).
+
+## Style, Glyphen, Sprites
+
+`frontend/public/map-style/` enthält:
+
+- `style-light.json`, `style-dark.json`: erzeugt von `scripts/gen-map-style.mjs` aus `@protomaps/basemaps` (BSD-3-Clause). Zwei Quellen `world` und `region`. Pins, Cluster und Gebäudeflächen setzt `app-map` zur Laufzeit.
+- `fonts/<Schrift>/<Bereich>.pbf`: Noto Sans Regular, Medium und Italic, nur die Bereiche `0-255`, `256-511`, `7680-7935`, `8192-8447`, `8448-8703` (Latein inkl. Umlaute, Satzzeichen, Euro). Fehlende Bereiche (kyrillisch, arabisch) ergeben 404 für einzelne Glyphen; das ist gewollt.
+- `sprites/v4/{light,dark}{,@2x}.{json,png}`.
+
+## Lizenzen
+
+| Teil | Lizenz | Pflicht |
+|---|---|---|
+| Kartendaten (OpenStreetMap über Protomaps Basemap) | ODbL 1.0, Produced Work | Namensnennung "© OpenStreetMap" sichtbar auf der Karte (steht auch in den Archiv-Metadaten) |
+| Protomaps-Basemap-Schema, `@protomaps/basemaps`, `pmtiles`, `maplibre-gl` | BSD-3-Clause | Lizenztext bleibt in den Paketen |
+| Schriften Noto Sans | SIL OFL 1.1 | `fonts/OFL.txt` liegt bei |
+| Sprites und Assets `protomaps/basemaps-assets` | siehe Repo (Code BSD-3, Schriften OFL) | `PROVENANCE.map-assets.json` hält Quelle und Commit |
