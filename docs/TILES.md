@@ -23,7 +23,17 @@ Der Protomaps-Bucket hält nur die Builds der letzten Woche. Ist `PROTOMAPS_BUIL
 2. Diff von `deploy/tiles.lock` prüfen, `scripts/build-tiles.sh fetch`, Karten im Dev ansehen.
 3. `scripts/build-tiles.sh install` auf dem Zielhost, Commit der Lock-Datei.
 
-Solange die Dateien im Volume liegen, läuft der Betrieb auch nach Ablauf des Builds weiter; nur ein Neuaufbau braucht einen aktuellen Pin. Die beiden Dateien gehören in die Sicherung (Weiche W-C3).
+Solange die Dateien im Volume liegen, läuft der Betrieb auch nach Ablauf des Builds weiter; nur ein Neuaufbau braucht einen aktuellen Pin. Der Pin ist nur eine Integritätsprüfung, kein dauerhafter Bezugsweg: nach etwa einer Woche gibt es den Build nicht mehr.
+
+### Sicherung der Quelle
+
+Die verifizierten Archive (`world.pmtiles`, `reutlingen.pmtiles`) sind die einzige reproduzierbare Quelle und gehören nach jedem erfolgreichen `fetch` plus `verify` in die Sicherung:
+
+1. Auf dem Zielhost liegt `tiles_data` (Compose-Volume) im borg-Lauf der Cloud-Sicherung; das Volume ist die Sicherungsquelle, solange `install` es gefüllt hat.
+2. Zusätzlich je Bump die beiden Dateien samt `deploy/tiles.lock` (Prüfsummen) auf die Storagebox legen, Verzeichnis `tiles/<PROTOMAPS_BUILD>/`.
+3. Ein Neuaufbau ohne gültigen Pin geht dann aus der Storagebox: Dateien nach `deploy/tiles/` kopieren, `scripts/build-tiles.sh verify`, `install`.
+
+`install` läuft nur nach erfolgreichem `verify` des Quellordners und prüft das Volume danach erneut; ein Volume mit abweichenden Dateien kann also nicht still entstehen. Das Einrichten des Storagebox-Pfads ist die offene Weiche W-C3 (Betriebsentscheidung, nicht im Repo).
 
 ## Dev
 

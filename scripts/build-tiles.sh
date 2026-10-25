@@ -97,8 +97,7 @@ install_volume() {
 bump() {
   local build="${1:?usage: bump <YYYYMMDD>}"
   [[ "${build}" =~ ^[0-9]{8}$ ]] || die "build must be YYYYMMDD"
-  set_pin PROTOMAPS_BUILD "${build}"
-  load_lock
+  local url="${PROTOMAPS_URL//${PROTOMAPS_BUILD}/${build}}"
   local old_world="" old_region=""
   [[ -f "${out}/world.pmtiles" ]] && old_world="$(stat -c %s "${out}/world.pmtiles")"
   [[ -f "${out}/${REGION_NAME}.pmtiles" ]] && old_region="$(stat -c %s "${out}/${REGION_NAME}.pmtiles")"
@@ -107,10 +106,14 @@ bump() {
   pmtiles="$(find_pmtiles)"
   tmp="$(mktemp -d)"
   trap "rm -rf '${tmp}'" EXIT
-  "${pmtiles}" extract "${PROTOMAPS_URL}" "${tmp}/world.pmtiles" --maxzoom="${WORLD_MAXZOOM}"
-  "${pmtiles}" extract "${PROTOMAPS_URL}" "${tmp}/region.pmtiles" --bbox="${REGION_BBOX}" --maxzoom="${REGION_MAXZOOM}"
-  set_pin WORLD_SHA256 "$(sha "${tmp}/world.pmtiles")"
-  set_pin REGION_SHA256 "$(sha "${tmp}/region.pmtiles")"
+  "${pmtiles}" extract "${url}" "${tmp}/world.pmtiles" --maxzoom="${WORLD_MAXZOOM}"
+  "${pmtiles}" extract "${url}" "${tmp}/region.pmtiles" --bbox="${REGION_BBOX}" --maxzoom="${REGION_MAXZOOM}"
+  local world_sha region_sha
+  world_sha="$(sha "${tmp}/world.pmtiles")"
+  region_sha="$(sha "${tmp}/region.pmtiles")"
+  set_pin PROTOMAPS_BUILD "${build}"
+  set_pin WORLD_SHA256 "${world_sha}"
+  set_pin REGION_SHA256 "${region_sha}"
   echo "world: ${old_world:-?} -> $(stat -c %s "${tmp}/world.pmtiles") bytes, region: ${old_region:-?} -> $(stat -c %s "${tmp}/region.pmtiles") bytes"
   echo "tiles.lock updated; review the diff, then run: scripts/build-tiles.sh fetch"
 }
