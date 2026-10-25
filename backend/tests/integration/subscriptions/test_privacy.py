@@ -11,6 +11,7 @@ from app.modules.subscriptions.outbox import run_outbox
 from app.modules.subscriptions.privacy import erase_subscriber, purge_expired
 from tests.integration.subscriptions.listmonk_support import (
     KEY,
+    LATER,
     NOW,
     add_subscriber,
     enqueue,
@@ -129,7 +130,7 @@ async def test_erase_removes_address_profile_tokens_and_the_listmonk_record(make
     await enqueue(maker, "upsert", sid)
     await run_outbox(maker, fake, KEY, now=NOW)
     assert await erase_subscriber(maker, maker, sid, by="sub-admin")
-    await run_outbox(maker, fake, KEY, now=NOW + timedelta(days=1))
+    await run_outbox(maker, fake, KEY, now=LATER)
     assert fake.subscribers == {}
     assert await scalar(maker, "SELECT count(*) FROM subscription_profile") == 0
     assert await scalar(

@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import time
 import uuid
-from datetime import timedelta
 
 import httpx
 import pytest
@@ -26,6 +25,7 @@ from app.modules.subscriptions.reconcile import reconcile
 from tests._support.real_listmonk import MAILPIT, make_real
 from tests.integration.subscriptions.listmonk_support import (
     KEY,
+    LATER,
     NOW,
     add_subscriber,
     enqueue,
@@ -119,5 +119,5 @@ async def chain(maker, real, monkeypatch, category: str) -> None:  # noqa: ANN00
     assert await scalar(maker, "SELECT status FROM subscriber") == "confirmed"
 
     assert await erase_subscriber(maker, maker, sid, by="sub-admin")
-    await run_outbox(maker, real.port, KEY, now=NOW + timedelta(days=1))
+    await run_outbox(maker, real.port, KEY, now=LATER)
     assert await real.port.find_subscriber(address) is None

@@ -21,6 +21,7 @@ from tests._support.fake_listmonk import FakeListmonk
 
 KEY = "k" * 32
 NOW = datetime(2026, 10, 24, 12, 0, tzinfo=UTC)
+LATER = datetime(2099, 1, 1, tzinfo=UTC)
 SUBS_TABLES = "outbox, digest_run, listmonk_list, subscription_profile, subscriber"
 
 Maker = async_sessionmaker[AsyncSession]

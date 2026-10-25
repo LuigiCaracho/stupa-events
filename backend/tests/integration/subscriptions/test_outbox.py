@@ -11,6 +11,7 @@ from app.modules.subscriptions.outbox import BREAKER_KEY, run_outbox
 from tests._support.fake_listmonk import FakeListmonk
 from tests.integration.subscriptions.listmonk_support import (
     KEY,
+    LATER,
     NOW,
     Maker,
     MemoryBreaker,
@@ -196,7 +197,7 @@ async def test_delete_job_removes_the_record_and_drops_the_ciphertext(maker, fak
 
         await session.execute(text("SELECT privacy_erase_subscriber(:i)"), {"i": sid})
     assert await scalar(maker, "SELECT payload ? 'emailEnc' FROM outbox WHERE op = 'delete'")
-    await run(maker, fake, now=NOW + timedelta(days=1))
+    await run(maker, fake, now=LATER)
     assert fake.subscribers == {}
     row = await one(maker, "SELECT state, payload FROM outbox WHERE op = 'delete'")
     assert row.state == "done" and "emailEnc" not in row.payload
@@ -218,7 +219,7 @@ async def test_erasure_blocklists_before_it_deletes_and_drops_both_ciphertexts(m
         )
         == 1
     )
-    await run(maker, fake, now=NOW + timedelta(days=1))
+    await run(maker, fake, now=LATER)
     assert fake.by_email("a@example.test").status == "blocklisted"  # type: ignore[union-attr]
     row = await one(maker, "SELECT state, payload FROM outbox WHERE op = 'unsubscribe'")
     assert row.state == "done" and "emailEnc" not in row.payload
@@ -231,7 +232,7 @@ async def test_delete_finds_the_record_by_address_when_the_id_was_never_stored(m
         from sqlalchemy import text
 
         await session.execute(text("SELECT privacy_erase_subscriber(:i)"), {"i": sid})
-    await run(maker, fake, now=NOW + timedelta(days=1))
+    await run(maker, fake, now=LATER)
     assert fake.subscribers == {}
 
 

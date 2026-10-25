@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
-
 import pytest
 from sqlalchemy import text
 
@@ -12,6 +10,7 @@ from app.modules.subscriptions.outbox import run_outbox
 from app.modules.subscriptions.reconcile import reconcile
 from tests.integration.subscriptions.listmonk_support import (
     KEY,
+    LATER,
     NOW,
     add_subscriber,
     enqueue,
@@ -104,7 +103,7 @@ async def test_confirmed_subscriber_missing_in_listmonk_is_queued_again(maker, f
         await scalar(maker, "SELECT count(*) FROM outbox WHERE idempotency_key LIKE '%reconcile%'")
         == 1
     )
-    await run_outbox(maker, fake, KEY, now=NOW + timedelta(days=1))
+    await run_outbox(maker, fake, KEY, now=LATER)
     assert fake.by_email("a@example.test") is not None
     assert ids
 
