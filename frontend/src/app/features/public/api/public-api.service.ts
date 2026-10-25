@@ -5,6 +5,12 @@ import { API_BASE_URL } from '@core/api/api.config';
 import { toParams } from '@core/api/query-params';
 import type { Observable } from 'rxjs';
 import type {
+  CampusRange,
+  MapQuery,
+  PublicCampusCollection,
+  PublicMapCollection,
+} from '../model/map.models';
+import type {
   PublicArchiveOut,
   PublicCalendarOut,
   PublicCategoryOut,
@@ -50,5 +56,23 @@ export class PublicApi {
 
   archive(query: ArchiveQuery): Observable<PublicArchiveOut> {
     return this.http.get<PublicArchiveOut>(`${this.base}/archive`, { params: toParams(query) });
+  }
+
+  mapEvents(query: MapQuery): Observable<PublicMapCollection> {
+    return this.http.get<PublicMapCollection>(`${this.base}/map/events`, {
+      params: toParams(query),
+    });
+  }
+
+  campusBuildings(range: CampusRange): Observable<PublicCampusCollection> {
+    return this.http.get<PublicCampusCollection>(`${this.base}/campus/buildings`, {
+      params: toParams(range),
+    });
+  }
+
+  campusEvents(building: string, range: CampusRange, limit = 50): Observable<PublicSearchOut> {
+    return this.http.get<PublicSearchOut>(`${this.base}/campus/events`, {
+      params: toParams({ building, ...range, limit }),
+    });
   }
 }

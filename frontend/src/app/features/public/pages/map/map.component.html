@@ -1,0 +1,117 @@
+<header class="map__head">
+  <h1 class="map__title">{{ 'public.map.heading' | t }}</h1>
+  <p class="map__lede">{{ 'public.map.lede' | t }}</p>
+  <nav class="map__switch" [attr.aria-label]="'public.map.switchLabel' | t">
+    <a class="chip" routerLink="/karte" aria-current="page">{{ 'public.map.world' | t }}</a>
+    <a class="chip" routerLink="/campus">{{ 'public.map.campus' | t }}</a>
+  </nav>
+</header>
+
+<div class="map__filters">
+  <app-segmented
+    [ariaLabel]="'public.map.timeLabel' | t"
+    [options]="timeOptions()"
+    [value]="timeValue()"
+    (valueChange)="setTime($event)"
+  />
+  @if (past()) {
+    <app-filter-select
+      [label]="'public.map.year' | t"
+      [options]="yearOptions()"
+      [values]="year() ? [year() + ''] : []"
+      [active]="!!year()"
+      [resetLabel]="'public.map.allYears' | t"
+      (valuesChange)="setYear($event)"
+    />
+  }
+  <app-filter-select
+    [label]="'public.map.category' | t"
+    [multiple]="true"
+    [options]="categoryOptions()"
+    [values]="categories()"
+    [active]="categories().length > 0"
+    [resetLabel]="'public.map.categoryReset' | t"
+    (valuesChange)="setCategories($event)"
+  />
+</div>
+
+@if (error(); as kind) {
+  <app-load-error [kind]="kind" (retry)="reload()" />
+} @else if (!loaded()) {
+  <app-skeleton variant="panel" [label]="'common.loading' | t" />
+} @else {
+  @if (loaded()?.truncated) {
+    <app-note kind="info" icon="info" role="status">
+      {{ 'public.map.truncated' | t: { n: total() } }}
+    </app-note>
+  }
+  @if (mapFailed()) {
+    <app-note kind="error" icon="alert" role="alert">{{ 'public.map.mapFailed' | t }}</app-note>
+  }
+  @if (empty()) {
+    <app-empty-state plain icon="pin" [heading]="'public.map.empty' | t" />
+  } @else {
+    <div class="map__split">
+      @if (!mapFailed()) {
+        <app-map
+          class="map__map"
+          mode="events"
+          height="26rem"
+          skipTarget="map-list"
+          [collection]="geo()"
+          [selected]="selected()"
+          [userPosition]="near.position()"
+          (featureSelect)="selected.set($event)"
+          (featureOpen)="open($event)"
+          (clusterSelect)="cluster.set($event)"
+          (mapError)="mapFailed.set(true)"
+        />
+      }
+      <section class="map__list" id="map-list" tabindex="-1" aria-labelledby="map-list-h">
+        <div class="map__listhead">
+          <h2 id="map-list-h" class="map__h2">{{ 'public.map.listHeading' | t }}</h2>
+          <span class="map__count">{{ 'public.map.count' | t: { n: rows().length } }}</span>
+        </div>
+        @if (cluster()) {
+          <p class="map__cluster">
+            {{ 'public.map.clusterFilter' | t }}
+            <app-button variant="text" size="sm" (click)="cluster.set(null)">{{
+              'public.map.clusterClear' | t
+            }}</app-button>
+          </p>
+        }
+        <ul class="map__rows">
+          @for (row of rows(); track row.feature.properties.slug) {
+            <li
+              (mouseenter)="selected.set(row.feature.properties.slug)"
+              (focusin)="selected.set(row.feature.properties.slug)"
+            >
+              <app-list-item
+                [title]="row.feature.properties.title"
+                [link]="'/e/' + row.feature.properties.slug"
+                [sub]="row.sub"
+                [selected]="selected() === row.feature.properties.slug"
+              >
+                <app-date-block lead [date]="row.day" />
+                @if (row.status; as s) {
+                  <app-status-text status [kind]="s.kind">{{ s.key | t }}</app-status-text>
+                }
+              </app-list-item>
+            </li>
+          }
+        </ul>
+        <div class="map__near">
+          <app-button variant="tonal" [loading]="near.status() === 'pending'" (click)="nearMe()">{{
+            'public.map.nearMe' | t
+          }}</app-button>
+          <p class="map__hint">{{ 'public.map.nearMeHint' | t }}</p>
+          @if (near.status() === 'denied') {
+            <app-note kind="warn" icon="alert" role="status">{{
+              'public.map.nearMeDenied' | t
+            }}</app-note>
+          }
+        </div>
+      </section>
+    </div>
+  }
+}

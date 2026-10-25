@@ -36,6 +36,9 @@ export const PUBLIC_ROUTES: Routes = [
   page('kalender', 'public.calendar.title', () =>
     import('./pages/calendar/calendar.component').then((m) => m.CalendarPageComponent),
   ),
+  page('karte', 'public.map.title', () =>
+    import('./pages/map/map.component').then((m) => m.MapPageComponent),
+  ),
   page('e/:slug', 'public.event.title', () =>
     import('./pages/event/event.component').then((m) => m.EventPageComponent),
   ),

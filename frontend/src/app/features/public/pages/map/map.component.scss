@@ -1,0 +1,92 @@
+@use 'breakpoints' as bp;
+@use '../../ui/chip';
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding-inline: var(--space-4);
+  box-sizing: border-box;
+}
+
+.map__title {
+  margin: 0;
+  font-size: var(--fs-h1, 1.75rem);
+}
+
+.map__lede,
+.map__hint,
+.map__count {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--fs-small);
+}
+
+.map__switch,
+.map__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.map__filters {
+  margin-top: 0;
+}
+
+.chip {
+  @include chip.chip;
+}
+
+.map__split {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 56.25rem) {
+  .map__split {
+    grid-template-columns: minmax(0, 3fr) minmax(18rem, 2fr);
+    align-items: start;
+  }
+}
+
+.map__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.map__listhead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.map__h2 {
+  margin: 0;
+  font-size: var(--fs-h2, 1.25rem);
+}
+
+.map__rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.map__near {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.map__cluster {
+  margin: 0;
+  font-size: var(--fs-small);
+}
