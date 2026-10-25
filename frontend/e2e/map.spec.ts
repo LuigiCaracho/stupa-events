@@ -2,7 +2,7 @@
  * C acceptance in the browser (C contract 6.1): the world map and the campus map behind the production nginx with the
  * test tiles. WebGL needs the `map` project (`channel: 'chromium'`). The API answers come from route mocks
  * (`support/map-fixtures.ts`), so the cases are predictable. Covered: no request leaves the origin and no CSP
- * violation (T1), clusters and the list twin (T3), the campus counts of building 9 (T4), "In meiner Nähe" without a
+ * violation (T1, sprite and console T1b), clusters and the list twin (T3), the campus counts of building 9 (T4), "In meiner Nähe" without a
  * request that carries the position (T5), the position per SPA navigation under an active service worker (T6), axe in
  * both themes (T8) and the phone (T9). T2 (Range) is `deploy/tiles-smoke.sh`. T7 (pin sheet) is in `venue-pin.spec.ts`.
  */
@@ -60,6 +60,22 @@ test('T1: the map loads without a request to a third party and without a CSP vio
   expect(await violations(page)).toEqual([]);
   expect(cookies).toEqual([]);
   await expect(map(page)).toHaveAttribute('data-feature-count', '3');
+});
+
+test('T1b: the sprite is requested with an absolute URL, answers 200 and the console stays clean', async ({
+  page,
+}) => {
+  const sprites: { url: string; status: number }[] = [];
+  const errors: string[] = [];
+  page.on('response', (r) => {
+    if (r.url().includes('/sprites/')) sprites.push({ url: r.url(), status: r.status() });
+  });
+  page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+  await openWorld(page);
+  await settle(page);
+  expect(sprites.length).toBeGreaterThan(0);
+  expect(sprites.every((s) => s.status === 200 && s.url.startsWith(BASE_URL))).toBe(true);
+  expect(errors).toEqual([]);
 });
 
 test('T3: clusters, a click zooms, a cluster at one place filters the list', async ({ page }) => {

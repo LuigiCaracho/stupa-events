@@ -36,6 +36,7 @@ export const mapDe = {
     'Die Karte konnte nicht geladen werden. Die Liste darunter zeigt alle Treffer.',
   'public.map.truncated': 'Es werden nur die ersten {n} Events gezeigt.',
   'public.map.clusterFilter': 'Nur Treffer an diesem Ort.',
+  'public.map.attribution': 'Kartendaten © OpenStreetMap-Mitwirkende (ODbL)',
   'public.map.clusterClear': 'Alle zeigen',
   'public.campus.title': 'Campus',
   'public.campus.heading': 'Campuskarte',

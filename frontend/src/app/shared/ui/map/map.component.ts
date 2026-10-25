@@ -36,6 +36,7 @@ import {
   selectionFilter,
 } from './map-layers';
 import { MapLoaderService, type MapLibre } from './map-loader.service';
+import { STYLE_OPTIONS } from './map-style';
 import { readMapColors } from './map-theme';
 import {
   EMPTY_COLLECTION,
@@ -47,7 +48,6 @@ import {
   STYLE_BASE,
 } from './map.models';
 
-const ATTRIBUTION = { events: '© OpenStreetMap', campus: '© OpenStreetMap-Mitwirkende (ODbL)' };
 const OVERLAY_LAYERS = [
   'ev-clusters',
   'ev-cluster-count',
@@ -147,7 +147,6 @@ export class MapComponent {
       this.styleUrl = this.styleFor(this.theme.resolved());
       const map = new this.lib.Map({
         container: this.canvas().nativeElement,
-        style: this.styleUrl,
         center: [...REUTLINGEN_CENTER],
         zoom: 11,
         maxZoom: 18,
@@ -157,6 +156,7 @@ export class MapComponent {
         dragRotate: false,
       });
       this.map = map;
+      map.setStyle(this.styleUrl, STYLE_OPTIONS);
       this.addControls(map);
       map.on('style.load', () => this.onStyleLoad());
       map.on('idle', () => this.onIdle());
@@ -189,13 +189,7 @@ export class MapComponent {
   private addControls(map: MlMap): void {
     const lib = this.lib as MapLibre;
     map.addControl(new lib.NavigationControl({ showCompass: false }), 'top-right');
-    map.addControl(
-      new lib.AttributionControl({
-        compact: true,
-        customAttribution: this.mode() === 'campus' ? ATTRIBUTION.campus : ATTRIBUTION.events,
-      }),
-      'bottom-right',
-    );
+    map.addControl(new lib.AttributionControl({ compact: true }), 'bottom-right');
   }
 
   private reducedMotion(): boolean {
@@ -206,7 +200,7 @@ export class MapComponent {
     const url = this.styleFor(theme);
     if (!this.map || url === this.styleUrl) return;
     this.styleUrl = url;
-    this.map.setStyle(url, { diff: false });
+    this.map.setStyle(url, STYLE_OPTIONS);
   }
 
   private onStyleLoad(): void {

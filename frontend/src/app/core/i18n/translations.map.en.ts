@@ -35,6 +35,7 @@ export const mapEn = {
   'public.map.mapFailed': 'The map could not be loaded. The list below shows all results.',
   'public.map.truncated': 'Only the first {n} events are shown.',
   'public.map.clusterFilter': 'Only results at this place.',
+  'public.map.attribution': 'Map data © OpenStreetMap contributors (ODbL)',
   'public.map.clusterClear': 'Show all',
 
   'public.campus.title': 'Campus',

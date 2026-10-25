@@ -12,9 +12,8 @@ class FakeMap {
   layers = new Set<string>();
   sources = new Map<string, unknown>();
   styles: string[] = [];
-  constructor(public options: { style: string }) {
+  constructor(public options: object) {
     FakeMap.last = this;
-    this.styles.push(options.style);
   }
   on(name: string, a: string | Handler, b?: Handler): void {
     const key = typeof a === 'string' ? `${name}:${a}` : name;
