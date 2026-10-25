@@ -39,6 +39,9 @@ export const PUBLIC_ROUTES: Routes = [
   page('karte', 'public.map.title', () =>
     import('./pages/map/map.component').then((m) => m.MapPageComponent),
   ),
+  page('campus', 'public.campus.title', () =>
+    import('./pages/campus/campus.component').then((m) => m.CampusPageComponent),
+  ),
   page('e/:slug', 'public.event.title', () =>
     import('./pages/event/event.component').then((m) => m.EventPageComponent),
   ),

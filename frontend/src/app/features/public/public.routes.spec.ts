@@ -9,6 +9,7 @@ describe('PUBLIC_ROUTES', () => {
       'suche',
       'kalender',
       'karte',
+      'campus',
       'e/:slug',
       'k/:slug',
       'rueckblick',
