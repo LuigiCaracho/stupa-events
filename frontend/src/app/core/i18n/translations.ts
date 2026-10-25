@@ -17,9 +17,9 @@ import { shellDe } from './translations.shell.de';
 import { subscriptionsDe } from './translations.subscriptions.de';
 import { sharedDe } from './translations.shared.de';
 
-export type Locale = 'de';
+export type Locale = 'de' | 'en';
 
-export const SUPPORTED_LOCALES: readonly Locale[] = ['de'] as const;
+export const SUPPORTED_LOCALES: readonly Locale[] = ['de', 'en'] as const;
 export const DEFAULT_LOCALE: Locale = 'de';
 
 export const de = {
@@ -39,5 +39,11 @@ export const de = {
 
 export type TranslationKey = keyof typeof de;
 
-/** The catalog of every locale. */
-export const CATALOG: Record<Locale, Record<TranslationKey, string>> = { de };
+/**
+ * An English catalog covers the public site (public pages, subscriptions, shared blocks, maps and the public shell);
+ * the internal catalogs stay German, and a missing key falls back to German. It loads on demand.
+ */
+export type PartialCatalog = Partial<Record<TranslationKey, string>>;
+
+export const loadEnglish = (): Promise<PartialCatalog> =>
+  import('./translations.en').then((m) => m.en);

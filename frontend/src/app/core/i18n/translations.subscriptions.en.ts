@@ -1,0 +1,125 @@
+/**
+ * English strings of Get started, the mail part of Subscribe, confirm and manage: the same keys as
+ * `translations.subscriptions.de.ts`, enforced by `satisfies`. The consent sentence itself comes from the server and
+ * stays as the server wrote it.
+ */
+import type { subscriptionsDe } from './translations.subscriptions.de';
+
+export const subscriptionsEn = {
+  'public.start.title': 'Get started',
+  'public.start.lede':
+    'Answer a few questions and get your personal calendar. You do not need an account for this.',
+  'public.start.progress': 'Progress',
+  'public.start.step.interests': 'Interests',
+  'public.start.step.faculty': 'Student council',
+  'public.start.step.channel': 'Channel',
+  'public.start.step.mail': 'Email',
+  'public.start.step.result': 'Done',
+  'public.start.interests': 'What are you interested in?',
+  'public.start.interestsList': 'Interests',
+  'public.start.interestsLock': 'Pick at least one interest.',
+  'public.start.meetings': 'Are you interested in meetings and committees?',
+  'public.start.yes': 'Yes',
+  'public.start.no': 'No',
+  'public.start.faculty': 'Which student council do you belong to?',
+  'public.start.facultyList': 'Student councils',
+  'public.start.facultyHint': 'This is optional.',
+  'public.start.facultyNone': 'None',
+  'public.start.channel': 'How would you like to stay up to date?',
+  'public.start.channelCalendar': 'Calendar only',
+  'public.start.channelMail': 'Calendar and email',
+  'public.start.channelHint':
+    'Email only starts after you confirm. You can unsubscribe at any time with one click.',
+  'public.start.mail': 'Where should the email go?',
+  'public.start.email': 'Email address',
+  'public.start.emailInvalid': 'That does not look like an email address.',
+  'public.start.consentMissing': 'Please confirm your consent.',
+  'public.start.privacy': 'Privacy',
+  'public.start.mailHint': 'We will send you a confirmation. Without it we store nothing.',
+  'public.start.next': 'Next',
+  'public.start.back': 'Back',
+  'public.start.submit': 'Create profile',
+  'public.start.checking': 'The spam check is running …',
+  'public.start.result': 'Your calendar is ready',
+  'public.start.resultCategories': 'What is in it',
+  'public.start.mailSent': 'We have sent you a confirmation email.',
+  'public.start.mailSentBody':
+    'Your email subscription only starts once you click the link in the email.',
+  'public.start.manage': 'Manage subscription',
+  'public.start.manageBody':
+    'We send you the link to manage it with every email. You can also request it on the Subscribe page.',
+  'public.start.toSubscribe': 'To Subscribe',
+  'public.start.again': 'Start again',
+
+  'public.links.open': 'Open in calendar app',
+  'public.links.url': 'Your calendar link',
+  'public.links.copy': 'Copy',
+  'public.links.copied': 'Link copied.',
+  'public.links.copyFailed': 'The link could not be copied. Please select it by hand.',
+  'public.links.google':
+    'Google Calendar: on a computer, go to “Other calendars”, choose “From URL” and paste the link.',
+  'public.links.delay': 'Changes arrive with a delay.',
+  'public.links.secret': 'This link is yours alone. Do not share it.',
+
+  'public.sub.error.altchaInvalid': 'The spam check did not work. Please try again.',
+  'public.sub.error.rateLimited': 'Too many attempts. Please wait {minutes} minutes.',
+  'public.sub.error.rateLimitedOne': 'Too many attempts. Please wait a minute.',
+  'public.sub.error.consentOutdated':
+    'The consent text has changed. Please reload the page and confirm again.',
+  'public.sub.error.invalidToken': 'This link is invalid or has expired.',
+  'public.sub.error.unknownInterest': 'An interest no longer exists. Please choose again.',
+  'public.sub.error.noInterest': 'Pick at least one interest.',
+  'public.sub.error.invalidInput': 'That does not look like an email address.',
+  'public.sub.error.failed': 'That did not work. Please try again.',
+
+  'public.subscribe.mail.title': 'Personal: choose your interests',
+  'public.subscribe.mail.body':
+    'Tell us what you are interested in and get your own calendar, with one email a week if you like.',
+  'public.subscribe.mail.start': 'Get started',
+  'public.subscribe.mail.hint': 'Email subscriptions only start after you confirm.',
+  'public.subscribe.mail.manageLink': 'Request a management link',
+  'public.subscribe.mail.manageTitle': 'Request a management link',
+  'public.subscribe.mail.manageBody':
+    'We send you a link to manage your subscription. It is valid for two hours.',
+  'public.subscribe.mail.send': 'Request link',
+  'public.subscribe.mail.sent': 'If the address is registered with us, the link is on its way.',
+
+  'public.confirm.title': 'Confirm subscription',
+  'public.confirm.checking': 'Checking the link …',
+  'public.confirm.body': 'You want to receive emails about {categories}.',
+  'public.confirm.bodyAny': 'You want to receive emails about the university’s events.',
+  'public.confirm.hint': 'The subscription only starts when you click.',
+  'public.confirm.button': 'Confirm subscription',
+  'public.confirm.done': 'Thank you, your subscription is active.',
+  'public.confirm.doneManage':
+    'We send you the link to manage it with every email. You can also request it on the Subscribe page.',
+  'public.confirm.invalid': 'This link has expired or was already used.',
+  'public.confirm.again': 'Sign up again',
+
+  'public.manage.title': 'Manage subscription',
+  'public.manage.loading': 'Loading your subscription …',
+  'public.manage.invalid': 'This management link is invalid.',
+  'public.manage.invalidBody': 'It may have expired. You can get a new one here.',
+  'public.manage.interests': 'Interests',
+  'public.manage.faculty': 'Student council',
+  'public.manage.save': 'Save',
+  'public.manage.saved': 'Saved.',
+  'public.manage.consentTitle': 'Consent for new emails',
+  'public.manage.consentSave': 'Agree and save',
+  'public.manage.mail': 'Email',
+  'public.manage.mailSwitch': 'Receive emails about my interests',
+  'public.manage.mailHint': 'Switching off unsubscribes you from all lists.',
+  'public.manage.calendar': 'Calendar',
+  'public.manage.calendarBody':
+    'We show your calendar link only once, when you create it. You can generate a new one at any time.',
+  'public.manage.rotate': 'Generate a new URL',
+  'public.manage.rotateTitle': 'Generate a new URL?',
+  'public.manage.rotateConfirm': 'The old link will stop working.',
+  'public.manage.rotated': 'Here is your new link. We show it only now.',
+  'public.manage.delete': 'Delete',
+  'public.manage.deleteButton': 'Unsubscribe from everything and delete data',
+  'public.manage.deleteTitle': 'Delete everything?',
+  'public.manage.deleteConfirm': 'We delete your address and your profile. This cannot be undone.',
+  'public.manage.deleted': 'Done. We have deleted your address and your profile.',
+  'public.manage.toStart': 'Sign up again',
+} as const satisfies Record<keyof typeof subscriptionsDe, string>;

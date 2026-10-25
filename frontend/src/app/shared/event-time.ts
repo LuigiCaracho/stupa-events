@@ -1,4 +1,5 @@
 /** Conversion between wall-clock input in an IANA zone and the UTC instants of the wire. */
+import { dateFormat } from '@core/i18n/format-locale';
 
 interface Zoned {
   date: string;
@@ -60,7 +61,7 @@ export function isoToZoned(iso: string, tz: string): Zoned {
 
 /** "Do., 5. Nov., 19:30" in the zone of the event. */
 export function formatEventTime(iso: string, tz: string): string {
-  return new Intl.DateTimeFormat('de-DE', {
+  return dateFormat({
     timeZone: tz,
     weekday: 'short',
     day: 'numeric',
@@ -73,7 +74,7 @@ export function formatEventTime(iso: string, tz: string): string {
 
 /** "Do., 5. Nov." in the zone of the event, for cards and rows. */
 export function formatEventDay(iso: string, tz: string): string {
-  return new Intl.DateTimeFormat('de-DE', {
+  return dateFormat({
     timeZone: tz,
     weekday: 'short',
     day: 'numeric',
@@ -83,7 +84,7 @@ export function formatEventDay(iso: string, tz: string): string {
 
 /** "01.11." for the "geplant ab" line of a card. */
 export function formatShortDate(iso: string, tz: string): string {
-  return new Intl.DateTimeFormat('de-DE', {
+  return dateFormat({
     timeZone: tz,
     day: '2-digit',
     month: '2-digit',
@@ -92,7 +93,7 @@ export function formatShortDate(iso: string, tz: string): string {
 
 /** "Do., 22. Okt. 2026" in the zone of the event, for the detail page. */
 export function formatEventDate(iso: string, tz: string): string {
-  return new Intl.DateTimeFormat('de-DE', {
+  return dateFormat({
     timeZone: tz,
     weekday: 'short',
     day: 'numeric',
@@ -103,7 +104,7 @@ export function formatEventDate(iso: string, tz: string): string {
 
 /** "20:00" in the zone of the event. */
 export function formatClock(iso: string, tz: string): string {
-  return new Intl.DateTimeFormat('de-DE', {
+  return dateFormat({
     timeZone: tz,
     hour: '2-digit',
     minute: '2-digit',

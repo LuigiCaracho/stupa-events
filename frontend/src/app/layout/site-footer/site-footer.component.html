@@ -20,4 +20,17 @@
       }
     </li>
   </ul>
+  <div class="ft__lang" role="group" [attr.aria-label]="'footer.language' | t">
+    @for (option of languages; track option.locale) {
+      <button
+        type="button"
+        class="ft__link"
+        [attr.lang]="option.locale"
+        [attr.aria-pressed]="i18n.locale() === option.locale"
+        (click)="i18n.setLocale(option.locale)"
+      >
+        {{ option.name }}
+      </button>
+    }
+  </div>
 </footer>

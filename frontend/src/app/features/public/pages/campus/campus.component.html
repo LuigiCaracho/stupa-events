@@ -20,7 +20,7 @@
   <app-skeleton variant="panel" [label]="'common.loading' | t" />
 } @else {
   @if (nothing()) {
-    <app-note kind="info" icon="info" role="status">{{
+    <app-note kind="neutral" icon="info" role="status">{{
       (span() === 'today' ? 'public.campus.emptyToday' : 'public.campus.emptyWeek') | t
     }}</app-note>
   }

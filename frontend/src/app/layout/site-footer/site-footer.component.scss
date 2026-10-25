@@ -27,6 +27,15 @@
   padding: 0;
   list-style: none;
 }
+.ft__lang {
+  display: flex;
+  gap: var(--space-2);
+}
+.ft__lang .ft__link[aria-pressed='true'] {
+  color: var(--color-text);
+  font-weight: var(--fw-semibold);
+  text-decoration: none;
+}
 .ft__links a,
 .ft__link {
   display: inline-flex;

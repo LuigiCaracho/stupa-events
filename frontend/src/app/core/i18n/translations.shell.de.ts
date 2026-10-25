@@ -12,6 +12,7 @@ export const shellDe = {
   'nav.more': 'Mehr',
   'shell.nav.brand': '{name}, Start',
   'footer.coBranding': 'STUPA Events, Studierendenparlament der Hochschule Reutlingen',
+  'footer.language': 'Sprache',
   'theme.toggle': 'Hell oder dunkel umschalten',
   'action.login': 'Anmelden',
   'action.logout': 'Abmelden',

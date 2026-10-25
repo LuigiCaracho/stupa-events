@@ -3,6 +3,7 @@
  * can shift a day. A key is turned into a UTC midnight only to count days. "Today" and the wall-clock time of an
  * entry are read in `Europe/Berlin` (the one zone of the platform, PLAN 8.1).
  */
+import { dateFormat } from '@core/i18n/format-locale';
 import type { EventState } from '../../status-kind.util';
 
 export type CalendarMode = 'month' | 'week';
@@ -115,44 +116,30 @@ export function localDay(iso: string): string {
   return todayKey(new Date(iso));
 }
 
-const clock = new Intl.DateTimeFormat('de-DE', {
-  timeZone: CALENDAR_TZ,
-  hour: '2-digit',
-  minute: '2-digit',
-  hourCycle: 'h23',
-});
-
 /** "18:30" in the zone of the platform. */
 export function clockTime(iso: string): string {
-  return clock.format(Date.parse(iso));
+  return dateFormat({
+    timeZone: CALENDAR_TZ,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(Date.parse(iso));
 }
 
-const longDay = new Intl.DateTimeFormat('de-DE', {
-  timeZone: 'UTC',
-  weekday: 'long',
-  day: 'numeric',
-  month: 'long',
-});
-const shortDay = new Intl.DateTimeFormat('de-DE', {
-  timeZone: 'UTC',
-  weekday: 'short',
-  day: 'numeric',
-  month: 'short',
-});
-const weekday = new Intl.DateTimeFormat('de-DE', { timeZone: 'UTC', weekday: 'short' });
-const monthYear = new Intl.DateTimeFormat('de-DE', {
-  timeZone: 'UTC',
-  month: 'long',
-  year: 'numeric',
-});
+const UTC_DAY = { timeZone: 'UTC' } as const;
 
-export const dayLong = (key: string): string => longDay.format(utc(key));
-export const dayShort = (key: string): string => shortDay.format(utc(key));
-export const weekdayShort = (key: string): string => weekday.format(utc(key));
+export const dayLong = (key: string): string =>
+  dateFormat({ ...UTC_DAY, weekday: 'long', day: 'numeric', month: 'long' }).format(utc(key));
+export const dayShort = (key: string): string =>
+  dateFormat({ ...UTC_DAY, weekday: 'short', day: 'numeric', month: 'short' }).format(utc(key));
+export const weekdayShort = (key: string): string =>
+  dateFormat({ ...UTC_DAY, weekday: 'short' }).format(utc(key));
+const monthYearOf = (key: string): string =>
+  dateFormat({ ...UTC_DAY, month: 'long', year: 'numeric' }).format(utc(key));
 export const dayOfMonth = (key: string): number => Number(key.slice(8));
 
 export function periodTitle(mode: CalendarMode, anchor: string): string {
-  if (mode === 'month') return monthYear.format(utc(anchor));
+  if (mode === 'month') return monthYearOf(anchor);
   const days = weekDays(anchor);
   return `${dayShort(days[0])} – ${dayShort(days[6])}`;
 }

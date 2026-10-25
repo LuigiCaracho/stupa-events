@@ -8,7 +8,7 @@
 />
 
 @if (offlineFailure()) {
-  <app-offline-state level="2" />
+  <app-offline-state [level]="2" />
 } @else if (error(); as kind) {
   <app-load-error [kind]="kind" (retry)="reload()" />
 } @else if (!loaded()) {

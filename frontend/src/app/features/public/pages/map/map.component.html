@@ -41,7 +41,7 @@
   <app-skeleton variant="panel" [label]="'common.loading' | t" />
 } @else {
   @if (loaded()?.truncated) {
-    <app-note kind="info" icon="info" role="status">
+    <app-note kind="neutral" icon="info" role="status">
       {{ 'public.map.truncated' | t: { n: total() } }}
     </app-note>
   }

@@ -2,6 +2,7 @@
  * Display helpers of the public pages: when, where and in which state an event is, and the semester it belongs to.
  * Times are always shown in the zone of the event (`tzid`, Europe/Berlin), never in the browser zone.
  */
+import { dateWords } from '@core/i18n/format-locale';
 import type { StatusKind } from '@shared/status-kind.util';
 import { formatClock, formatEventDate, isoToZoned } from '@shared/event-time';
 import type { TranslationKey } from '@core/i18n/translations';
@@ -24,20 +25,22 @@ export const startDay = (e: Starting): string =>
 export const endDay = (e: Ending): string =>
   e.endsOn ?? isoToZoned(e.endsAt, e.tzid ?? BERLIN).date;
 
-/** "Do., 22. Okt. 2026, 20:00 bis 22:30 Uhr", a two-day span, or "… (ganztägig)". */
+/** "Do., 22. Okt. 2026, 20:00 bis 22:30 Uhr", a two-day span, or "… (ganztägig)"; in English "Thu, 22 Oct 2026, 20:00 to 22:30". */
 export function whenText(e: Timed): string {
   const tz = e.tzid;
+  const w = dateWords();
   if (e.allDay) {
     const start = formatEventDate(e.startsAt, tz);
     return endDay(e) !== startDay(e)
-      ? `${start} bis ${formatEventDate(e.endsAt, tz)}`
-      : `${start} (ganztägig)`;
+      ? `${start} ${w.to} ${formatEventDate(e.endsAt, tz)}`
+      : `${start} (${w.allDay})`;
   }
   const day = formatEventDate(e.startsAt, tz);
   const from = formatClock(e.startsAt, tz);
-  if (e.endsAt === e.startsAt) return `${day}, ${from} Uhr`;
-  if (endDay(e) === startDay(e)) return `${day}, ${from} bis ${formatClock(e.endsAt, tz)} Uhr`;
-  return `${day}, ${from} Uhr bis ${formatEventDate(e.endsAt, tz)}, ${formatClock(e.endsAt, tz)} Uhr`;
+  if (e.endsAt === e.startsAt) return `${day}, ${w.clock(from)}`;
+  if (endDay(e) === startDay(e))
+    return `${day}, ${from} ${w.to} ${w.clock(formatClock(e.endsAt, tz))}`;
+  return `${day}, ${w.clock(from)} ${w.to} ${formatEventDate(e.endsAt, tz)}, ${w.clock(formatClock(e.endsAt, tz))}`;
 }
 
 /** The time of day of a row ("20:00"), or `null` for an all-day event. */
@@ -75,9 +78,10 @@ export function semesterOf(startsOn: string): SemesterGroup {
 
 /** "Wintersemester 2025/26" or "Sommersemester 2026". */
 export function semesterLabel(group: SemesterGroup): string {
+  const w = dateWords();
   return group.semester === 'sose'
-    ? `Sommersemester ${group.year}`
-    : `Wintersemester ${group.year}/${String(group.year + 1).slice(2)}`;
+    ? `${w.summer} ${group.year}`
+    : `${w.winter} ${group.year}/${String(group.year + 1).slice(2)}`;
 }
 
 /** Groups items in the order they come: one group per run of the same semester. */
