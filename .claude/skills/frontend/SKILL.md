@@ -74,6 +74,19 @@ description: Angular 20 app of STUPA Events (frontend/). Shell, auth, i18n, them
 - `resourceValue(resource, fallback)` (`core/api/resource-value.ts`) reads a resource without throwing in the error state; use it instead of `hasValue() ? value() : x`.
 - Trap: `<app-checkbox id="x">` puts the id on the host and the input (label broken); bind `[id]="'x'"`. A highlighted title is split into text nodes: find a hit by `getByRole('article', { name })`.
 
+**C and B4 (maps, PWA, English, `docs/C-KONTRAKT.md` 5):**
+- `shared/ui/map` is `app-map` (modes `events`, `campus`, `pick`). MapLibre is NOT an Angular chunk: `angular.json` copies `maplibre-gl.mjs`, the worker and the css to `/map/`, `MapLoaderService`
+  imports it through a variable `import()` (esbuild leaves it) and sets the same-origin worker, so `worker-src 'self'` holds. The PMTiles protocol sends `ngsw-bypass`. `npm run check:map` (after `npm run build`)
+  fails when `maplibre`/`pmtiles` reach the initial bundle or `geolocation` leaves the near-me chunk. The host element is the test seam (`data-map-state`, `-feature-count`, `-cluster-count`, `-zoom`).
+- Pages: `/karte` (P11, `features/public/pages/map`, URL `?vergangen=1&jahr=&k=`) and `/campus` (P12). "In meiner Nähe" is `NearMeService`: the position lives in one signal, there is no `HttpClient` in that file and no
+  bbox param anywhere (E30). The pin sheet of the Orte tab (`admin/taxonomy/venues/venue-pin-sheet`) only proposes; the row is saved by "Speichern" with `geocodeSource: 'nominatim'` only for an unchanged search result.
+- English: `core/i18n/translations.*.en.ts` (`satisfies Record<keyof typeof xxxDe, string>` makes a missing key a compile error), loaded lazily (`loadEnglish`); the internal catalogs stay German and `translate` falls back
+  to them. `public-shell-keys.ts` lists the non-public keys the public frame shows. Dates and the words in `whenText` follow `core/i18n/format-locale.ts` (`setFormatLang`, set by `I18nService`).
+  Detection runs in `ready()` (app initializer) only, so jest specs stay German.
+- PWA: `ngsw-config.json` has `dataGroups` `today` and `events` (freshness, 1 d) and no longer excludes `/e/**` from `navigationUrls`; `OnlineService` and the "Stand HH:MM" note on Heute; `layout/install-hint` for iOS Safari.
+- E2E of C: `scripts/e2e-web.sh up <port> <dist> <tiles>` starts the production nginx as a throwaway container next to the host API (needs `docker`); `e2e/map.spec.ts` and `e2e/venue-pin.spec.ts` run in the `map` project
+  (`channel: 'chromium'`, WebGL), `offline.spec.ts` and `en.spec.ts` against 8081, `pwa-update.spec.ts` against `scripts/pwa-update-stack.sh start` (8084). A service worker bypasses `page.route`: use `context.route` when it is active.
+
 **Gates:** `npm run lint`, `npm run typecheck` (app and specs), `npm test` (coverage thresholds in `jest.config`), `npm run build`,
 E2E `npx playwright test` (browsers from `nix build nixpkgs#playwright-driver.browsers`, against the compose stack or `ng serve` with `E2E_BASE_URL`; `m1.spec.ts` to `m5b.spec.ts`; helpers in `e2e/support/dossier.ts`). `m5b.spec.ts` and `m3.spec.ts` run axe (`@axe-core/playwright` 4.13.0, light and dark, contrast included); run it against the production build of the compose `web` container. The crowded dev DB hides entries: filter by title (`?q=`) before looking for a card or a calendar day.
 
