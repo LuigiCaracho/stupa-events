@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -34,7 +35,7 @@ PINS = {
 
 
 @pytest.fixture
-async def site(api: Api) -> Site:
+async def site(api: Api) -> AsyncIterator[Site]:
     site_data.configure(api)
     found = await site_data.seed(api)
     await api.sql("DELETE FROM venue WHERE slug LIKE 'map-%'")
