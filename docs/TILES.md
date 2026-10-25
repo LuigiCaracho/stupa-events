@@ -49,3 +49,20 @@ Solange die Dateien im Volume liegen, läuft der Betrieb auch nach Ablauf des Bu
 | Protomaps-Basemap-Schema, `@protomaps/basemaps`, `pmtiles`, `maplibre-gl` | BSD-3-Clause | Lizenztext bleibt in den Paketen |
 | Schriften Noto Sans | SIL OFL 1.1 | `fonts/OFL.txt` liegt bei |
 | Sprites und Assets `protomaps/basemaps-assets` | siehe Repo (Code BSD-3, Schriften OFL) | `PROVENANCE.map-assets.json` hält Quelle und Commit |
+
+## Gemessene Befunde (2026-10-25)
+
+- **Sprite-URL muss absolut sein.** MapLibre 6.13 lehnt `"sprite": "/map-style/sprites/v4/light"` mit `Invalid sprite URL ..., must be absolute` ab. Die Style-Dateien sind statisch und kennen die Origin nicht, also macht `app-map` die URL beim Laden absolut (`new URL(style.sprite, location.origin).href`, am einfachsten nach dem `fetch` des Styles, bevor das Objekt an `Map({style})` geht). Glyphen-URLs dürfen relativ bleiben.
+- **CSP.** Gegen den echten nginx mit der Produktions-CSP (`worker-src 'self'`, kein `blob:`, kein `unsafe-eval`) laufen Hauptthread, Modul-Worker `/map/maplibre-gl-worker.mjs`, PMTiles-Range-Requests, Glyphen und Sprites ohne Verstoß. Getestet in Chromium (`channel: 'chromium'`, WebGL2) mit einer Wegwerf-Seite.
+- **Übergabe Welt zu Region bei Zoom 7** zeigt bei Zoom 7 bis 8 am Rand der Region einen sichtbaren Sprung (feinere Landnutzung in der Region). Gewollt; wer ihn ruhiger will, erhöht `HANDOFF_ZOOM` in `scripts/gen-map-style.mjs`.
+- `Accept-Ranges: bytes` sendet nginx nur auf 200 und HEAD, nicht auf 206; ein zusätzliches `add_header` würde dort doppeln. `deploy/tiles-smoke.sh` prüft deshalb HEAD.
+
+## Screenshots (Style, Wegwerf-Seite)
+
+| Hell, Welt Zoom 3 | Hell, Zoom 7 | Hell, Reutlingen Zoom 12 |
+|---|---|---|
+| ![](tiles/light-welt-z3.jpg) | ![](tiles/light-reutlingen-z7.jpg) | ![](tiles/light-reutlingen-z12.jpg) |
+
+| Dunkel, Zoom 12 | Dunkel, Zoom 16 (Alteburgstraße) |
+|---|---|
+| ![](tiles/dark-reutlingen-z12.jpg) | ![](tiles/dark-reutlingen-z16.jpg) |
