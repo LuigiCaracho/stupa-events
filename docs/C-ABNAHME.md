@@ -9,7 +9,7 @@ und Campus-Polygone stehen in `docs/C-PINS.md` und `docs/C-CAMPUS-OSM.md`, die d
 |---|---|
 | `npm run lint` | sauber |
 | `npm run typecheck` (App und Specs) | sauber |
-| `npx jest` | 223 Suites, 1804 Tests grün (1 übersprungen, 1 todo davon war `it.todo` der EN-Parität, jetzt durch 7 echte Tests ersetzt) |
+| `npx jest` | 223 Suites, 1804 Tests grün (1 übersprungen; der `it.todo` der EN-Parität ist durch 7 echte Tests ersetzt) |
 | `npm run build` | grün; Initial 662,89 kB (173,86 kB übertragen), B3-Stand 654,33 kB: **+8,56 kB roh**, siehe Offen |
 | `npm run check:map` | `map isolation ok`: kein `maplibre` und kein `pmtiles` in `index.html` oder im Initial-Bundle, `/map/maplibre-gl.mjs`, `-worker.mjs` und `.css` im Build, `geolocation` nur im Near-me-Chunk und im zone.js-Polyfill |
 | `deploy/tiles-smoke.sh`, `smoke.sh` | gehören dem tiles-builder |
@@ -32,7 +32,7 @@ Die Karten-Specs mocken die Karten-API (`support/map-fixtures.ts`), damit die Za
 ## Abnahmekriterien
 
 - **C1** Karte lädt ohne Request an Dritte: `map.spec` T1. Range-Requests hinter nginx: `deploy/tiles-smoke.sh` (tiles-builder).
-- **C2** (Frontend) kein Autocomplete und kein clientseitiger Nominatim-Aufruf: `grep -rn "nominatim\|openstreetmap.org" frontend/src` findet nur den Text "Vorschlag von OpenStreetMap" und das Feld `geocodeSource`; der Aufruf geht über `POST /api/admin/venues/{id}/geocode`. Private Orte: Knopf aus und kein Request (`venue-pin.spec`, Jest `venue-pin-sheet.component.spec`).
+- **C2** (Frontend) kein Autocomplete und kein clientseitiger Nominatim-Aufruf: `grep -rn "nominatim\|openstreetmap.org" frontend/src` findet nur den Wert `nominatim` des Felds `geocodeSource` und Bezeichner, keine URL; der Aufruf geht über `POST /api/admin/venues/{id}/geocode`. Private Orte: Knopf aus und kein Request (`venue-pin.spec`, Jest `venue-pin-sheet.component.spec`).
 - **C3** Weltkarte, Liste mit denselben Treffern, kein Request mit Koordinaten: `map.spec` T3 und T5, Jest `pages/map/map.component.spec`. Davos, Ischgl, Europapark und Straßburg stehen erst mit dem Pin-Lauf in den Daten.
 - **C4** Gebäude 9 zählt korrekt in Karte, Tabelle und Liste: `map.spec` T4; keine OSM-Abfrage zur Laufzeit (T1).
 - **B4** "Heute" offline lesbar: `offline.spec`. EN-Parität: `translations.spec` ("English parity", 7 Tests) und `en.spec`. Update-Prompt: `pwa-update.spec`.
