@@ -23,6 +23,10 @@ LEFT_OUT = frozenset(
         "hero_credit",
         "public_seq",
         "updated_at",
+        "venue_lat",
+        "venue_lon",
+        "venue_geo_precision",
+        "venue_building_no",
     }
 )
 FULL = ", ".join(c.key for c in ROW_COLUMNS)

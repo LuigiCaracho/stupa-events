@@ -1,0 +1,269 @@
+{
+  "campus": {
+    "$defs": {
+      "PublicCampusFeature": {
+        "additionalProperties": false,
+        "description": "One building polygon as stored (WGS84).",
+        "properties": {
+          "geometry": {
+            "additionalProperties": true,
+            "title": "Geometry",
+            "type": "object"
+          },
+          "properties": {
+            "$ref": "#/$defs/PublicCampusProperties"
+          },
+          "type": {
+            "const": "Feature",
+            "default": "Feature",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "geometry",
+          "properties"
+        ],
+        "title": "PublicCampusFeature",
+        "type": "object"
+      },
+      "PublicCampusProperties": {
+        "additionalProperties": false,
+        "description": "A building of the campus map with the number of events in the asked range.",
+        "properties": {
+          "approx": {
+            "title": "Approx",
+            "type": "boolean"
+          },
+          "buildingNo": {
+            "title": "Buildingno",
+            "type": "string"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "buildingNo",
+          "name",
+          "approx",
+          "count"
+        ],
+        "title": "PublicCampusProperties",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "description": "All buildings, those without events included.",
+    "properties": {
+      "features": {
+        "items": {
+          "$ref": "#/$defs/PublicCampusFeature"
+        },
+        "title": "Features",
+        "type": "array"
+      },
+      "generatedAt": {
+        "format": "date-time",
+        "title": "Generatedat",
+        "type": "string"
+      },
+      "type": {
+        "const": "FeatureCollection",
+        "default": "FeatureCollection",
+        "title": "Type",
+        "type": "string"
+      }
+    },
+    "required": [
+      "generatedAt",
+      "features"
+    ],
+    "title": "PublicCampusCollection",
+    "type": "object"
+  },
+  "events": {
+    "$defs": {
+      "PublicMapFeature": {
+        "additionalProperties": false,
+        "description": "One event with a public coordinate.",
+        "properties": {
+          "geometry": {
+            "$ref": "#/$defs/PublicPoint"
+          },
+          "properties": {
+            "$ref": "#/$defs/PublicMapProperties"
+          },
+          "type": {
+            "const": "Feature",
+            "default": "Feature",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "geometry",
+          "properties"
+        ],
+        "title": "PublicMapFeature",
+        "type": "object"
+      },
+      "PublicMapProperties": {
+        "additionalProperties": false,
+        "description": "What a pin on the world map shows.",
+        "properties": {
+          "categorySlug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categoryslug"
+          },
+          "endsAt": {
+            "format": "date-time",
+            "title": "Endsat",
+            "type": "string"
+          },
+          "imageThumb": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imagethumb"
+          },
+          "precision": {
+            "enum": [
+              "exact",
+              "building"
+            ],
+            "title": "Precision",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "startsAt": {
+            "format": "date-time",
+            "title": "Startsat",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "scheduled",
+              "cancelled",
+              "postponed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "venueName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Venuename"
+          }
+        },
+        "required": [
+          "slug",
+          "title",
+          "startsAt",
+          "endsAt",
+          "status",
+          "categorySlug",
+          "imageThumb",
+          "venueName",
+          "precision"
+        ],
+        "title": "PublicMapProperties",
+        "type": "object"
+      },
+      "PublicPoint": {
+        "additionalProperties": false,
+        "description": "A GeoJSON point, longitude first.",
+        "properties": {
+          "coordinates": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Coordinates",
+            "type": "array"
+          },
+          "type": {
+            "const": "Point",
+            "default": "Point",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "coordinates"
+        ],
+        "title": "PublicPoint",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "description": "The events of the world map; `truncated` tells that `limit` cut the list.",
+    "properties": {
+      "features": {
+        "items": {
+          "$ref": "#/$defs/PublicMapFeature"
+        },
+        "title": "Features",
+        "type": "array"
+      },
+      "generatedAt": {
+        "format": "date-time",
+        "title": "Generatedat",
+        "type": "string"
+      },
+      "truncated": {
+        "title": "Truncated",
+        "type": "boolean"
+      },
+      "type": {
+        "const": "FeatureCollection",
+        "default": "FeatureCollection",
+        "title": "Type",
+        "type": "string"
+      }
+    },
+    "required": [
+      "generatedAt",
+      "truncated",
+      "features"
+    ],
+    "title": "PublicMapCollection",
+    "type": "object"
+  }
+}

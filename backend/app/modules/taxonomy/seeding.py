@@ -1,4 +1,4 @@
-"""Idempotent loading of the reference rows (organizations, categories, venues).
+"""Idempotent loading of the reference rows (organizations, categories, venues, campus buildings).
 
 Migrations `0002_events_core` and `0003_roles_taxonomy` insert the same rows on a fresh
 database. This function adds what is missing on a database that already exists. It never
@@ -13,6 +13,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.orgs.models import Organization
+from app.modules.taxonomy.campus import seed_campus_async
 from app.modules.taxonomy.models import Category, Venue
 from app.modules.taxonomy.reference import CATEGORIES, ORGANIZATIONS
 from app.modules.taxonomy.reference_descriptions import DESCRIPTIONS
@@ -40,3 +41,4 @@ async def ensure_reference(session: AsyncSession) -> None:
         )
     for row in VENUES:
         await session.execute(insert(Venue).values(**row).on_conflict_do_nothing())
+    await seed_campus_async(session)

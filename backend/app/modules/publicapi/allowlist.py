@@ -148,6 +148,25 @@ PUBLIC_FIELDS: Mapping[str, frozenset[str]] = {
     "PublicCalendarDay": frozenset({"date", "count", "items"}),
     "PublicCalendarOut": frozenset({"month", "truncated", "days"}),
     "PublicArchiveOut": frozenset({"years", "year", "items", "next_cursor"}),
+    "PublicPoint": frozenset({"type", "coordinates"}),
+    "PublicMapProperties": frozenset(
+        {
+            "slug",
+            "title",
+            "starts_at",
+            "ends_at",
+            "status",
+            "category_slug",
+            "image_thumb",
+            "venue_name",
+            "precision",
+        }
+    ),
+    "PublicMapFeature": frozenset({"type", "geometry", "properties"}),
+    "PublicMapCollection": frozenset({"type", "generated_at", "truncated", "features"}),
+    "PublicCampusProperties": frozenset({"building_no", "name", "approx", "count"}),
+    "PublicCampusFeature": frozenset({"type", "geometry", "properties"}),
+    "PublicCampusCollection": frozenset({"type", "generated_at", "features"}),
     "IcsRow": frozenset(
         {
             "id",
@@ -216,6 +235,10 @@ PUBLIC_VIEW_COLUMNS: tuple[str, ...] = (
     "cost_text",
     "description_md",
     "search_tsv",
+    "venue_lat",
+    "venue_lon",
+    "venue_geo_precision",
+    "venue_building_no",
 )
 
 PUBLIC_CATEGORY_COLUMNS: tuple[str, ...] = (

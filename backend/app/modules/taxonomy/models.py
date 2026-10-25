@@ -10,8 +10,10 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Integer, Numeric, Text, Uuid
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base, TimestampMixin, UUIDPkMixin
@@ -98,4 +100,23 @@ class Venue(UUIDPkMixin, TimestampMixin, Base):
         CheckConstraint(f"name !~ '{CONTROL_CHARS}'", name="name_clean"),
         CheckConstraint(f"address !~ '{CONTROL_CHARS}'", name="address_clean"),
         CheckConstraint(f"notes !~ '{CONTROL_CHARS}'", name="notes_clean"),
+    )
+
+
+class CampusBuilding(Base):
+    """A building polygon of the campus map; venues join it through `venue.building_no`."""
+
+    __tablename__ = "campus_building"
+
+    number: Mapped[str] = mapped_column(Text, primary_key=True)
+    name: Mapped[str] = mapped_column(Text)
+    geometry: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    approx: Mapped[bool] = mapped_column(Boolean, server_default="false")
+    osm_ref: Mapped[str | None] = mapped_column(Text, nullable=True)
+    sort: Mapped[int] = mapped_column(Integer, server_default="0")
+
+    __table_args__ = (
+        CheckConstraint("number ~ '^[0-9]{1,3}[a-z]?$'", name="number_ok"),
+        CheckConstraint("geometry ->> 'type' IN ('Polygon', 'MultiPolygon')", name="geometry_type"),
+        CheckConstraint("NOT approx OR osm_ref IS NULL", name="approx_has_no_osm"),
     )

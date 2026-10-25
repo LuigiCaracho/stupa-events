@@ -21,6 +21,7 @@ from sqlalchemy import (
     Boolean,
     Date,
     DateTime,
+    Double,
     Integer,
     Row,
     Select,
@@ -94,6 +95,10 @@ PUBLIC_EVENT_V = table(
     column("cost_text", Text),
     column("description_md", Text),
     column("search_tsv", TSVECTOR),
+    column("venue_lat", Double),
+    column("venue_lon", Double),
+    column("venue_geo_precision", Text),
+    column("venue_building_no", Text),
 )
 V = PUBLIC_EVENT_V.c
 ROW_COLUMNS = tuple(c for c in PUBLIC_EVENT_V.c if c.key != "search_tsv")

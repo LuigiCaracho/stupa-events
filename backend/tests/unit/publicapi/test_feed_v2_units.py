@@ -11,7 +11,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from app.modules.publicapi import allowlist, cursor, selection, site_schemas
+from app.modules.publicapi import allowlist, cursor, map_schemas, selection, site_schemas
 from app.modules.publicapi import schemas as public_schemas
 from app.modules.publicapi.ics.model import IcsRow
 from app.modules.publicapi.router import parse_since, pick_organization
@@ -156,8 +156,11 @@ def test_the_etag_covers_the_next_cursor_but_not_the_generation_time() -> None:
     assert items_etag(feed, "abc") == items_etag(feed, "abc")
 
 
+SCHEMA_MODULES = (public_schemas, site_schemas, map_schemas)
+
+
 def model_fields(name: str) -> set[str]:
-    module = site_schemas if hasattr(site_schemas, name) else public_schemas
+    module = next(m for m in SCHEMA_MODULES if hasattr(m, name))
     return set(getattr(module, name).model_fields)
 
 
@@ -169,7 +172,7 @@ def test_public_allowlist_names_exactly_the_fields_of_the_models() -> None:
             assert fields == model_fields(name), name
     declared = {
         name
-        for module in (public_schemas, site_schemas)
+        for module in SCHEMA_MODULES
         for name, value in vars(module).items()
         if isinstance(value, type)
         and issubclass(value, public_schemas.CamelModel)

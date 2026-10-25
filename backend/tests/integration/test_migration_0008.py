@@ -16,6 +16,7 @@ from tests.integration.conftest import make_alembic_config
 from tests.integration.events.harness import db_roles  # noqa: F401
 
 pytestmark = pytest.mark.integration
+MAP_COLUMNS = 4
 
 
 @contextmanager
@@ -101,7 +102,7 @@ def test_upgrade_adds_the_columns_without_changing_the_rows(
             ).scalar_one()
         assert before == after == ["s-archived-True", "s-published-True"] and hits == 2
         assert description == "Movienight und Filmabende"
-        assert view_columns(engine, "public_event_v") == PUBLIC_VIEW_COLUMNS
+        assert view_columns(engine, "public_event_v") == PUBLIC_VIEW_COLUMNS[:-MAP_COLUMNS]
         assert view_columns(engine, "public_category_v") == PUBLIC_CATEGORY_COLUMNS
         public = create_engine(url.replace("test:test", "events_public:pw"))
         with public.connect() as conn:
