@@ -37,11 +37,15 @@
   border-radius: var(--radius-md, 8px);
   background: var(--color-surface);
   color: var(--color-primary);
-  transform: translateY(-200%);
 }
 
-.map__skip:focus-visible {
-  transform: none;
+.map__skip:not(:focus-visible) {
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  clip-path: inset(50%);
 }
 
 :host ::ng-deep .maplibregl-ctrl-attrib a {
