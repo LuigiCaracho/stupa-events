@@ -43,3 +43,7 @@
 .map__skip:focus-visible {
   transform: none;
 }
+
+:host ::ng-deep .maplibregl-ctrl-attrib a {
+  text-decoration: underline;
+}

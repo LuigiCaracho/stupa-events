@@ -42,6 +42,17 @@ export default defineConfig({
     ignoreHTTPSErrors: true,
   },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    {
+      name: 'chromium',
+      testIgnore: /map\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    // The map needs WebGL. The headless shell of the default project has none; the new headless mode of the
+    // `chromium` channel has WebGL 2 without flags (C contract L20).
+    {
+      name: 'map',
+      testMatch: /map\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'], channel: 'chromium' },
+    },
   ],
 });
