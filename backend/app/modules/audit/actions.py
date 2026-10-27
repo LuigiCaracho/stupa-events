@@ -56,3 +56,9 @@ class AuditAction(StrEnum):
     # A geocode request for a venue: carries the venue id and `found`, never the address.
     VENUE_GEOCODE = "venue_geocode"
     EXPORT = "export"
+    # M6: ids and counters only, never a source URL (the FSI calendar URL is a secret).
+    IMPORT_RUN = "import_run"
+    IMPORT_TAKE = "import_take"
+    IMPORT_DECISION = "import_decision"
+    IMPORT_SOURCE = "import_source"
+    IMPORT_LEGACY = "import_legacy"

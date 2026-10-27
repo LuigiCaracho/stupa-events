@@ -10,6 +10,7 @@ Copied from STUPA-Workflow@93c33d6 backend/app/settings.py (trimmed to the M1 fi
 import json
 import logging
 from functools import lru_cache
+from pathlib import Path
 from typing import Annotated, Any
 
 from pydantic import Field, ValidationError, field_validator, model_validator
@@ -101,6 +102,7 @@ class Settings(BaseSettings):
         "pgcrypto_email_key",
         "altcha_hmac_secret",
         "email_hash_key",
+        "import_fixture_dir",
         mode="before",
     )
     @classmethod
@@ -198,6 +200,15 @@ class Settings(BaseSettings):
     nominatim_enabled: bool = False
     nominatim_base_url: str = "https://nominatim.openstreetmap.org"
     nominatim_contact: str | None = None
+
+    import_lock_ttl_s: int = Field(default=900, ge=60)
+    import_max_items: int = Field(default=200, ge=1)
+    import_http_timeout_s: float = Field(default=15.0, gt=0)
+    import_http_max_bytes: int = Field(default=2 * 1024 * 1024, ge=1024)
+    import_image_max_bytes: int = Field(default=8 * 1024 * 1024, ge=1024)
+    import_fixture_dir: Path | None = None
+    import_digest_enabled: bool = True
+    import_preview_cache_ttl_s: int = Field(default=86400, ge=0)
 
     @field_validator("cors_allow_origins", "listmonk_allowed_hosts", mode="before")
     @classmethod

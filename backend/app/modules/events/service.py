@@ -108,7 +108,12 @@ class EventService:
                 raise _invalid("venueId", "unknown venue", code="unknown_venue")
 
     async def create(
-        self, principal: Principal, body: EventCreate, *, format_id: UUID | None = None
+        self,
+        principal: Principal,
+        body: EventCreate,
+        *,
+        format_id: UUID | None = None,
+        origin_kind: str = "internal",
     ) -> Event:
         """Create a draft in an organization where the principal holds `event.create`.
 
@@ -121,10 +126,53 @@ class EventService:
         org = await self._organization(body.organization_id)
         if not principal.has("event.create", org.id):
             raise NotFoundError("organization not found")
-        starts_at, ends_at, estimated = self._times_of(body)
         await self._require_references(body.primary_category_id, body.venue_id)
-        event = Event(
-            state=EventState.DRAFT.value,
+        event = self._build(
+            body,
+            org,
+            actor=principal.sub,
+            state=EventState.DRAFT,
+            origin_kind=origin_kind,
+            format_id=format_id,
+        )
+        return await self._persist(event, actor=principal.sub, actor_type="human", note=None)
+
+    async def create_imported(
+        self,
+        actor_sub: str,
+        body: EventCreate,
+        *,
+        origin_kind: str,
+        state: EventState = EventState.DRAFT,
+        note: str | None = None,
+    ) -> Event:
+        """Create a dossier for the import pipeline with the system as the actor.
+
+        The caller has checked the right (`import.review`, `import.legacy`) and the scope;
+        the dossier keeps `published_at` empty, so an archived one never reaches the feed.
+
+        Raises:
+            NotFoundError: The organization is unknown or inactive.
+            ValidationProblem: Unknown category or venue.
+        """
+        org = await self._organization(body.organization_id)
+        await self._require_references(body.primary_category_id, body.venue_id)
+        event = self._build(body, org, actor=actor_sub, state=state, origin_kind=origin_kind)
+        return await self._persist(event, actor=actor_sub, actor_type="system", note=note)
+
+    def _build(
+        self,
+        body: EventCreate,
+        org: Organization,
+        *,
+        actor: str,
+        state: EventState,
+        origin_kind: str,
+        format_id: UUID | None = None,
+    ) -> Event:
+        starts_at, ends_at, estimated = self._times_of(body)
+        return Event(
+            state=state.value,
             title=body.title,
             summary=body.summary,
             description_md=body.description_md,
@@ -143,24 +191,37 @@ class EventService:
             cost_text=body.cost_text,
             ticket_url=body.ticket_url,
             website_url=body.website_url,
-            created_by=principal.sub,
+            origin_kind=origin_kind,
+            created_by=actor,
             rev=1,
             public_seq=0,
         )
+
+    async def _persist(
+        self, event: Event, *, actor: str, actor_type: str, note: str | None
+    ) -> Event:
         self.session.add(event)
         await self.session.flush()
         await self.session.refresh(event)
         await add_refs(self.session, "event", event.id, event.description_md)
-        await revisions.append_revision(self.session, event, actor=principal.sub)
+        await revisions.append_revision(
+            self.session, event, actor=actor, note=note, actor_type=actor_type
+        )
         await revisions.append_status(
-            self.session, event, transition_id="create", from_state=None, actor=principal.sub
+            self.session,
+            event,
+            transition_id="create",
+            from_state=None,
+            actor=actor,
+            note=note,
+            actor_type=actor_type,
         )
         await revisions.audit(
             self.session,
             event,
-            actor=principal.sub,
+            actor=actor,
             action=AuditAction.EVENT_CREATE,
-            data={"organizationId": str(org.id)},
+            data={"organizationId": str(event.organization_id), "originKind": event.origin_kind},
         )
         return event
 
